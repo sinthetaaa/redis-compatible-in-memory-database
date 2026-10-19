@@ -6,14 +6,15 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Approved design; Phase 1A and 1B networking primitives implemented
+**Architecture state:** Approved design; Phase 1A–1C networking foundations implemented
 
 This document describes the intended system.
 
-The build foundation, descriptor-ownership wrapper
-and standalone loopback TCP listener are implemented.
-The event loop, protocol engine and database server
-execution path have not yet been implemented.
+The build foundation, descriptor-ownership wrapper,
+loopback TCP listener and event-poller interface are
+implemented. Native kernel pollers, the serving event
+loop, protocol engine and database execution path
+have not yet been implemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -245,36 +246,72 @@ Planned development defaults:
 - Address: 127.0.0.1
 - Port: 6380
 
-## 4.2 Event Loop
+## 4.2 Event-Poller Interface — Implemented in Phase 1C
 
-Planned conceptual interface:
+Header: `include/redisdb/net/EventPoller.hpp`
 
-```cpp
-class EventLoop {
-public:
-    virtual ~EventLoop() = default;
+Automated tests: `tests/unit/event_poller_test.cpp`
 
-    virtual void add(int fd, EventMask events) = 0;
-    virtual void modify(int fd, EventMask events) = 0;
-    virtual void remove(int fd) = 0;
-    virtual std::vector<Event> wait(int timeout_ms) = 0;
-};
-```
+The abstract `EventPoller` interface exposes:
 
-This is an illustration, not implemented code.
+- `add(fd, interest, token)`
+- `modify(fd, interest)`
+- `remove(fd)`
+- `wait(std::chrono::milliseconds timeout)`
 
-The final interface must handle:
+`EventMask` is a type-safe flag enum containing:
 
-- Read readiness.
-- Write readiness.
-- Error and hangup events.
-- Registration updates.
-- Removal of closed connections.
-- Timeouts and maintenance scheduling.
+- Read
+- Write
+- Error
+- Hangup
 
-The design must prevent stale descriptor events
-from being applied to unrelated connections
-after descriptor reuse.
+Read and Write are supported interest masks.
+Error and Hangup are output-only readiness flags.
+
+`ReadyEvent` carries a 64-bit registration token
+and the reported event flags. Token zero is invalid.
+
+The caller must assign a fresh nonzero token for
+every registration lifetime. A token must not be
+reused when the operating system reuses an FD number.
+
+A native poller does not own registered descriptors.
+The owning component must unregister a descriptor
+before closing it.
+
+Registration operations are single-threaded under
+the current contract.
+
+`wait()` accepts:
+
+- Zero milliseconds for a non-blocking check.
+- A positive timeout for a finite wait.
+- Negative one millisecond for an infinite wait.
+
+Other negative timeout values are invalid.
+
+Removal is idempotent; modification requires an
+existing registration. Duplicate live registrations
+are invalid.
+
+An event in a previously returned batch may become
+stale after a connection closes. The event consumer
+must compare tokens against current live registrations
+before processing the event.
+
+A fake poller validates the interface contract,
+argument handling, event representation and
+simulated stale-event filtering.
+
+The fake implementation does not observe actual
+kernel readiness, block for real elapsed time,
+or establish kqueue/epoll compatibility.
+
+The native macOS backend is Phase 1D.
+The Linux backend is Phase 1E.
+The running server loop and client lifecycle
+remain future work.
 
 ## 4.3 Connection Ownership
 

@@ -4,11 +4,11 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1C — Event-Loop Interface (next)
+- Current subphase: 1D — macOS kqueue Implementation (next)
 - Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1B — TCP Listener
-- Exact next task: Begin Phase 1C — design the portable event-loop interface, event masks, registration lifecycle and readiness API with tests.
-- Implementation maturity: Build foundation, POSIX descriptor RAII and tested loopback TCP listener
+- Last completed milestone: 1C — Event-Loop Interface
+- Exact next task: Begin Phase 1D — implement the native macOS kqueue poller against the Phase 1C EventPoller contract, with real readiness and lifecycle tests.
+- Implementation maturity: Build foundation, POSIX descriptor RAII, TCP listener and portable event-poller interface
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -36,7 +36,8 @@
 - Working tree after 0D: CLEAN
 - Phase 0E commit: 0cc4594d692f10f9a70ed6c9ae6107b0610a624f
 - Phase 1A commit: 1981e8b806944f19783f1de30c581eae1b41871b
-- Phase 1B commit: This revision; verify exact SHA from Git after push.
+- Phase 1B commit: dda6c4f562cb304c2986257890a05e1dba42b8f2
+- Phase 1C commit: This revision; verify exact SHA from Git after push.
 - Branch tracking: origin/main
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -98,7 +99,7 @@
 
 - 1A: COMPLETE — Move-only POSIX descriptor ownership validated.
 - 1B: COMPLETE — Non-blocking loopback TCP listener validated.
-- 1C: NOT STARTED — Event-loop interface.
+- 1C: COMPLETE — Portable event-poller contract and test double validated.
 - 1D: NOT STARTED — macOS kqueue implementation.
 - 1E: NOT STARTED — Linux epoll implementation.
 - 1F: NOT STARTED — Connection lifecycle.
@@ -130,11 +131,18 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - accept_one() returning owned client descriptors.
 - Dedicated redisdb-listener-tests executable.
 - Real TCP loopback connection and payload tests.
+- Header-only EventPoller interface.
+- Type-safe Read/Write/Error/Hangup event masks.
+- ReadyEvent registration tokens.
+- Registration and timeout contract.
+- Test-double registration and event-delivery tests.
+- Simulated stale-event filtering tests.
+- Dedicated redisdb-poller-tests executable.
 
 ### Not Yet Implemented
 
 - Event-loop-driven TCP serving and managed client connection lifecycle.
-- kqueue and epoll.
+- Native kqueue and epoll poller implementations.
 - Concurrent client processing through the event loop.
 - RESP2 parser and serializer.
 - Command execution.
@@ -201,6 +209,16 @@ No durability or crash-recovery guarantees exist yet.
 - include/redisdb/net/TcpListener.hpp (created)
 - src/net/TcpListener.cpp (created)
 - tests/integration/tcp_listener_test.cpp (created)
+- README.md (updated)
+- docs/ROADMAP.md (updated)
+- docs/PROJECT_STATE.md (updated)
+- docs/ARCHITECTURE.md (updated)
+
+### Phase 1C
+
+- CMakeLists.txt (modified)
+- include/redisdb/net/EventPoller.hpp (created)
+- tests/unit/event_poller_test.cpp (created)
 - README.md (updated)
 - docs/ROADMAP.md (updated)
 - docs/PROJECT_STATE.md (updated)
@@ -293,6 +311,34 @@ Linux portability, or complete networking correctness.
 Scope: macOS loopback component tests only.
 The server executable still has no TCP serving loop.
 Linux validation, event multiplexing and RESP2 are pending.
+
+### Phase 1C — 2026-10-19
+
+- Apple Clang C++20 Debug build: PASS
+- Debug automated tests: 5/5 PASS
+- Apple Clang C++20 Release build: PASS
+- Release automated tests: 5/5 PASS
+- Direct EventPoller interface test: PASS
+- Repeated interface test: 25/25 PASS
+- Abstract interface and virtual destructor checks: PASS
+- Type-safe event mask checks: PASS
+- Read/Write interest validation: PASS
+- Registration add/modify/remove tests: PASS
+- Duplicate live registration rejection: PASS
+- Stable live registration tokens: PASS
+- Simulated stale token filtering: PASS
+- Timeout argument validation: PASS
+- FD ownership separation using socketpair: PASS
+- clang-format: PASS
+- CMake integration and staged file review: PASS
+
+Scope: Header-only interface and test-double validation.
+The test double injects events; it does not monitor
+kernel readiness or actually wait for timeouts.
+Token uniqueness across successive registration
+lifetimes remains a caller responsibility.
+Native kqueue/epoll, running event loop, and
+connection dispatch are not yet implemented.
 
 ## 11. Benchmarks
 
@@ -394,17 +440,18 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify and push the Phase 1B milestone commit.
-2. Begin Phase 1C — Event-Loop Interface.
-3. Inspect UniqueFd and TcpListener interfaces.
-4. Define read/write/error event masks.
-5. Define poller registration and modification semantics.
-6. Define readiness events and timeout behavior.
-7. Define descriptor lifetime and stale-event safeguards.
-8. Write interface-level tests and test doubles.
-9. Validate Debug and Release builds.
-10. Document, commit and push Phase 1C.
-11. Proceed to macOS kqueue in Phase 1D.
+1. Verify Phase 1C commit and remote synchronization.
+2. Begin Phase 1D — macOS kqueue implementation.
+3. Review EventPoller.hpp and TcpListener.hpp.
+4. Design RAII ownership of the kqueue descriptor.
+5. Implement add/modify/remove registration operations.
+6. Preserve unique registration tokens in readiness events.
+7. Implement finite, zero and infinite wait semantics.
+8. Handle EOF, error, EINTR and descriptor removal.
+9. Test with real socketpair and loopback TCP sockets.
+10. Validate Debug and Release builds and regressions.
+11. Update documentation, commit and push Phase 1D.
+12. Continue to Linux epoll in Phase 1E.
 
 ## 17. Continuation Instructions
 

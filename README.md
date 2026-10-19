@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — RAII descriptors and TCP listener implemented.**
+**Project status: Phase 1 in progress — RAII, TCP listener and event-poller interface implemented.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -46,6 +46,9 @@ Implemented and validated:
 - Unix socket-pair ownership and cleanup tests.
 - Non-blocking, loopback-only IPv4 TCP listener.
 - Real TCP connection and listener integration tests.
+- Portable EventPoller interface and event masks.
+- Registration token and timeout contracts.
+- Test-double validation of event-poller behavior.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
@@ -163,14 +166,18 @@ clang-format --dry-run --Werror \
   tests/unit/unique_fd_test.cpp \
   include/redisdb/net/TcpListener.hpp \
   src/net/TcpListener.cpp \
-  tests/integration/tcp_listener_test.cpp
+  tests/integration/tcp_listener_test.cpp \
+  include/redisdb/net/EventPoller.hpp \
+  tests/unit/event_poller_test.cpp
 ```
 
 Current tests cover version reporting, POSIX descriptor
-ownership, and real loopback TCP listener behavior.
+ownership, loopback TCP listener behavior, and the
+platform-neutral event-poller contract using a fake poller.
 
-Future tests will cover event-loop processing, protocol
-parsing, command behavior, persistence and recovery.
+Future tests will cover native kqueue/epoll readiness,
+event-loop processing, protocol parsing, command
+behavior, persistence and recovery.
 
 ## Planned Architecture
 
@@ -312,7 +319,9 @@ Phase 1A — RAII Socket Abstraction is complete.
 
 Phase 1B — TCP Listener is complete.
 
-Phase 1C — Event-Loop Interface is the next milestone.
+Phase 1C — Event-Loop Interface is complete.
+
+Phase 1D — macOS kqueue is the next milestone.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

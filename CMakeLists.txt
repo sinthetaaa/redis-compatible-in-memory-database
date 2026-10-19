@@ -136,4 +136,26 @@ if(BUILD_TESTING)
         integration.tcp_listener
         PROPERTIES TIMEOUT 20
     )
+
+    add_executable(
+        redisdb-poller-tests
+        tests/unit/event_poller_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-poller-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-poller-tests)
+
+    add_test(
+        NAME unit.event_poller
+        COMMAND redisdb-poller-tests
+    )
+
+    set_tests_properties(
+        unit.event_poller
+        PROPERTIES TIMEOUT 10
+    )
 endif()
