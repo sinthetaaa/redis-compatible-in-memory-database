@@ -33,13 +33,13 @@ roadmap, including all 169 subphases.
 
 # Phase 0 — Repository and Environment Foundation
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 
 - [x] 0A — Environment audit
 - [x] 0B — Repository initialization
 - [x] 0C — C++20 build foundation
 - [x] 0D — Project documentation foundation
-- [ ] 0E — Baseline validation
+- [x] 0E — Baseline validation
 
 ### Acceptance Gate
 

@@ -295,9 +295,9 @@ documentation, commits and GitHub synchronization.
 
 ## Development Status
 
-Phase 0 is in progress.
+Phase 0 — Repository and Environment Foundation is complete.
 
-The initial C++20 build foundation is complete.
+Phase 1A — RAII Socket Abstraction is the next implementation milestone.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
