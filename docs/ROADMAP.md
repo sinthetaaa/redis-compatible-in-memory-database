@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A and 2B COMPLETE; Phase 2C Incremental Parser NEXT.
+Phases 2A and 2B COMPLETE; Phase 2C Parser IN PROGRESS.
 
 ### Acceptance Gate
 
@@ -217,8 +217,9 @@ At Phase 2A closure, neither serializer nor
 parser was implemented. The running server still
 remains transport-smoke-only.
 
-Phase 2B — Response Serializer: IN PROGRESS.
-Phase 2C through 2G: NOT STARTED.
+At Phase 2A closure, Phase 2B was next.
+The following Phase 2B record captures its
+subsequent implementation and completion.
 
 ### Phase 2B Detailed Progress
 
@@ -270,12 +271,63 @@ Phase 2B: COMPLETE.
 The standalone bounded serializer is validated
 on macOS and Linux in Debug and Release.
 
-Phase 2C — Incremental Parser: NEXT, NOT STARTED.
+Phase 2C — Incremental Parser: IN PROGRESS.
 Phase 2D through 2G: NOT STARTED.
 
-The running server remains transport-only.
-No RESP2 parsing, command execution, or
-database storage is implemented.
+The standalone parser has been implemented, but
+is not integrated with the running TCP server.
+
+### Phase 2C Detailed Progress
+
+- 2C.0: COMPLETE — Phase 2B closure baseline
+  verified and parser feature branch created.
+- 2C.1: COMPLETE — Bounded single-frame parser
+  implemented and validated locally.
+- 2C.1b: COMPLETE — Round-trip and boundary
+  regressions added; implementation committed
+  and pushed after correcting a test namespace.
+- 2C.2: COMPLETE — Draft PR #6 created and
+  initial Linux Debug/Release acceptance passed.
+- 2C.3: IN PROGRESS — Documentation synchronization,
+  final PR-head CI and source review.
+- 2C.4: NOT STARTED — PR merge and post-merge
+  macOS/Linux acceptance.
+- 2C.5: NOT STARTED — Formal milestone closure.
+
+Implementation commit:
+82b7dc98dbb99c83146d95c90fb3feb1408e4a8a.
+
+PR #6:
+https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/6
+
+Initial Linux workflow 39327039720: SUCCESS.
+
+Linux Debug and Release each passed all 13 tests,
+including unit.resp_parser and unit.resp_serializer.
+
+Existing TCP smoke, connection lifecycle and
+native epoll regression steps passed.
+
+Parser implementation:
+
+- Stateless, one-frame RESP2 decoding.
+- Complete, NeedMore and Invalid result states.
+- Owned RespValue on successful decoding.
+- Exact consumed-byte reporting.
+- Binary-safe bulk strings and recursive arrays.
+- Signed 64-bit integers via std::from_chars.
+- Checked lengths and configured resource bounds.
+- Parser/serializer round-trip regressions.
+- Incomplete prefix and invalid framing tests.
+
+Phase 2C remains IN PROGRESS until final PR
+acceptance, merge and post-merge verification.
+
+Phase 2D through 2G remain NOT STARTED.
+
+The server remains transport-smoke-only.
+No RESP2 network execution or database storage
+has been implemented.
 
 ### Acceptance Gate
 

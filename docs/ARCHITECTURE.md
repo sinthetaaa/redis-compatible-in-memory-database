@@ -651,6 +651,56 @@ Post-merge CI: 39320475360 SUCCESS.
 Phase 2B is complete.
 Phase 2C incremental parsing is NEXT, NOT STARTED.
 
+## Phase 2C Single-Frame RESP2 Parser — IN PROGRESS
+
+Files:
+
+- `include/redisdb/protocol/RespParser.hpp`
+- `src/protocol/RespParser.cpp`
+- `tests/unit/resp_parser_test.cpp`
+
+`RespParser` provides stateless, bounded decoding
+of one RESP2 frame from a `std::string_view`.
+
+It reports:
+
+- Complete: owned RespValue and exact consumed bytes.
+- NeedMore: incomplete valid prefix, zero consumption.
+- Invalid: malformed or limited frame, zero consumption
+  and an error explanation.
+
+Parsed values own their strings and arrays.
+No borrowed input data is exposed through RespValue.
+
+The parser uses std::from_chars for integer and
+declared-length conversion. Bulk payloads remain
+binary safe and require exact CRLF framing.
+
+Configured defaults:
+
+- Maximum frame bytes: 1 MiB.
+- Maximum bulk bytes: 1 MiB.
+- Maximum array elements: 65,536.
+- Maximum nested array depth: 32.
+- Maximum inline metadata bytes: 64 KiB.
+
+The parser does not allocate arrays directly from
+untrusted declared element counts.
+
+The parser consumes at most one complete value,
+leaving trailing input to the caller.
+
+Implementation: 82b7dc9.
+PR #6: OPEN, DRAFT.
+Initial Linux workflow: 39327039720 SUCCESS.
+
+Phase 2C is not yet complete.
+Persistent receive buffers and fragmented network
+input belong to Phase 2D. Multi-frame pipelining
+belongs to Phase 2E.
+
+No parser-to-socket integration exists yet.
+
 ## Parsing Model
 
 The parser must distinguish:

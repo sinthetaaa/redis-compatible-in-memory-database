@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A and 2B COMPLETE; Phase 2C Incremental Parser NEXT.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A and 2B COMPLETE; Phase 2C standalone parser implemented and under acceptance in draft PR #6.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -432,8 +432,44 @@ Merge commit:
 Phase 2B implementation, final review, merge,
 and post-merge acceptance are complete.
 
-Phase 2C — Incremental RESP2 Parser is NEXT,
-NOT STARTED.
+Phase 2C — Incremental RESP2 Parser is IN PROGRESS.
+
+A bounded, stateless RESP2 single-frame parser
+is implemented in commit 82b7dc9.
+
+It decodes all seven supported RESP2 value
+categories into the existing owned RespValue model.
+
+The parser reports three explicit outcomes:
+Complete, NeedMore and Invalid.
+
+Successful decoding returns exact consumed-byte
+accounting; incomplete and invalid frames do not
+expose partial values.
+
+Initial parser limits:
+
+- Maximum frame bytes: 1 MiB.
+- Maximum bulk-string bytes: 1 MiB.
+- Maximum array elements: 65,536.
+- Maximum array nesting depth: 32.
+- Maximum inline metadata bytes: 64 KiB.
+
+Local macOS Debug and Release: 13/13 PASS.
+Parser unit-test repetitions: 30/30 per configuration.
+
+Initial Linux Debug and Release workflow:
+39327039720 — SUCCESS.
+
+PR #6: OPEN, DRAFT.
+
+Final documentation, PR review, merge and
+post-merge acceptance remain.
+
+Persistent input buffering and fragmentation
+integration belong to Phase 2D. Multi-frame
+pipelining belongs to Phase 2E.
+Phase 2D through 2G are NOT STARTED.
 
 The server still operates only in transport smoke mode;
 it does not parse RESP2 or execute Redis commands.

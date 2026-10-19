@@ -126,9 +126,10 @@ also passed in both configurations.
 ## ADR-004 — RESP2 Protocol Compatibility
 
 **Status:** Accepted
-**Implementation:** Partial — Phase 2A value
-model and Phase 2B response serializer completed
-and merged; incremental parser remains pending
+**Implementation:** Partial — Phase 2A value model
+and Phase 2B serializer merged. Phase 2C standalone
+parser implemented and Linux validated in draft
+PR #6; network integration remains pending
 
 ### Decision
 
@@ -513,7 +514,12 @@ Phase 2B Response Serializer is COMPLETE.
 PR #5 merged as 0fa0269.
 Post-merge Linux workflow 39320475360 succeeded.
 
-Phase 2C incremental parsing is NEXT, NOT STARTED.
+Phase 2C single-frame parsing is IN PROGRESS.
+PR #6 is open and draft. Initial Linux Debug and
+Release workflow 39327039720 succeeded.
+
+Persistent receive-buffer handling remains Phase 2D.
+Pipelining remains Phase 2E.
 
 ## Phase 2
 
