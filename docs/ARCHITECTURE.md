@@ -6,15 +6,15 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Approved design; networking foundations through Phase 1D implemented
+**Architecture state:** Approved design; networking foundations through Phase 1E implemented
 
 This document describes the intended system.
 
 The build foundation, descriptor-ownership wrapper,
-loopback TCP listener, portable event-poller interface
-and native macOS kqueue backend are implemented.
-Linux epoll, the serving loop, protocol engine and
-database execution path remain unimplemented.
+loopback TCP listener, portable event-poller interface,
+macOS kqueue and Linux epoll backends are implemented.
+The serving loop, protocol engine and database execution
+path remain unimplemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -370,7 +370,57 @@ and TCP loopback readiness.
 The tests do not cover every injected syscall failure
 or guarantee future connection-manager correctness.
 
-The Linux epoll backend is not yet implemented.
+The Linux epoll backend is implemented in Phase 1E.
+
+## Implemented Kernel Poller — Phase 1E
+
+`redisdb::net::EpollPoller` implements `EventPoller`
+on Linux using the native epoll API.
+
+Files:
+
+- `include/redisdb/net/EpollPoller.hpp`
+- `src/net/EpollPoller.cpp`
+- `tests/integration/epoll_poller_test.cpp`
+
+CMake selects this backend only for Linux, while
+retaining KqueuePoller on macOS.
+
+An `epoll_create1(EPOLL_CLOEXEC)` descriptor is
+managed through `UniqueFd`. Registered sockets are
+owned by their callers, not the poller.
+
+The implementation uses level-triggered notifications
+through `epoll_ctl()` and `epoll_wait()`.
+
+Read and write interest map to `EPOLLIN` and `EPOLLOUT`.
+Hangup maps from `EPOLLHUP` or `EPOLLRDHUP`.
+Kernel errors map from `EPOLLERR`.
+
+A registration token is stored in `epoll_event.data.u64`
+and returned with its corresponding readiness event.
+Tokens must be unique for each registration lifetime.
+
+The backend validates duplicate registration, invalid
+interest masks and missing registrations. Failed ADD
+operations discard their inserted bookkeeping.
+Failed MOD and DEL operations propagate kernel errors.
+
+Waiting supports zero, positive finite and infinite
+timeouts. Interrupted system calls are retried.
+
+Native integration tests cover real socket readiness,
+read/write modification, multiple tokens, cleanup,
+failed registration, timeout behavior, peer half-close
+and TCP listener readiness.
+
+The Ubuntu 24.04 x86-64 Debug and Release GitHub Actions
+jobs passed all six automated tests each, including
+15 repeated epoll tests per configuration.
+
+The native Linux backend does not run the server loop,
+parse RESP2, execute database commands or manage the
+full client connection lifecycle.
 
 ## 4.3 Connection Ownership
 

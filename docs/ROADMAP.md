@@ -58,7 +58,7 @@ roadmap, including all 169 subphases.
 - [x] 1B — TCP listener
 - [x] 1C — Event-loop interface
 - [x] 1D — macOS kqueue implementation
-- [ ] 1E — Linux epoll implementation
+- [x] 1E — Linux epoll implementation
 - [ ] 1F — Connection lifecycle
 - [ ] 1G — Multi-client smoke tests
 

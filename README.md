@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — macOS kqueue backend implemented and tested.**
+**Project status: Phase 1 in progress — macOS kqueue and Linux epoll backends validated.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -50,6 +50,8 @@ Implemented and validated:
 - Registration token and timeout contracts.
 - Test-double validation of event-poller behavior.
 - Native macOS kqueue implementation and integration tests.
+- Native Linux epoll implementation and integration tests.
+- Ubuntu Debug and Release validation through GitHub Actions.
 - Kernel-backed read/write readiness and hangup detection.
 - Formatting and compiler-warning configuration.
 
@@ -173,14 +175,17 @@ clang-format --dry-run --Werror \
   tests/unit/event_poller_test.cpp \
   include/redisdb/net/KqueuePoller.hpp \
   src/net/KqueuePoller.cpp \
-  tests/integration/kqueue_poller_test.cpp
+  tests/integration/kqueue_poller_test.cpp \
+  include/redisdb/net/EpollPoller.hpp \
+  src/net/EpollPoller.cpp \
+  tests/integration/epoll_poller_test.cpp
 ```
 
 Current tests cover version reporting, POSIX descriptor
-ownership, loopback TCP listener behavior, portable
-event-poller contracts and native macOS kqueue readiness.
+ownership, loopback TCP behavior, portable event-poller
+contracts and native kqueue/epoll readiness.
 
-Future tests will cover Linux epoll readiness, event-loop
+Future tests will cover connection lifecycle, event-loop
 processing, protocol parsing, command behavior,
 persistence and recovery.
 
@@ -328,7 +333,9 @@ Phase 1C — Event-Loop Interface is complete.
 
 Phase 1D — macOS kqueue is complete.
 
-Phase 1E — Linux epoll is the next milestone.
+Phase 1E — Linux epoll is complete.
+
+Phase 1F — Connection Lifecycle is the next milestone.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
