@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Next milestone: Phase 2A — RESP2 Value Model (NOT STARTED).
+Next milestone: Phase 2A — RESP2 Value Model (IN PROGRESS).
 
 ### Acceptance Gate
 
@@ -153,7 +153,7 @@ simultaneous connections without resource leaks.
 
 # Phase 2 — RESP2 Protocol Engine
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
 
 - [ ] 2A — RESP value model
 - [ ] 2B — Response serializer
@@ -162,6 +162,46 @@ simultaneous connections without resource leaks.
 - [ ] 2E — Pipelining
 - [ ] 2F — Malformed-input and resource-limit handling
 - [ ] 2G — Parser fuzz-test foundation
+
+### Phase 2A Detailed Progress
+
+- 2A.0: COMPLETE — Clean Phase 1 baseline and
+  dedicated feature branch established.
+- 2A.1: COMPLETE — Owned RESP2 value representation
+  implemented and validated on macOS.
+- 2A.1b: COMPLETE — Nested binary deep-copy
+  regression added, tested, committed and pushed.
+- 2A.2: COMPLETE — Draft PR #4 created and
+  Linux Debug/Release validation passed.
+- 2A.3: IN PROGRESS — Documentation synchronization,
+  final review, merge and post-merge acceptance.
+
+Implementation commit:
+7981c8c428f64eba76158029d56e7aca81c6a38b.
+
+PR #4:
+https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/4
+
+Linux workflow 39297170492: SUCCESS.
+
+Both Linux Debug and Release discovered and passed
+all 11 CTest tests, including unit.resp_value.
+Existing TCP smoke, lifecycle and epoll regression
+steps also passed.
+
+RESP2 value categories:
+
+- Simple strings and error replies.
+- Signed 64-bit integers.
+- Binary-safe bulk strings.
+- Null bulk strings.
+- Recursive arrays.
+- Null arrays.
+
+Phase 2A remains IN PROGRESS until final PR
+acceptance, merge and post-merge validation.
+
+Phase 2B through 2G have NOT STARTED.
 
 ### Acceptance Gate
 
