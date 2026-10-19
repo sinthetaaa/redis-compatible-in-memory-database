@@ -39,6 +39,11 @@ if(APPLE)
         redisdb-core
         PRIVATE src/net/KqueuePoller.cpp
     )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(
+        redisdb-core
+        PRIVATE src/net/EpollPoller.cpp
+    )
 endif()
 
 target_compile_features(
@@ -187,6 +192,32 @@ if(BUILD_TESTING)
         set_tests_properties(
             integration.kqueue
             PROPERTIES TIMEOUT 15
+        )
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_package(Threads REQUIRED)
+
+        add_executable(
+            redisdb-epoll-tests
+            tests/integration/epoll_poller_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-epoll-tests
+            PRIVATE
+                redisdb-core
+                Threads::Threads
+        )
+
+        redisdb_enable_warnings(redisdb-epoll-tests)
+
+        add_test(
+            NAME integration.epoll
+            COMMAND redisdb-epoll-tests
+        )
+
+        set_tests_properties(
+            integration.epoll
+            PROPERTIES TIMEOUT 20
         )
     endif()
 endif()
