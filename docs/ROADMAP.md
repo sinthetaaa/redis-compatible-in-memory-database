@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phase 2A — RESP2 Value Model COMPLETE; Phase 2B is next.
+Phase 2A COMPLETE; Phase 2B Response Serializer IN PROGRESS.
 
 ### Acceptance Gate
 
@@ -213,11 +213,53 @@ Phase 2A: COMPLETE.
 The owned value model is validated on macOS and
 Linux in Debug and Release configurations.
 
-No RESP2 wire serializer or parser is implemented.
-The running server remains transport-smoke-only.
+At Phase 2A closure, neither serializer nor
+parser was implemented. The running server still
+remains transport-smoke-only.
 
-Phase 2B — Response Serializer: NEXT, NOT STARTED.
+Phase 2B — Response Serializer: IN PROGRESS.
 Phase 2C through 2G: NOT STARTED.
+
+### Phase 2B Detailed Progress
+
+- 2B.0: COMPLETE — Clean Phase 2A closure baseline
+  verified and dedicated serializer branch created.
+- 2B.1: COMPLETE — Two-pass bounded serializer
+  implemented and locally tested.
+- 2B.1b: COMPLETE — Boundary regressions added,
+  implementation committed and pushed.
+- 2B.2: COMPLETE — Draft PR #5 created; Linux
+  Debug and Release validation passed.
+- 2B.3: IN PROGRESS — Documentation synchronization,
+  final review, merge and post-merge acceptance.
+
+Implementation commit:
+7835524ca00acd02e9ec16f8bd297b59b750e2c9.
+
+PR #5:
+https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/5
+
+Initial Linux workflow 39311216460: SUCCESS.
+
+Both Linux Debug and Release passed 12/12 tests.
+The serializer unit test and existing networking
+regressions passed.
+
+Serializer implementation:
+
+- RESP2 framing for all seven value categories.
+- Binary-safe owned response bytes.
+- Decimal encoding with std::to_chars.
+- Recursive array encoding.
+- Two-pass measurement and writing.
+- Checked cumulative response-size accounting.
+- Output, array-element and nesting-depth limits.
+
+Phase 2B remains IN PROGRESS pending final PR
+acceptance, merge and post-merge Linux validation.
+
+Phase 2C through 2G have NOT STARTED.
+The server has no RESP2 network integration.
 
 ### Acceptance Gate
 
