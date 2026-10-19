@@ -459,7 +459,6 @@ Implemented and validated through Phase 1F:
 
 Remaining:
 
-- Phase 1F final acceptance and merge.
 - Phase 1G external multi-client smoke tests.
 
 ## Phase 2

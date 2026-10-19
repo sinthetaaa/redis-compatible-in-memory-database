@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — Connection lifecycle implemented and cross-platform validated; final Phase 1F acceptance pending.**
+**Project status: Phase 1 in progress — Phase 1F Connection Lifecycle complete and merged; Phase 1G Multi-Client Smoke Tests next.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -332,7 +332,10 @@ Phase 1D — macOS kqueue is complete.
 
 Phase 1E — Linux epoll is complete.
 
-Phase 1F — Connection Lifecycle is the next milestone.
+Phase 1F — Connection Lifecycle is complete.
+
+Phase 1G — Multi-Client Smoke Tests is next
+and has not yet started.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

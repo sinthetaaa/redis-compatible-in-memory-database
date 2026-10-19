@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1F-E.3 — Final acceptance and PR merge
+- Current subphase: 1G — Multi-client smoke tests (next; not started)
 - Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1F-E.2 — Documentation synchronization
-- Exact next task: Verify the documentation checkpoint and Linux CI, review PR #2, then merge only after final acceptance passes.
+- Last completed milestone: 1F-E.3 — Final acceptance and PR #2 merge
+- Exact next task: Plan Phase 1G, integrate continuous TCP serving into redisdb-server, and validate multiple simultaneous real clients.
 - Implementation maturity: Cross-platform networking library with connection ownership, dispatch, idle handling, backpressure and failure isolation
 - Working TCP database: NOT IMPLEMENTED
 
@@ -29,7 +29,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: phase1f/connection-lifecycle (draft PR #2)
+- Branch: main
 - Phase 0C commit: b2c668f180495dfc76bd47bf906ff34fe4e90b0b
 - Phase 0D commit: 409eff47c627eb4d3c54846e06826b6659760446
 - Phase 0D remote synchronization: PASS
@@ -43,14 +43,17 @@
 - Phase 1E merge commit: fb242b2f3d72d29b198cbc2356ccfd57319b607e.
 - Phase 1E Linux CI run: 39233458374 (Debug and Release passed).
 - Phase 1E pull request: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/1
-- Branch tracking: origin/phase1f/connection-lifecycle
+- Branch tracking: origin/main
 - Phase 1F-A/B: c8ec996 — Connection ownership and admission.
 - Phase 1F-C: 50ead92 — Readiness dispatch.
 - Phase 1F-D: 6881b04 — Lifecycle and backpressure.
 - Phase 1F-D: f5bdacc — Socket failure isolation.
 - Phase 1F-E.1: a01ae98 — Enhanced Linux CI.
 - Phase 1F-E.1b: 51a363b — CI test-selection correction.
-- Phase 1F PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/2.
+- Phase 1F PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/2 (MERGED).
+- Phase 1F implementation tip: 748bda315b1d97b0c6a7318e927fa630cc59ffbe.
+- Phase 1F merge commit: 290bc71035bbaa0e93a6c0d12a228f7eb9ff4427.
+- Phase 1F post-merge Linux CI: 39271745832 (Debug and Release passed).
 - Verified Linux CI run: 39256465515.
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -115,7 +118,7 @@
 - 1C: COMPLETE — Portable event-poller contract and test double validated.
 - 1D: COMPLETE — Native kqueue implementation tested on macOS.
 - 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
-- 1F: IN PROGRESS — A-D and E.1-E.2 complete; E.3 acceptance pending.
+- 1F: COMPLETE — A-E validated and merged through PR #2.
 - 1G: NOT STARTED — Multi-client smoke tests.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
@@ -481,7 +484,11 @@ Verified results:
 - Linux native epoll repetitions: PASS.
 - Linux test discovery: exactly two lifecycle tests selected.
 - GitHub Actions: 39256465515 SUCCESS.
-- Draft PR #2: final acceptance pending.
+- PR #2: MERGED on 2026-10-19.
+- Merge commit: 290bc71035bbaa0e93a6c0d12a228f7eb9ff4427.
+- Post-merge Linux CI: 39271745832 SUCCESS.
+- Phase 1F acceptance: COMPLETE.
+- Phase 1G: NOT STARTED.
 
 The networking library is implemented and tested.
 The executable does not yet continuously serve TCP
@@ -587,15 +594,21 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify the Phase 1F-E.2 documentation commit and push.
-2. Confirm Linux Debug and Release CI on the latest PR head.
-3. Update PR #2 with accurate implementation and validation results.
-4. Complete Phase 1F-E.3 final acceptance review.
-5. Merge PR #2 only after the acceptance gate passes.
-6. Synchronize local main and verify clean Git status.
-7. Begin Phase 1G on a new feature branch.
-8. Implement continuous TCP serving and multi-client smoke tests.
-9. Preserve the approved RESP2 and database roadmap.
+1. Commit and push the Phase 1F documentation closure.
+2. Verify main is clean and synchronized with origin/main.
+3. Confirm the post-closure Linux CI result.
+4. Create a new Phase 1G feature branch from main.
+5. Inspect ConnectionManager, EventPoller and server entry point.
+6. Design continuous TCP serving and graceful lifecycle behavior.
+7. Implement the minimum serving loop needed for multi-client tests.
+8. Add external real-TCP multi-client smoke tests.
+9. Validate Debug and Release builds on macOS and Linux.
+10. Update Phase 1G status, documentation and PR evidence.
+11. Merge Phase 1G only after its acceptance gate passes.
+12. Preserve the approved RESP2 and database roadmap.
+
+Do not claim the working TCP database or RESP2 command
+support before those capabilities have been implemented.
 
 ## 17. Continuation Instructions
 

@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Connection lifecycle implemented and cross-platform validated through Phase 1F-D; final Phase 1F acceptance pending
+**Architecture state:** Phase 1F Connection Lifecycle complete, merged and cross-platform validated; Phase 1G serving-loop integration pending
 
 This document describes the intended system.
 
@@ -229,7 +229,9 @@ Validated behavior:
 - Propagates unexpected socket errors as exceptions.
 - Cleans up listening and accepted descriptors via RAII.
 
-The listener is not yet integrated with a polling loop.
+The listener is integrated with EventPoller through
+ConnectionManager as of Phase 1F, although the
+executable's continuous serving loop remains pending.
 No command handling, RESP2 parsing or persistent data
 storage occurs in the server executable.
 

@@ -59,7 +59,7 @@ roadmap, including all 169 subphases.
 - [x] 1C — Event-loop interface
 - [x] 1D — macOS kqueue implementation
 - [x] 1E — Linux epoll implementation
-- [ ] 1F — Connection lifecycle (final acceptance pending)
+- [x] 1F — Connection lifecycle
 - [ ] 1G — Multi-client smoke tests
 
 ### Phase 1F Detailed Progress
@@ -70,11 +70,20 @@ roadmap, including all 169 subphases.
 - 1F-D: COMPLETE — Idle eviction, backpressure and error isolation.
 - 1F-E.1: COMPLETE — Enhanced Linux CI and test-selection correction.
 - 1F-E.2: COMPLETE — Documentation synchronized and validated.
-- 1F-E.3: NOT STARTED — Final acceptance audit and PR merge.
+- 1F-E.3: COMPLETE — Final acceptance passed and PR #2 merged.
 
-The networking library has passed macOS and Linux
-integration tests. Phase 1F remains unchecked until
-documentation and pull-request acceptance are complete.
+The networking library passed native macOS and Linux
+integration tests. Phase 1F was merged through PR #2
+on 2026-10-19.
+
+Merge commit:
+290bc71035bbaa0e93a6c0d12a228f7eb9ff4427
+
+Post-merge Linux Debug and Release CI:
+39271745832 — SUCCESS.
+
+Phase 1F is complete. Phase 1G has not started.
+Phase 1 overall remains IN PROGRESS.
 
 The redisdb-server executable remains a bootstrap CLI.
 Continuous serving and external multi-client smoke
