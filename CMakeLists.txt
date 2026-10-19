@@ -30,6 +30,7 @@ endfunction()
 add_library(
     redisdb-core STATIC
     src/server/Version.cpp
+    src/protocol/RespValue.cpp
     src/net/UniqueFd.cpp
     src/net/TcpListener.cpp
     src/net/Connection.cpp
@@ -111,6 +112,28 @@ if(BUILD_TESTING)
     add_test(
         NAME unit.version
         COMMAND redisdb-tests
+    )
+
+    add_executable(
+        redisdb-resp-value-tests
+        tests/unit/resp_value_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-resp-value-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-resp-value-tests)
+
+    add_test(
+        NAME unit.resp_value
+        COMMAND redisdb-resp-value-tests
+    )
+
+    set_tests_properties(
+        unit.resp_value
+        PROPERTIES TIMEOUT 10
     )
 
     add_test(
