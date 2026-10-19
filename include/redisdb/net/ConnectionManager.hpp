@@ -60,6 +60,8 @@ class ConnectionManager final {
         std::size_t duplicate_events = 0;
         std::size_t handler_failures = 0;
         std::size_t output_limit_closes = 0;
+        // Socket errors, excluding ordinary EOF.
+        std::size_t io_failures = 0;
     };
 
     // A transport callback, not a protocol parser.

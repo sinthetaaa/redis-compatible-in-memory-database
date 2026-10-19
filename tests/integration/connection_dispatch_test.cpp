@@ -828,6 +828,193 @@ void test_half_closed_client_drains_output() {
     receive_exact(client.get(), "REPLY");
 }
 
+void test_client_error_notification_isolated() {
+    NativePoller poller;
+    ConnectionManager manager(TcpListener::bind_loopback(0), poller);
+
+    UniqueFd first = connect_loopback(manager.listener_port());
+
+    check(manager.poll_once(1000ms).accepted == 1, "error test client not accepted");
+
+    send_exact(first.get(), "X");
+
+    const auto ready = poller.wait(1000ms);
+    RegistrationToken token = redisdb::net::InvalidToken;
+
+    for (const auto& event : ready) {
+        if (manager.find(event.token)) {
+            token = event.token;
+            break;
+        }
+    }
+
+    check(token != redisdb::net::InvalidToken, "error test connection token missing");
+
+    const auto failure = manager.dispatch_ready({{token, EventMask::Error}});
+
+    check(failure.closed == 1, "client error did not close connection");
+    check(failure.io_failures == 1, "client error was not counted");
+    check(manager.connection_count() == 0, "failed client remained registered");
+
+    manager.set_input_handler([](Connection& connection) {
+        connection.consume_input(connection.input().size());
+        connection.queue_output("OK");
+    });
+
+    UniqueFd second = connect_loopback(manager.listener_port());
+
+    check(manager.poll_once(1000ms).accepted == 1, "listener failed after client error");
+
+    send_exact(second.get(), "Y");
+
+    std::size_t sent = 0;
+    for (int i = 0; i < 10 && sent < 2; ++i) {
+        sent += manager.poll_once(1000ms).bytes_sent;
+    }
+
+    check(sent == 2, "healthy client response failed");
+    receive_exact(second.get(), "OK");
+}
+
+void test_listener_error_propagates() {
+    NativePoller poller;
+    ConnectionManager manager(TcpListener::bind_loopback(0), poller);
+
+    bool rejected = false;
+
+    try {
+        (void)manager.dispatch_ready({{manager.listener_token(), EventMask::Error}});
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+
+    check(rejected, "listener error was silently ignored");
+    check(manager.listener_registered(), "listener error unexpectedly removed registration");
+}
+
+void test_abrupt_client_reset() {
+    NativePoller poller;
+    ConnectionManager manager(TcpListener::bind_loopback(0), poller);
+
+    UniqueFd client = connect_loopback(manager.listener_port());
+
+    check(manager.poll_once(1000ms).accepted == 1, "reset test client not accepted");
+
+    linger reset_linger{};
+    reset_linger.l_onoff = 1;
+    reset_linger.l_linger = 0;
+
+    check(::setsockopt(client.get(), SOL_SOCKET, SO_LINGER, &reset_linger,
+                       static_cast<socklen_t>(sizeof(reset_linger))) == 0,
+          "failed to configure abrupt client reset");
+
+    client.reset();
+
+    for (int i = 0; i < 10 && manager.connection_count() != 0; ++i) {
+        (void)manager.poll_once(100ms);
+    }
+
+    check(manager.connection_count() == 0, "abruptly reset client remained registered");
+}
+
+void test_healthy_client_progress_under_pressure() {
+    NativePoller poller;
+
+    ConnectionManager::Limits limits;
+    limits.max_connections = 2;
+    limits.max_write_per_event = 2;
+    limits.connection.max_output_bytes = 64;
+
+    ConnectionManager manager(TcpListener::bind_loopback(0), poller, limits);
+
+    UniqueFd slow = connect_loopback(manager.listener_port());
+    UniqueFd fast = connect_loopback(manager.listener_port());
+
+    for (int i = 0; i < 5 && manager.connection_count() < 2; ++i) {
+        (void)manager.poll_once(1000ms);
+    }
+
+    check(manager.connection_count() == 2, "two-client fairness setup failed");
+
+    send_exact(slow.get(), "S");
+
+    const auto ready = poller.wait(1000ms);
+    RegistrationToken slow_token = redisdb::net::InvalidToken;
+
+    for (const auto& event : ready) {
+        if (manager.find(event.token)) {
+            slow_token = event.token;
+            break;
+        }
+    }
+
+    check(slow_token != redisdb::net::InvalidToken, "slow connection token missing");
+
+    const auto setup = manager.dispatch_ready(ready);
+    check(setup.bytes_received == 1, "slow connection setup read failed");
+
+    Connection* slow_connection = manager.find(slow_token);
+
+    check(slow_connection != nullptr, "slow connection lookup failed");
+
+    slow_connection->consume_input(1);
+    slow_connection->queue_output(std::string(60, 'S'));
+    manager.refresh_interest(slow_token);
+
+    check(manager.read_paused(slow_token), "slow connection did not pause reads");
+
+    bool fast_processed = false;
+    bool slow_read_while_paused = false;
+    RegistrationToken fast_token = redisdb::net::InvalidToken;
+
+    manager.set_input_handler([&](Connection& connection) {
+        const std::string payload(connection.input());
+        connection.consume_input(payload.size());
+
+        if (payload == "F") {
+            fast_processed = true;
+            fast_token = connection.token();
+            connection.queue_output("OK");
+        }
+
+        if (payload == "Q") {
+            slow_read_while_paused = true;
+        }
+    });
+
+    // Queue more slow-client input while its read
+    // interest is disabled.
+    send_exact(slow.get(), "Q");
+    send_exact(fast.get(), "F");
+
+    bool fast_response_drained = false;
+
+    for (int i = 0; i < 10; ++i) {
+        (void)manager.poll_once(1000ms);
+
+        if (fast_processed) {
+            const Connection* active = manager.find(fast_token);
+
+            if (active != nullptr && !active->wants_write()) {
+                fast_response_drained = true;
+                break;
+            }
+        }
+    }
+
+    check(fast_processed, "healthy client request was starved");
+
+    check(fast_response_drained, "healthy client response was starved");
+
+    check(!slow_read_while_paused, "paused slow connection was read");
+
+    check(manager.read_paused(slow_token), "slow connection resumed prematurely");
+
+    check(slow_connection->pending_output_bytes() > 32, "slow output drained beyond test pressure");
+
+    receive_exact(fast.get(), "OK");
+}
+
 } // namespace
 
 int main() {
@@ -847,6 +1034,10 @@ int main() {
         test_callback_runtime_failure_isolated();
         test_callback_output_limit_isolated();
         test_half_closed_client_drains_output();
+        test_client_error_notification_isolated();
+        test_listener_error_propagates();
+        test_abrupt_client_reset();
+        test_healthy_client_progress_under_pressure();
 
         std::cout << "Connection readiness dispatch tests passed.\n";
 

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <system_error>
 #include <unordered_map>
 #include <utility>
 
@@ -300,6 +301,11 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
 
     for (const ReadyEvent& event : combined) {
         if (is_listener_event(event.token)) {
+            if (contains_all(event.events, EventMask::Error) ||
+                contains_all(event.events, EventMask::Hangup)) {
+                throw std::runtime_error("listener reported error or hangup");
+            }
+
             if (contains_all(event.events, EventMask::Read)) {
                 const auto accepted = accept_ready(limits_.max_accept_per_call);
 
@@ -321,6 +327,7 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
                 ++stats.closed;
             }
 
+            ++stats.io_failures;
             continue;
         }
 
@@ -328,7 +335,18 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
                               contains_all(event.events, EventMask::Hangup);
 
         if (readable && !connection->received_eof() && !read_paused_.contains(event.token)) {
-            const auto received = connection->receive_once(limits_.max_read_per_event);
+            Connection::ReadResult received{};
+
+            try {
+                received = connection->receive_once(limits_.max_read_per_event);
+            } catch (const std::system_error&) {
+                if (close_connection(event.token)) {
+                    ++stats.closed;
+                }
+
+                ++stats.io_failures;
+                continue;
+            }
 
             stats.bytes_received += received.bytes_read;
 
@@ -368,7 +386,18 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
         }
 
         if (contains_all(event.events, EventMask::Write) && connection->wants_write()) {
-            const auto written = connection->flush_once(limits_.max_write_per_event);
+            Connection::WriteResult written{};
+
+            try {
+                written = connection->flush_once(limits_.max_write_per_event);
+            } catch (const std::runtime_error&) {
+                if (close_connection(event.token)) {
+                    ++stats.closed;
+                }
+
+                ++stats.io_failures;
+                continue;
+            }
 
             stats.bytes_sent += written.bytes_written;
 
