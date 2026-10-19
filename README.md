@@ -8,11 +8,11 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — Phase 1F Connection Lifecycle complete and merged; Phase 1G Multi-Client Smoke Tests next.**
+**Project status: Phase 1 in progress — Phase 1G TCP smoke serving implemented and under final acceptance in draft PR #3.**
 
-The current executable is a bootstrap CLI.
-It does not yet accept TCP connections or execute
-Redis commands.
+The executable now supports a continuously running,
+loopback-only TCP echo mode for transport testing.
+It does not parse RESP2 or execute Redis commands.
 
 ## Project Goals
 
@@ -62,11 +62,17 @@ Implemented and validated:
 - Per-connection callback and socket failure isolation.
 - Native macOS and Linux connection integration tests.
 - Kernel-backed read/write readiness and hangup detection.
+- Continuous native event-loop serving in explicit smoke mode.
+- Eight-client external TCP integration and binary-safe echo.
+- Connection churn, admission recovery and half-close tests.
+- Abrupt reset isolation during accepted-socket setup.
+- SIGINT/SIGTERM smoke-server shutdown tests.
+- Repeated macOS Debug and Release smoke validation.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
 
-- A continuously running TCP serving loop in redisdb-server.
+- A production Redis-compatible TCP command-serving mode.
 - Redis protocol processing.
 - Database command execution.
 - In-memory key/value storage.
@@ -101,6 +107,7 @@ For local macOS development:
 - Ninja.
 - clang-format.
 - Git.
+- Python 3 for the external-process CTest integration test.
 
 Docker and Redis command-line utilities become
 necessary for later integration and deployment stages.
@@ -150,7 +157,22 @@ Show the bootstrap usage:
 ./build/debug/redisdb-server --help
 ```
 
-The TCP database service has not yet been implemented.
+Run the transport-only TCP echo server:
+
+```bash
+./build/debug/redisdb-server --smoke-echo --port 0 --max-clients 8
+```
+
+The server prints `SMOKE_READY 127.0.0.1:<port>`.
+Port `0` requests an OS-assigned ephemeral port.
+The listener always binds to `127.0.0.1`.
+Stop the foreground process with Ctrl+C.
+
+`--smoke-echo` reflects received bytes unchanged.
+It is not a Redis protocol endpoint, and `redis-cli`
+cannot be used to validate Redis commands against it.
+The future production database server is not yet
+implemented.
 
 ## Test
 
@@ -182,9 +204,13 @@ Linux CI validates Debug and Release configurations,
 including repeated connection-manager, dispatch and
 native epoll integration tests.
 
-Future work includes the continuously running server
-entry point, external multi-client smoke tests, RESP2
-parsing, command execution, persistence and recovery.
+The CTest suite includes a real external
+server-process smoke test. Linux Debug and Release
+acceptance passed in GitHub Actions run 39288146570,
+including repeated smoke, lifecycle and epoll tests.
+
+Future work includes RESP2 parsing, command execution,
+persistence, recovery and the production serving path.
 
 ## Planned Architecture
 
@@ -334,8 +360,10 @@ Phase 1E — Linux epoll is complete.
 
 Phase 1F — Connection Lifecycle is complete.
 
-Phase 1G — Multi-Client Smoke Tests is next
-and has not yet started.
+Phase 1G — Multi-Client Smoke Tests is IN PROGRESS.
+Implementation and local robustness tests are complete.
+Linux acceptance has passed. Final PR review, merge
+and post-merge verification remain.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

@@ -68,6 +68,7 @@ redisdb_enable_warnings(redisdb-core)
 add_executable(
     redisdb-server
     src/main.cpp
+    src/server/SmokeServer.cpp
 )
 
 target_link_libraries(
@@ -78,6 +79,23 @@ target_link_libraries(
 redisdb_enable_warnings(redisdb-server)
 
 if(BUILD_TESTING)
+    if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+        add_test(
+            NAME integration.server_smoke
+            COMMAND
+                "${Python3_EXECUTABLE}"
+                "${PROJECT_SOURCE_DIR}/tests/integration/server_smoke_test.py"
+                "$<TARGET_FILE:redisdb-server>"
+        )
+
+        set_tests_properties(
+            integration.server_smoke
+            PROPERTIES TIMEOUT 60
+        )
+    endif()
+
     add_executable(
         redisdb-tests
         tests/unit/version_test.cpp

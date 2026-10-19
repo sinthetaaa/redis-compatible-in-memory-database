@@ -145,8 +145,20 @@ ConnectionManager::AcceptResult ConnectionManager::accept_ready(std::size_t budg
         // Accept returns a non-blocking owning UniqueFd.
         const RegistrationToken token = allocate_token();
 
-        auto connection =
-            std::make_unique<Connection>(std::move(*accepted), token, limits_.connection);
+        std::unique_ptr<Connection> connection;
+
+        try {
+            connection =
+                std::make_unique<Connection>(std::move(*accepted), token, limits_.connection);
+        } catch (const Connection::DisconnectedDuringSetup&) {
+            // The client reset before setup finished.
+            // RAII releases the accepted socket.
+            //
+            // Skip only this client, retain the
+            // bounded accept budget, and continue
+            // serving all healthy connections.
+            continue;
+        }
 
         const int fd = connection->fd();
 

@@ -82,12 +82,57 @@ Merge commit:
 Post-merge Linux Debug and Release CI:
 39271745832 — SUCCESS.
 
-Phase 1F is complete. Phase 1G has not started.
+Phase 1F is complete. Phase 1G is IN PROGRESS.
 Phase 1 overall remains IN PROGRESS.
 
-The redisdb-server executable remains a bootstrap CLI.
-Continuous serving and external multi-client smoke
-tests are not yet implemented.
+### Phase 1G Detailed Progress
+
+- 1G-A: COMPLETE — Clean baseline and feature branch.
+- 1G-B: COMPLETE — Explicit native TCP smoke serving loop.
+- 1G-C: COMPLETE — Permanent external multi-client CTest
+  integration and initial cross-platform CI.
+- 1G-D: COMPLETE — Reset isolation, connection churn,
+  deterministic fairness tests and Linux CI acceptance.
+- 1G-E: IN PROGRESS — Final documentation, PR review,
+  merge and post-merge acceptance.
+
+Implementation commits:
+
+- 4b94facef34a6760a17f71efe18e384c68593ef4 —
+  smoke server and permanent multi-client integration.
+- f7ed0d5564e411f6598015748a9256f6c85d6745 —
+  reset hardening, churn tests and fairness-test corrections.
+
+PR #3 remains OPEN and DRAFT.
+
+macOS Debug and Release: 10/10 tests passed.
+Dispatch repetitions: 100/100 in both configurations.
+Smoke repetitions: 10/10 in both configurations.
+Repeated full Release suites: 5/5 passed.
+
+Linux workflow 39283579738 failed because the new
+CI smoke-test step contained incorrect Bash line
+continuations. The full Linux test suites passed.
+
+Commit 3db387d corrected the workflow syntax.
+
+Linux workflow 39288146570: SUCCESS.
+
+Verified in both Linux Debug and Release:
+
+- Full CTest suite: 10/10 PASS.
+- TCP smoke repetitions: 10/10 PASS.
+- Connection manager repetitions: 20/20 PASS.
+- Connection dispatch repetitions: 20/20 PASS.
+- Native epoll repetitions: 15/15 PASS.
+- Executable version check: PASS.
+
+PR #3 review, merge and post-merge verification remain.
+
+The executable has a loopback-only transport echo mode.
+It does not implement RESP2 or Redis database commands.
+Phase 1G is not complete until the acceptance gate,
+documentation commit, and PR merge have passed.
 
 ### Acceptance Gate
 

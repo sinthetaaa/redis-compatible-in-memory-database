@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace redisdb::net {
 
@@ -21,6 +22,16 @@ namespace redisdb::net {
 // movable so its registration identity stays stable.
 class Connection {
   public:
+    // An accepted peer disappeared while its socket
+    // was being configured. The manager may discard
+    // this client without stopping other connections.
+    class DisconnectedDuringSetup final : public std::system_error {
+      public:
+        explicit DisconnectedDuringSetup(int error)
+            : std::system_error(error, std::generic_category(),
+                                "accepted peer disconnected during SO_NOSIGPIPE setup") {}
+    };
+
     struct Limits {
         std::size_t max_input_bytes = 64 * 1024;
         std::size_t max_output_bytes = 64 * 1024;
