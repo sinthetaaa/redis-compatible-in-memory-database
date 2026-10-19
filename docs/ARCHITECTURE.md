@@ -6,15 +6,15 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Approved design; Phase 1A–1C networking foundations implemented
+**Architecture state:** Approved design; networking foundations through Phase 1D implemented
 
 This document describes the intended system.
 
 The build foundation, descriptor-ownership wrapper,
-loopback TCP listener and event-poller interface are
-implemented. Native kernel pollers, the serving event
-loop, protocol engine and database execution path
-have not yet been implemented.
+loopback TCP listener, portable event-poller interface
+and native macOS kqueue backend are implemented.
+Linux epoll, the serving loop, protocol engine and
+database execution path remain unimplemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -308,10 +308,69 @@ The fake implementation does not observe actual
 kernel readiness, block for real elapsed time,
 or establish kqueue/epoll compatibility.
 
-The native macOS backend is Phase 1D.
-The Linux backend is Phase 1E.
+The native macOS backend was implemented in Phase 1D.
+The Linux backend remains Phase 1E.
 The running server loop and client lifecycle
 remain future work.
+
+## Implemented Kernel Poller — Phase 1D
+
+`redisdb::net::KqueuePoller` implements the portable
+`EventPoller` interface on macOS.
+
+Implemented files:
+
+- `include/redisdb/net/KqueuePoller.hpp`
+- `src/net/KqueuePoller.cpp`
+- `tests/integration/kqueue_poller_test.cpp`
+
+CMake includes the backend and native tests only when
+`APPLE` is true.
+
+The poller owns its `kqueue()` descriptor through
+`UniqueFd`, with close-on-exec enabled.
+
+Registered socket descriptors remain caller-owned.
+
+The implementation uses level-triggered `EVFILT_READ`
+and `EVFILT_WRITE` filters with explicit enable and
+disable behavior.
+
+Registration and modification use `EV_RECEIPT` to
+inspect kernel registration results.
+
+The backend retains a mapping from file descriptors
+to interest masks and nonzero 64-bit tokens.
+
+Tokens travel through the opaque `kevent.udata` field.
+The field is treated as an identity value and is
+never dereferenced.
+
+On `wait()`, the backend converts native filters
+and flags into `ReadyEvent` values, including
+read/write readiness and EOF/error indications.
+
+Supported timeouts are immediate, positive finite,
+and indefinite, following the EventPoller contract.
+Interrupted waits are retried with remaining time
+accounted for on finite waits.
+
+Registration removal is idempotent at the API level.
+A poller does not close the registered socket.
+
+A failed registration attempts filter cleanup.
+A failed interest modification attempts rollback.
+If rollback cannot restore a reliable kernel state,
+the poller rejects further operations.
+
+Phase 1D tests passed on macOS in both Debug and
+Release configurations, including real Unix socket
+and TCP loopback readiness.
+
+The tests do not cover every injected syscall failure
+or guarantee future connection-manager correctness.
+
+The Linux epoll backend is not yet implemented.
 
 ## 4.3 Connection Ownership
 

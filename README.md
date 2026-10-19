@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — RAII, TCP listener and event-poller interface implemented.**
+**Project status: Phase 1 in progress — macOS kqueue backend implemented and tested.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -49,6 +49,8 @@ Implemented and validated:
 - Portable EventPoller interface and event masks.
 - Registration token and timeout contracts.
 - Test-double validation of event-poller behavior.
+- Native macOS kqueue implementation and integration tests.
+- Kernel-backed read/write readiness and hangup detection.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
@@ -168,16 +170,19 @@ clang-format --dry-run --Werror \
   src/net/TcpListener.cpp \
   tests/integration/tcp_listener_test.cpp \
   include/redisdb/net/EventPoller.hpp \
-  tests/unit/event_poller_test.cpp
+  tests/unit/event_poller_test.cpp \
+  include/redisdb/net/KqueuePoller.hpp \
+  src/net/KqueuePoller.cpp \
+  tests/integration/kqueue_poller_test.cpp
 ```
 
 Current tests cover version reporting, POSIX descriptor
-ownership, loopback TCP listener behavior, and the
-platform-neutral event-poller contract using a fake poller.
+ownership, loopback TCP listener behavior, portable
+event-poller contracts and native macOS kqueue readiness.
 
-Future tests will cover native kqueue/epoll readiness,
-event-loop processing, protocol parsing, command
-behavior, persistence and recovery.
+Future tests will cover Linux epoll readiness, event-loop
+processing, protocol parsing, command behavior,
+persistence and recovery.
 
 ## Planned Architecture
 
@@ -321,7 +326,9 @@ Phase 1B — TCP Listener is complete.
 
 Phase 1C — Event-Loop Interface is complete.
 
-Phase 1D — macOS kqueue is the next milestone.
+Phase 1D — macOS kqueue is complete.
+
+Phase 1E — Linux epoll is the next milestone.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

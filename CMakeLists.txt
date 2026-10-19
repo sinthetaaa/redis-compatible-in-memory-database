@@ -34,6 +34,13 @@ add_library(
     src/net/TcpListener.cpp
 )
 
+if(APPLE)
+    target_sources(
+        redisdb-core
+        PRIVATE src/net/KqueuePoller.cpp
+    )
+endif()
+
 target_compile_features(
     redisdb-core PUBLIC cxx_std_20
 )
@@ -158,4 +165,28 @@ if(BUILD_TESTING)
         unit.event_poller
         PROPERTIES TIMEOUT 10
     )
+
+    if(APPLE)
+        add_executable(
+            redisdb-kqueue-tests
+            tests/integration/kqueue_poller_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-kqueue-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(redisdb-kqueue-tests)
+
+        add_test(
+            NAME integration.kqueue
+            COMMAND redisdb-kqueue-tests
+        )
+
+        set_tests_properties(
+            integration.kqueue
+            PROPERTIES TIMEOUT 15
+        )
+    endif()
 endif()

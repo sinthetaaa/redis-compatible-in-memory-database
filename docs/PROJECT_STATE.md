@@ -4,11 +4,11 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1D — macOS kqueue Implementation (next)
+- Current subphase: 1E — Linux epoll Implementation (next)
 - Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1C — Event-Loop Interface
-- Exact next task: Begin Phase 1D — implement the native macOS kqueue poller against the Phase 1C EventPoller contract, with real readiness and lifecycle tests.
-- Implementation maturity: Build foundation, POSIX descriptor RAII, TCP listener and portable event-poller interface
+- Last completed milestone: 1D — macOS kqueue Implementation
+- Exact next task: Begin Phase 1E — implement the Linux epoll backend against the EventPoller contract and validate native Linux readiness, registration and lifecycle behavior.
+- Implementation maturity: Build foundation, descriptor RAII, TCP listener, portable poller interface and native macOS kqueue backend
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -37,7 +37,8 @@
 - Phase 0E commit: 0cc4594d692f10f9a70ed6c9ae6107b0610a624f
 - Phase 1A commit: 1981e8b806944f19783f1de30c581eae1b41871b
 - Phase 1B commit: dda6c4f562cb304c2986257890a05e1dba42b8f2
-- Phase 1C commit: This revision; verify exact SHA from Git after push.
+- Phase 1C commit: d7dffafc6f0474ee8a4950caf16d47418f39e86e
+- Phase 1D commit: This revision; verify exact SHA from Git after push.
 - Branch tracking: origin/main
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -100,7 +101,7 @@
 - 1A: COMPLETE — Move-only POSIX descriptor ownership validated.
 - 1B: COMPLETE — Non-blocking loopback TCP listener validated.
 - 1C: COMPLETE — Portable event-poller contract and test double validated.
-- 1D: NOT STARTED — macOS kqueue implementation.
+- 1D: COMPLETE — Native kqueue implementation tested on macOS.
 - 1E: NOT STARTED — Linux epoll implementation.
 - 1F: NOT STARTED — Connection lifecycle.
 - 1G: NOT STARTED — Multi-client smoke tests.
@@ -138,11 +139,18 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Test-double registration and event-delivery tests.
 - Simulated stale-event filtering tests.
 - Dedicated redisdb-poller-tests executable.
+- Native macOS KqueuePoller implementation.
+- RAII-owned kqueue kernel descriptor.
+- Level-triggered read/write event registration.
+- Native event-token delivery and filter modification.
+- Zero, finite and infinite wait support.
+- Socket hangup and real TCP readiness testing.
+- Dedicated redisdb-kqueue-tests executable.
 
 ### Not Yet Implemented
 
 - Event-loop-driven TCP serving and managed client connection lifecycle.
-- Native kqueue and epoll poller implementations.
+- Native Linux epoll poller implementation.
 - Concurrent client processing through the event loop.
 - RESP2 parser and serializer.
 - Command execution.
@@ -219,6 +227,17 @@ No durability or crash-recovery guarantees exist yet.
 - CMakeLists.txt (modified)
 - include/redisdb/net/EventPoller.hpp (created)
 - tests/unit/event_poller_test.cpp (created)
+- README.md (updated)
+- docs/ROADMAP.md (updated)
+- docs/PROJECT_STATE.md (updated)
+- docs/ARCHITECTURE.md (updated)
+
+### Phase 1D
+
+- CMakeLists.txt (modified)
+- include/redisdb/net/KqueuePoller.hpp (created)
+- src/net/KqueuePoller.cpp (created)
+- tests/integration/kqueue_poller_test.cpp (created)
 - README.md (updated)
 - docs/ROADMAP.md (updated)
 - docs/PROJECT_STATE.md (updated)
@@ -340,6 +359,36 @@ lifetimes remains a caller responsibility.
 Native kqueue/epoll, running event loop, and
 connection dispatch are not yet implemented.
 
+### Phase 1D — 2026-10-19
+
+- Native macOS kqueue source compilation: PASS
+- Apple Clang C++20 Debug build: PASS
+- Debug automated tests: 6/6 PASS
+- Apple Clang C++20 Release build: PASS
+- Release automated tests: 6/6 PASS
+- Direct native kqueue test: PASS
+- Repeated native kqueue integration test: 15/15 PASS
+- Kernel queue creation and descriptor cleanup: PASS
+- FD_CLOEXEC verification: PASS
+- Real socket read readiness: PASS
+- Real socket write readiness: PASS
+- Read/write filter modification: PASS
+- Multiple registration token delivery: PASS
+- Duplicate registration and invalid argument checks: PASS
+- Registration removal and re-registration: PASS
+- Finite timeout behavior: PASS
+- Infinite wait awakened by socket data: PASS
+- Peer hangup detection: PASS
+- Native TCP listener readiness: PASS
+- Poller does not own registered sockets: PASS
+- Source formatting: PASS
+- CMake integration and exact staged file set: PASS
+
+Scope: Native macOS kqueue component validation.
+The tests exercise real kernel readiness notifications.
+They do not establish Linux epoll behavior, complete
+error-injection coverage, or a running database server.
+
 ## 11. Benchmarks
 
 NOT STARTED.
@@ -440,18 +489,18 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify Phase 1C commit and remote synchronization.
-2. Begin Phase 1D — macOS kqueue implementation.
-3. Review EventPoller.hpp and TcpListener.hpp.
-4. Design RAII ownership of the kqueue descriptor.
-5. Implement add/modify/remove registration operations.
-6. Preserve unique registration tokens in readiness events.
-7. Implement finite, zero and infinite wait semantics.
-8. Handle EOF, error, EINTR and descriptor removal.
-9. Test with real socketpair and loopback TCP sockets.
-10. Validate Debug and Release builds and regressions.
-11. Update documentation, commit and push Phase 1D.
-12. Continue to Linux epoll in Phase 1E.
+1. Verify Phase 1D commit and remote synchronization.
+2. Begin Phase 1E — Linux epoll Implementation.
+3. Review EventPoller.hpp and KqueuePoller behavior.
+4. Implement Linux-only EpollPoller sources.
+5. Preserve registration identity with 64-bit tokens.
+6. Implement add/modify/remove through epoll_ctl.
+7. Implement epoll_wait and timeout semantics.
+8. Handle readable, writable, error and hangup events.
+9. Test FD ownership, removal and stale-event safety.
+10. Validate with actual Linux builds and socket tests.
+11. Update documentation, commit and push Phase 1E.
+12. Continue to Phase 1F — Connection Lifecycle.
 
 ## 17. Continuation Instructions
 
