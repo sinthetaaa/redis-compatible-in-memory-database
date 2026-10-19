@@ -32,6 +32,7 @@ add_library(
     src/server/Version.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
+    src/protocol/RespParser.cpp
     src/net/UniqueFd.cpp
     src/net/TcpListener.cpp
     src/net/Connection.cpp
@@ -156,6 +157,28 @@ if(BUILD_TESTING)
 
     set_tests_properties(
         unit.resp_serializer
+        PROPERTIES TIMEOUT 10
+    )
+
+    add_executable(
+        redisdb-resp-parser-tests
+        tests/unit/resp_parser_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-resp-parser-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-resp-parser-tests)
+
+    add_test(
+        NAME unit.resp_parser
+        COMMAND redisdb-resp-parser-tests
+    )
+
+    set_tests_properties(
+        unit.resp_parser
         PROPERTIES TIMEOUT 10
     )
 
