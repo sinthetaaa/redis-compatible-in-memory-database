@@ -88,7 +88,7 @@ Do not claim multithreaded command execution.
 ## ADR-003 — Platform-Specific Event Multiplexing
 
 **Status:** Accepted
-**Implementation:** kqueue, epoll and connection dispatch validated through Phase 1F
+**Implementation:** Native kqueue/epoll, connection dispatch and Phase 1G smoke-serving integration implemented
 
 ### Decision
 
@@ -114,9 +114,10 @@ entire request can be read or response can be written.
 Handle EAGAIN, EINTR, EOF, errors, socket lifetimes
 and registration changes correctly.
 
-Readiness and registration semantics have been
-implemented and integration-tested through Phase 1F.
-Phase 1G still requires external serving smoke tests.
+Readiness and registration semantics were validated
+through Phase 1F. Phase 1G adds a continuous executable
+smoke loop and external multi-client integration tests.
+Final Phase 1G acceptance is still pending.
 
 ---
 
@@ -442,6 +443,43 @@ Any paid infrastructure requires approval.
 
 ---
 
+## ADR-013 — Transport-Only Smoke Serving Mode
+
+**Status:** Accepted
+**Implementation:** Phase 1G implementation complete;
+final acceptance pending
+
+### Decision
+
+Expose an explicit `--smoke-echo` executable mode to
+exercise the networking stack before RESP2 is built.
+
+Bind only to loopback. Support ephemeral test ports,
+bounded admission and a single native polling thread.
+
+Echo arbitrary input bytes without interpreting them
+as Redis commands or protocol frames.
+
+### Rationale
+
+External-process tests must exercise the real serving
+loop, socket ownership, failure isolation and shutdown
+behavior without inventing premature Redis compatibility.
+
+### Consequences
+
+- Keep smoke mode explicitly labeled as a test facility.
+- Do not claim `redis-cli` compatibility.
+- Preserve platform-specific kqueue/epoll validation.
+- Test abrupt disconnects and accepted-socket setup races.
+- Keep the production protocol pathway for later phases.
+- Do not weaken connection lifecycle failure handling.
+
+This decision does not replace the Phase 2 RESP2 design
+or the Phase 3 command-dispatch architecture.
+
+---
+
 # Outstanding Implementation Decisions
 
 These questions are intentionally deferred to their
@@ -457,9 +495,9 @@ Implemented and validated through Phase 1F:
 - Registration-token-safe connection lifecycle.
 - Bounded I/O, idle handling and backpressure.
 
-Remaining:
-
-- Phase 1G external multi-client smoke tests.
+Phase 1G implemented the external transport smoke
+tests and serving loop. Remaining work is CI acceptance,
+documentation verification and PR #3 merge.
 
 ## Phase 2
 

@@ -4,11 +4,11 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1G — Multi-client smoke tests (next; not started)
-- Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1F-E.3 — Final acceptance and PR #2 merge
-- Exact next task: Plan Phase 1G, integrate continuous TCP serving into redisdb-server, and validate multiple simultaneous real clients.
-- Implementation maturity: Cross-platform networking library with connection ownership, dispatch, idle handling, backpressure and failure isolation
+- Current subphase: 1G-E — Documentation and acceptance review
+- Status: PHASE 1 IN PROGRESS; 1G IN PROGRESS
+- Last committed milestone: 1G-D.3 — Reset hardening and fairness-test stabilization (f7ed0d5)
+- Exact next task: Verify Linux workflow 39283579738, complete Phase 1G documentation, and close PR #3 only after acceptance passes.
+- Implementation maturity: Cross-platform networking library and continuously running transport-only TCP smoke server with multi-client process integration tests
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -55,6 +55,13 @@
 - Phase 1F merge commit: 290bc71035bbaa0e93a6c0d12a228f7eb9ff4427.
 - Phase 1F post-merge Linux CI: 39271745832 (Debug and Release passed).
 - Verified Linux CI run: 39256465515.
+- Phase 1G branch: phase1g/multi-client-smoke.
+- Phase 1G implementation: 4b94facef34a6760a17f71efe18e384c68593ef4.
+- Phase 1G hardening: f7ed0d5564e411f6598015748a9256f6c85d6745.
+- Phase 1G PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/3 (OPEN, DRAFT).
+- Phase 1G Linux workflow: 39283579738 (acceptance result not yet verified).
+- Current development branch: phase1g/multi-client-smoke.
+- Target base: main at 7977ca101edf409c7b77c28a405edf74d5805b80.
 - Current HEAD and working-tree state must always be checked directly through Git.
 
 ## 4. Local Environment
@@ -119,7 +126,7 @@
 - 1D: COMPLETE — Native kqueue implementation tested on macOS.
 - 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
 - 1F: COMPLETE — A-E validated and merged through PR #2.
-- 1G: NOT STARTED — Multi-client smoke tests.
+- 1G: IN PROGRESS — Smoke serving and regression tests implemented; final acceptance pending.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
@@ -179,12 +186,18 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Half-close output draining and connection cleanup.
 - Callback and unexpected socket failure isolation.
 - Native macOS and Linux connection integration tests.
+- Explicit --smoke-echo executable mode.
+- Continuous native event-loop serving on loopback.
+- Configurable smoke TCP port and maximum clients.
+- Binary-safe echo callback, without RESP2 parsing.
+- External-process Python integration registered with CTest.
+- Multi-client, churn, admission and half-close tests.
+- Accept-time reset handling with client isolation.
+- SIGINT/SIGTERM shutdown in smoke mode.
 
 ### Not Yet Implemented
 
-- Continuous TCP serving in redisdb-server; library-level connection management is implemented.
-- Continuous executable event loop; native poller and ConnectionManager integration is tested.
-- External multi-client serving smoke tests.
+- Production TCP serving with RESP2 command execution.
 - RESP2 parser and serializer.
 - Command execution.
 - In-memory key-value database.
@@ -203,8 +216,14 @@ Currently available executable options:
 
 - --version
 - --help
+- --smoke-echo
+- --port PORT (smoke mode)
+- --max-clients COUNT (smoke mode)
 
-These are bootstrap CLI options, not RESP commands.
+The smoke listener binds to 127.0.0.1.
+Port 0 selects an ephemeral listener port.
+Smoke mode echoes raw bytes and is not RESP2.
+No database commands are supported.
 
 ## 8. Persistence Guarantees
 
@@ -488,11 +507,47 @@ Verified results:
 - Merge commit: 290bc71035bbaa0e93a6c0d12a228f7eb9ff4427.
 - Post-merge Linux CI: 39271745832 SUCCESS.
 - Phase 1F acceptance: COMPLETE.
-- Phase 1G: NOT STARTED.
+- Phase 1G: IN PROGRESS.
 
 The networking library is implemented and tested.
-The executable does not yet continuously serve TCP
-clients or implement Redis commands.
+The executable continuously serves multiple clients
+only in explicit transport smoke mode.
+Redis commands remain unimplemented.
+
+### Phase 1G — 2026-10-19
+
+Feature branch: `phase1g/multi-client-smoke`.
+PR #3: OPEN, DRAFT.
+
+Committed checkpoints:
+
+- 1G-C: 4b94fac — Native smoke serving and external TCP tests.
+- 1G-D: f7ed0d5 — Accept-time reset isolation, additional
+  process tests and deterministic fairness-test setup.
+
+Verified macOS results:
+
+- Debug full CTest suite: 10/10 PASS.
+- Release full CTest suite: 10/10 PASS.
+- Dispatch integration: 100/100 repetitions per configuration.
+- External smoke: 10/10 repetitions per configuration.
+- Full Release suite: five consecutive successful runs.
+- C++ formatting: PASS.
+- Local/remote feature-branch HEAD: synchronized.
+- Working tree after implementation push: CLEAN.
+
+The abrupt-reset test exposed a macOS accepted-socket
+initialization failure. A peer-specific exception is now
+handled during admission without terminating the server.
+The existing fairness test was updated to wait for actual
+kernel listener and healthy-client readiness.
+
+Linux workflow: 39283579738.
+Linux Debug/Release acceptance: PENDING VERIFICATION.
+
+Phase 1G remains IN PROGRESS. PR #3 is not merged.
+No RESP2, database commands, storage or persistence
+have been implemented.
 
 ## 11. Benchmarks
 
@@ -594,21 +649,21 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Commit and push the Phase 1F documentation closure.
-2. Verify main is clean and synchronized with origin/main.
-3. Confirm the post-closure Linux CI result.
-4. Create a new Phase 1G feature branch from main.
-5. Inspect ConnectionManager, EventPoller and server entry point.
-6. Design continuous TCP serving and graceful lifecycle behavior.
-7. Implement the minimum serving loop needed for multi-client tests.
-8. Add external real-TCP multi-client smoke tests.
-9. Validate Debug and Release builds on macOS and Linux.
-10. Update Phase 1G status, documentation and PR evidence.
-11. Merge Phase 1G only after its acceptance gate passes.
-12. Preserve the approved RESP2 and database roadmap.
+1. Verify Linux workflow 39283579738 for commit f7ed0d5.
+2. Confirm Linux Debug and Release both discover 10 tests.
+3. Confirm external smoke is repeated 10 times in each.
+4. Confirm connection lifecycle and epoll regressions pass.
+5. Resolve any CI failure before declaring acceptance.
+6. Review and commit Phase 1G documentation updates.
+7. Push and verify feature-branch HEAD synchronization.
+8. Verify the final Linux CI run for the documentation commit.
+9. Review PR #3 and its exact changes against main.
+10. Merge PR #3 only after all Phase 1G gates pass.
+11. Confirm merged main, post-merge CI and clean worktree.
+12. Close Phase 1 and identify Phase 2A as next.
 
-Do not claim the working TCP database or RESP2 command
-support before those capabilities have been implemented.
+The smoke server is not a Redis-compatible database.
+Do not advertise RESP2 or Redis command support yet.
 
 ## 17. Continuation Instructions
 

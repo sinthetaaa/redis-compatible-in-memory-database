@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phase 1F Connection Lifecycle complete, merged and cross-platform validated; Phase 1G serving-loop integration pending
+**Architecture state:** Phase 1G transport-only TCP serving implemented; acceptance and PR #3 merge pending
 
 This document describes the intended system.
 
@@ -18,8 +18,9 @@ The networking library provides bounded nonblocking I/O,
 readiness dispatch, admission control, idle eviction,
 backpressure and per-client failure isolation.
 
-The executable serving loop, RESP2 protocol engine
-and database execution path remain unimplemented.
+The executable has a continuous transport-only TCP
+smoke loop. RESP2 protocol processing and database
+execution remain unimplemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -230,10 +231,10 @@ Validated behavior:
 - Cleans up listening and accepted descriptors via RAII.
 
 The listener is integrated with EventPoller through
-ConnectionManager as of Phase 1F, although the
-executable's continuous serving loop remains pending.
+ConnectionManager as of Phase 1F. Phase 1G adds
+the executable's continuous, test-only TCP serving loop.
 No command handling, RESP2 parsing or persistent data
-storage occurs in the server executable.
+storage occurs in the executable.
 
 ## 4.1 TCP Listener
 
@@ -319,8 +320,9 @@ The macOS kqueue backend was completed in Phase 1D,
 the Linux epoll backend in Phase 1E, and connection
 lifecycle management through Phase 1F.
 
-The continuously running executable server loop
-remains future work.
+The continuous transport-only executable loop was
+added in Phase 1G. Production command serving remains
+future work.
 
 ## Implemented Kernel Poller — Phase 1D
 
@@ -497,9 +499,55 @@ Linux epoll integration tests.
 The input handler is transport-level, not a Redis
 protocol parser or command dispatcher.
 
-The redisdb-server executable remains a bootstrap CLI.
-Continuous serving and external multi-client smoke tests
-are subsequent networking work.
+Phase 1G added the executable's native TCP smoke
+serving loop and real external-process multi-client
+integration testing. This is not a Redis protocol
+implementation.
+
+## Implemented TCP Smoke Runner — Phase 1G
+
+Files:
+
+- `include/redisdb/server/SmokeServer.hpp`
+- `src/server/SmokeServer.cpp`
+- `src/main.cpp`
+- `tests/integration/server_smoke_test.py`
+
+`redisdb-server --smoke-echo` starts a loopback-only
+TCP server using the native kqueue/epoll backend,
+`TcpListener` and `ConnectionManager`.
+
+The smoke callback consumes incoming bytes and queues
+the exact same bytes for return. No RESP2 framing,
+command dispatch or database execution takes place.
+
+Options:
+
+- `--port PORT`: 6380 by default; 0 selects an ephemeral port.
+- `--max-clients COUNT`: 1024 by default.
+
+The server emits `SMOKE_READY` after initialization
+and `SMOKE_STOPPED` after its event loop exits.
+SIGINT and SIGTERM request controlled loop termination.
+
+Each poll is bounded to 100 milliseconds so shutdown
+does not require an indefinitely interrupted native wait.
+
+A peer reset during macOS accepted-socket setup can
+cause `SO_NOSIGPIPE` configuration to fail. A typed
+peer-disconnection exception allows the manager to
+discard that accepted socket while preserving other
+connections. Unrelated setup errors continue to
+propagate.
+
+Automated external-process tests exercise concurrent
+clients, binary payloads, half-close, admission limits,
+listener recovery, connection churn, abrupt resets and
+shutdown signals.
+
+The test runner does not establish Redis compatibility.
+Broader resource and shutdown guarantees remain for
+later dedicated hardening phases.
 
 # 5. RESP2 Protocol Subsystem
 
