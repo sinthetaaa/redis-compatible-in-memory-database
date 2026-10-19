@@ -570,7 +570,7 @@ Supported RESP2 value categories:
 - Null bulk strings.
 - Null arrays.
 
-## Phase 2A Value Model — Implemented, Acceptance Pending
+## Phase 2A Value Model — COMPLETE
 
 Files:
 
@@ -596,6 +596,13 @@ and binary-buffer ownership are covered by unit tests.
 
 Linux Debug and Release validation passed in
 workflow 39297170492 for commit 7981c8c.
+
+Final PR-head CI: 39298460768 SUCCESS.
+Merge commit: 861f0491fdb8af490ed6da820a8024541f26f9fa.
+Post-merge CI: 39304412144 SUCCESS.
+
+Phase 2A is complete. Phase 2B response serialization
+has not started.
 
 This value model does not implement RESP2 wire
 serialization, incremental parsing or command

@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Next milestone: Phase 2A — RESP2 Value Model (IN PROGRESS).
+Phase 2A — RESP2 Value Model COMPLETE; Phase 2B is next.
 
 ### Acceptance Gate
 
@@ -155,7 +155,7 @@ simultaneous connections without resource leaks.
 
 **Status:** IN PROGRESS
 
-- [ ] 2A — RESP value model
+- [x] 2A — RESP value model
 - [ ] 2B — Response serializer
 - [ ] 2C — Incremental parser
 - [ ] 2D — Fragmented request handling
@@ -173,8 +173,11 @@ simultaneous connections without resource leaks.
   regression added, tested, committed and pushed.
 - 2A.2: COMPLETE — Draft PR #4 created and
   Linux Debug/Release validation passed.
-- 2A.3: IN PROGRESS — Documentation synchronization,
-  final review, merge and post-merge acceptance.
+- 2A.3: COMPLETE — Documentation synchronized,
+  final PR-head Linux validation passed.
+- 2A.4: COMPLETE — PR #4 merged into main and
+  macOS/Linux post-merge acceptance passed.
+- 2A.5: COMPLETE — Formal milestone closure recorded.
 
 Implementation commit:
 7981c8c428f64eba76158029d56e7aca81c6a38b.
@@ -182,7 +185,14 @@ Implementation commit:
 PR #4:
 https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/4
 
-Linux workflow 39297170492: SUCCESS.
+Initial Linux workflow 39297170492: SUCCESS.
+Final PR-head workflow 39298460768: SUCCESS.
+
+PR #4: MERGED.
+Merge commit:
+861f0491fdb8af490ed6da820a8024541f26f9fa.
+
+Post-merge Linux workflow 39304412144: SUCCESS.
 
 Both Linux Debug and Release discovered and passed
 all 11 CTest tests, including unit.resp_value.
@@ -198,10 +208,16 @@ RESP2 value categories:
 - Recursive arrays.
 - Null arrays.
 
-Phase 2A remains IN PROGRESS until final PR
-acceptance, merge and post-merge validation.
+Phase 2A: COMPLETE.
 
-Phase 2B through 2G have NOT STARTED.
+The owned value model is validated on macOS and
+Linux in Debug and Release configurations.
+
+No RESP2 wire serializer or parser is implemented.
+The running server remains transport-smoke-only.
+
+Phase 2B — Response Serializer: NEXT, NOT STARTED.
+Phase 2C through 2G: NOT STARTED.
 
 ### Acceptance Gate
 

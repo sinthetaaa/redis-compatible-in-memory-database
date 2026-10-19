@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 Networking Foundation COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phase 2A value model under acceptance in draft PR #4.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phase 2A value model COMPLETE; Phase 2B serializer NEXT.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -370,23 +370,32 @@ Merge commit: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 Post-merge Linux Debug and Release CI:
 39290777669 — SUCCESS.
 
-Phase 2A — RESP2 Value Model is IN PROGRESS.
+Phase 2A — RESP2 Value Model is COMPLETE.
 
 The C++20 owned value model supports simple strings,
 errors, signed 64-bit integers, binary-safe bulk strings,
 null bulk strings, nested arrays and null arrays.
 
 The model was implemented in commit 7981c8c.
-PR #4 is OPEN and DRAFT.
+PR #4 MERGED on 2026-10-20.
+Merge commit: 861f0491fdb8af490ed6da820a8024541f26f9fa.
 
 Local macOS Debug and Release: 11/11 tests passed.
 Value-model unit test: 30/30 repetitions per configuration.
 
-Linux Debug and Release CI:
+Initial Linux Debug and Release CI:
 39297170492 — SUCCESS.
 
-Phase 2A merge and post-merge verification remain.
-Phase 2B serialization has NOT STARTED.
+Final PR-head Linux CI:
+39298460768 — SUCCESS.
+
+Post-merge Linux Debug and Release CI:
+39304412144 — SUCCESS.
+
+Phase 2A implementation, merge and post-merge
+acceptance are complete.
+
+Phase 2B — Response Serializer is NEXT, NOT STARTED.
 
 The server still operates only in transport smoke mode;
 it does not parse RESP2 or execute Redis commands.

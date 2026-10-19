@@ -126,8 +126,9 @@ also passed in both configurations.
 ## ADR-004 — RESP2 Protocol Compatibility
 
 **Status:** Accepted
-**Implementation:** In progress — Phase 2A value
-model implemented and Linux validated; merge pending
+**Implementation:** Partial — Phase 2A value
+model completed and merged; serializer and parser
+remain unimplemented
 
 ### Decision
 
@@ -504,9 +505,11 @@ workflow 39288146570; PR #3 was merged and post-merge
 workflow 39290777669 succeeded.
 
 Phase 1 Networking Foundation is COMPLETE.
-Phase 2A RESP2 Value Model is IN PROGRESS.
-Draft PR #4 passed Linux Debug and Release validation
-in workflow 39297170492.
+Phase 2A RESP2 Value Model is COMPLETE.
+PR #4 was merged as 861f049 and post-merge
+Linux workflow 39304412144 succeeded.
+
+Phase 2B Response Serializer is NEXT, NOT STARTED.
 
 ## Phase 2
 
