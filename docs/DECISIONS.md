@@ -126,7 +126,8 @@ also passed in both configurations.
 ## ADR-004 — RESP2 Protocol Compatibility
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** In progress — Phase 2A value
+model implemented and Linux validated; merge pending
 
 ### Decision
 
@@ -503,7 +504,9 @@ workflow 39288146570; PR #3 was merged and post-merge
 workflow 39290777669 succeeded.
 
 Phase 1 Networking Foundation is COMPLETE.
-Phase 2A RESP2 Value Model is next.
+Phase 2A RESP2 Value Model is IN PROGRESS.
+Draft PR #4 passed Linux Debug and Release validation
+in workflow 39297170492.
 
 ## Phase 2
 

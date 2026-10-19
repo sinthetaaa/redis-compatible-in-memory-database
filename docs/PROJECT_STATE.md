@@ -3,11 +3,11 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-19
-- Current phase: Phase 2 — RESP2 Protocol Engine (NOT STARTED)
-- Current subphase: 2A — RESP2 Value Model (NEXT; NOT STARTED)
-- Status: PHASE 1 COMPLETE; PHASE 2 NOT STARTED
-- Last completed milestone: 1G-E — PR #3 merged and post-merge CI passed
-- Exact next task: After Phase 1 documentation closure, create the Phase 2A feature branch, inspect the current architecture and design the RESP2 value representation before implementation.
+- Current phase: Phase 2 — RESP2 Protocol Engine (IN PROGRESS)
+- Current subphase: 2A — RESP2 Value Model (IN PROGRESS)
+- Status: PHASE 1 COMPLETE; PHASE 2A IN PROGRESS
+- Last completed milestone: 2A.2 — Implementation pushed, draft PR #4 created, Linux CI passed
+- Exact next task: Synchronize Phase 2A documentation, verify CI for the final PR head, review the implementation and merge only after acceptance gates pass.
 - Implementation maturity: Cross-platform networking library and continuously running transport-only TCP smoke server with multi-client process integration tests
 - Working TCP database: NOT IMPLEMENTED
 
@@ -29,7 +29,8 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: main
+- Branch: phase2a/resp2-value-model
+- Main baseline: 3e06210adbb1dae0f1bc4549e06af5ec551f8dc2
 - Phase 0C commit: b2c668f180495dfc76bd47bf906ff34fe4e90b0b
 - Phase 0D commit: 409eff47c627eb4d3c54846e06826b6659760446
 - Phase 0D remote synchronization: PASS
@@ -67,7 +68,10 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main.
+- Current development branch: phase2a/resp2-value-model.
+- Phase 2A implementation: 7981c8c428f64eba76158029d56e7aca81c6a38b.
+- Phase 2A PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/4 (OPEN, DRAFT).
+- Phase 2A initial Linux CI: 39297170492 (Debug and Release SUCCESS).
 - Phase 1G merged main: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -98,7 +102,7 @@
 |---|---|---|
 | 0 | Repository and Environment Foundation | COMPLETE |
 | 1 | Networking Foundation | COMPLETE |
-| 2 | RESP2 Protocol Engine | NOT STARTED |
+| 2 | RESP2 Protocol Engine | IN PROGRESS |
 | 3 | Command Framework | NOT STARTED |
 | 4 | Core String Database | NOT STARTED |
 | 5 | TTL and Expiration | NOT STARTED |
@@ -134,6 +138,18 @@
 - 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
 - 1F: COMPLETE — A-E validated and merged through PR #2.
 - 1G: COMPLETE — PR #3 merged; macOS and Linux post-merge acceptance passed.
+
+### Phase 2 Detail
+
+- 2A: IN PROGRESS — Value model implemented,
+  committed, pushed and Linux validated.
+  PR #4 merge and post-merge acceptance pending.
+- 2B: NOT STARTED — Response serializer.
+- 2C: NOT STARTED — Incremental parser.
+- 2D: NOT STARTED — Fragmented request handling.
+- 2E: NOT STARTED — Pipelining.
+- 2F: NOT STARTED — Malformed input and resource limits.
+- 2G: NOT STARTED — Parser fuzz-test foundation.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
@@ -580,10 +596,58 @@ with origin/main and the worktree was clean.
 
 Phase 1G: COMPLETE.
 Phase 1 Networking Foundation: COMPLETE.
-Phase 2A: NEXT, NOT STARTED.
+At the Phase 1G closure checkpoint,
+Phase 2A had not started.
 
-No RESP2, database commands, storage or persistence
-have been implemented.
+Since then, the Phase 2A typed RESP2 value
+representation has been implemented. Wire parsing,
+database commands, storage and persistence remain
+unimplemented.
+
+### Phase 2A — 2026-10-19
+
+Branch: `phase2a/resp2-value-model`.
+Base: 3e06210adbb1dae0f1bc4549e06af5ec551f8dc2.
+Implementation: 7981c8c428f64eba76158029d56e7aca81c6a38b.
+
+PR #4: OPEN, DRAFT.
+
+Implemented:
+
+- Owned std::variant-based RESP2 value representation.
+- Seven distinct value alternatives.
+- Binary-safe std::string payload ownership.
+- Recursive std::vector<RespValue> arrays.
+- Distinct null bulk and null array values.
+- Signed 64-bit integer representation.
+- Inline CR/LF validation.
+- Structural equality and copy/move support.
+- Nested binary deep-copy regression test.
+
+Local macOS validation:
+
+- Debug full suite: 11/11 PASS.
+- Release full suite: 11/11 PASS.
+- Value-model repetitions: 30/30 per configuration.
+- clang-format: PASS.
+- Feature branch synchronized and clean after push.
+
+GitHub Actions workflow 39297170492: SUCCESS.
+
+Linux Debug and Release:
+
+- Full test suite: 11/11 PASS.
+- unit.resp_value: PASS.
+- Repeated TCP smoke: PASS.
+- Connection lifecycle regressions: PASS.
+- Native epoll regressions: PASS.
+
+Phase 2A: IN PROGRESS.
+Final documentation, PR acceptance and merge remain.
+Phase 2B: NOT STARTED.
+
+The value model does not parse or serialize wire
+messages and is not connected to the TCP server.
 
 ## 11. Benchmarks
 
@@ -685,27 +749,25 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-Phase 1 networking work has passed its acceptance gate
-and was merged through PR #3.
+Phase 2A implementation has been committed and
+validated on macOS and Linux. PR #4 is draft.
 
-1. Verify this Phase 1 closure checkpoint is committed,
-   pushed and synchronized with origin/main.
-2. Verify the post-closure documentation CI result.
-3. Start Phase 2A from the clean current main branch.
-4. Create a dedicated Phase 2A feature branch.
-5. Inspect the existing C++ source and protocol ADR.
-6. Define the RESP2 value model and ownership invariants.
-7. Specify binary-safe strings, arrays, integers and
-   error/simple-string response representations.
-8. Decide error handling, resource bounds and test cases.
-9. Implement and validate Phase 2A in isolation.
-10. Commit, push and update the project-state record.
+1. Commit and push Phase 2A documentation updates.
+2. Verify Linux CI for the updated PR head.
+3. Review all files and value-model invariants.
+4. Confirm the PR contains no unrelated changes.
+5. Verify base, head and clean working tree.
+6. Complete final Phase 2A acceptance checks.
+7. Mark PR #4 ready and merge after all gates pass.
+8. Synchronize local main with the merged commit.
+9. Verify macOS and post-merge Linux tests.
+10. Record formal Phase 2A closure.
+11. Begin Phase 2B only after Phase 2A closure.
 
-Phase 2A is NOT STARTED at this checkpoint.
+Phase 2B Response Serializer remains NOT STARTED.
 
-The executable currently supports only an explicit
-transport-level TCP echo smoke mode.
-It is not a functioning Redis database.
+The current executable has only a transport-level
+TCP echo smoke mode; no RESP2 commands are served.
 
 ## 17. Continuation Instructions
 

@@ -568,6 +568,38 @@ Supported RESP2 value categories:
 - Bulk strings.
 - Arrays.
 - Null bulk strings.
+- Null arrays.
+
+## Phase 2A Value Model — Implemented, Acceptance Pending
+
+Files:
+
+- `include/redisdb/protocol/RespValue.hpp`
+- `src/protocol/RespValue.cpp`
+- `tests/unit/resp_value_test.cpp`
+
+`RespValue` stores a `std::variant` of the seven
+supported RESP2 value alternatives.
+
+Bulk data uses owned `std::string` storage,
+preserving embedded NUL bytes and arbitrary octets.
+Arrays contain owned `std::vector<RespValue>` elements.
+
+Null bulk strings and null arrays are distinct
+from empty bulk strings and empty arrays.
+
+Simple strings and error responses reject CR/LF.
+Integers use `std::int64_t`.
+
+Copy and move operations are supported. Nested array
+and binary-buffer ownership are covered by unit tests.
+
+Linux Debug and Release validation passed in
+workflow 39297170492 for commit 7981c8c.
+
+This value model does not implement RESP2 wire
+serialization, incremental parsing or command
+execution. Those remain separate later milestones.
 
 ## Parsing Model
 
