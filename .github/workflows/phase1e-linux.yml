@@ -3,6 +3,7 @@ name: Phase 1E Linux epoll validation
 on:
   push:
     branches:
+      - main
       - phase1e/linux-epoll
   pull_request:
     branches:

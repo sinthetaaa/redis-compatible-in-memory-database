@@ -4,11 +4,11 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1E — Linux epoll Implementation (next)
+- Current subphase: 1F — Connection Lifecycle (next)
 - Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1D — macOS kqueue Implementation
-- Exact next task: Begin Phase 1E — implement the Linux epoll backend against the EventPoller contract and validate native Linux readiness, registration and lifecycle behavior.
-- Implementation maturity: Build foundation, descriptor RAII, TCP listener, portable poller interface and native macOS kqueue backend
+- Last completed milestone: 1E — Linux epoll Implementation
+- Exact next task: Begin Phase 1F — implement event-loop-driven connection lifecycle management using the existing TCP listener and native platform pollers.
+- Implementation maturity: Build foundation, descriptor RAII, TCP listener and native macOS kqueue plus Linux epoll backends
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -38,7 +38,11 @@
 - Phase 1A commit: 1981e8b806944f19783f1de30c581eae1b41871b
 - Phase 1B commit: dda6c4f562cb304c2986257890a05e1dba42b8f2
 - Phase 1C commit: d7dffafc6f0474ee8a4950caf16d47418f39e86e
-- Phase 1D commit: This revision; verify exact SHA from Git after push.
+- Phase 1D commit: 142fd98b69e01bbd62aac627732233a9d397a9a6
+- Phase 1E implementation commit: 912cac4437ebed2531624da00ec3a11d7ae6bfc3
+- Phase 1E documentation commit: This revision; verify SHA after push.
+- Phase 1E Linux CI run: 39233458374 (Debug and Release passed).
+- Phase 1E pull request: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/1
 - Branch tracking: origin/main
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -102,7 +106,7 @@
 - 1B: COMPLETE — Non-blocking loopback TCP listener validated.
 - 1C: COMPLETE — Portable event-poller contract and test double validated.
 - 1D: COMPLETE — Native kqueue implementation tested on macOS.
-- 1E: NOT STARTED — Linux epoll implementation.
+- 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
 - 1F: NOT STARTED — Connection lifecycle.
 - 1G: NOT STARTED — Multi-client smoke tests.
 
@@ -146,11 +150,19 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Zero, finite and infinite wait support.
 - Socket hangup and real TCP readiness testing.
 - Dedicated redisdb-kqueue-tests executable.
+- Linux-only EpollPoller implementation.
+- RAII-owned epoll descriptor using EPOLL_CLOEXEC.
+- Level-triggered read/write socket registration.
+- 64-bit registration token delivery.
+- Native epoll error and hangup mapping.
+- Zero, finite and infinite wait handling.
+- Linux socket and TCP integration tests.
+- Ubuntu Debug/Release GitHub Actions validation.
 
 ### Not Yet Implemented
 
 - Event-loop-driven TCP serving and managed client connection lifecycle.
-- Native Linux epoll poller implementation.
+- Running event loop and platform poller integration.
 - Concurrent client processing through the event loop.
 - RESP2 parser and serializer.
 - Command execution.
@@ -238,6 +250,18 @@ No durability or crash-recovery guarantees exist yet.
 - include/redisdb/net/KqueuePoller.hpp (created)
 - src/net/KqueuePoller.cpp (created)
 - tests/integration/kqueue_poller_test.cpp (created)
+- README.md (updated)
+- docs/ROADMAP.md (updated)
+- docs/PROJECT_STATE.md (updated)
+- docs/ARCHITECTURE.md (updated)
+
+### Phase 1E
+
+- CMakeLists.txt (modified)
+- include/redisdb/net/EpollPoller.hpp (created)
+- src/net/EpollPoller.cpp (created)
+- tests/integration/epoll_poller_test.cpp (created)
+- .github/workflows/phase1e-linux.yml (created)
 - README.md (updated)
 - docs/ROADMAP.md (updated)
 - docs/PROJECT_STATE.md (updated)
@@ -389,6 +413,34 @@ The tests exercise real kernel readiness notifications.
 They do not establish Linux epoll behavior, complete
 error-injection coverage, or a running database server.
 
+### Phase 1E — 2026-10-19
+
+- Linux platform: Ubuntu 24.04 x86-64.
+- Linux compiler: GCC 13.3.0.
+- Linux Debug build: PASS.
+- Linux Debug automated tests: 6/6 PASS.
+- Linux Release build: PASS.
+- Linux Release automated tests: 6/6 PASS.
+- Debug epoll repeated integration test: 15/15 PASS.
+- Release epoll repeated integration test: 15/15 PASS.
+- Native Linux socket readiness: PASS.
+- Read/write interest modification: PASS.
+- Registration tokens and removal tests: PASS.
+- Epoll descriptor ownership and CLOEXEC: PASS.
+- Peer half-close and timeout tests: PASS.
+- Real TCP listener readiness: PASS.
+- Linux CLI version verification: PASS.
+- GitHub Actions run: 39233458374 SUCCESS.
+- macOS Debug regression tests: 6/6 PASS.
+- macOS Release regression tests: 6/6 PASS.
+- C++ formatting and file-set validation: PASS.
+
+Native epoll was executed on an actual Linux kernel
+using GitHub-hosted Ubuntu runners. This does not
+establish Linux ARM64 compatibility or a running
+database server. The connection lifecycle and
+continuous serving loop remain unimplemented.
+
 ## 11. Benchmarks
 
 NOT STARTED.
@@ -489,18 +541,18 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify Phase 1D commit and remote synchronization.
-2. Begin Phase 1E — Linux epoll Implementation.
-3. Review EventPoller.hpp and KqueuePoller behavior.
-4. Implement Linux-only EpollPoller sources.
-5. Preserve registration identity with 64-bit tokens.
-6. Implement add/modify/remove through epoll_ctl.
-7. Implement epoll_wait and timeout semantics.
-8. Handle readable, writable, error and hangup events.
-9. Test FD ownership, removal and stale-event safety.
-10. Validate with actual Linux builds and socket tests.
-11. Update documentation, commit and push Phase 1E.
-12. Continue to Phase 1F — Connection Lifecycle.
+1. Revalidate the Phase 1E documentation commit in CI.
+2. Finalize PR #1 and merge into main after CI passes.
+3. Synchronize local main and verify a clean worktree.
+4. Begin Phase 1F — Connection Lifecycle.
+5. Design Connection ownership and connection states.
+6. Integrate TcpListener and native EventPoller.
+7. Design unique registration-token allocation.
+8. Implement safe accept, register and disconnect paths.
+9. Handle non-blocking reads, writes and backpressure.
+10. Implement idle-connection and cleanup behavior.
+11. Write real socket lifecycle tests.
+12. Validate macOS and Linux before completing Phase 1F.
 
 ## 17. Continuation Instructions
 
