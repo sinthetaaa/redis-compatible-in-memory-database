@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — Phase 1G TCP smoke serving implemented and under final acceptance in draft PR #3.**
+**Project status: Phase 1 Networking Foundation COMPLETE. Phase 2 RESP2 Protocol Engine is next and has not started.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -360,10 +360,18 @@ Phase 1E — Linux epoll is complete.
 
 Phase 1F — Connection Lifecycle is complete.
 
-Phase 1G — Multi-Client Smoke Tests is IN PROGRESS.
-Implementation and local robustness tests are complete.
-Linux acceptance has passed. Final PR review, merge
-and post-merge verification remain.
+Phase 1G — Multi-Client Smoke Tests is complete.
+
+Phase 1 Networking Foundation is COMPLETE.
+
+PR #3 merged on 2026-10-19.
+Merge commit: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
+
+Post-merge Linux Debug and Release CI:
+39290777669 — SUCCESS.
+
+Phase 2A — RESP2 Value Model is the next implementation
+milestone. Phase 2 has not yet started.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

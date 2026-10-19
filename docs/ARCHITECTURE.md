@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phase 1G transport-only TCP serving and Linux acceptance validated; PR #3 merge pending
+**Architecture state:** Phase 1 Networking Foundation COMPLETE; transport-only smoke server merged and post-merge Linux CI validated
 
 This document describes the intended system.
 

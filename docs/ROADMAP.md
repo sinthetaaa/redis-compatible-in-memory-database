@@ -52,7 +52,7 @@ roadmap, including all 169 subphases.
 
 # Phase 1 — Networking Foundation
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE
 
 - [x] 1A — RAII socket abstraction
 - [x] 1B — TCP listener
@@ -60,7 +60,7 @@ roadmap, including all 169 subphases.
 - [x] 1D — macOS kqueue implementation
 - [x] 1E — Linux epoll implementation
 - [x] 1F — Connection lifecycle
-- [ ] 1G — Multi-client smoke tests
+- [x] 1G — Multi-client smoke tests
 
 ### Phase 1F Detailed Progress
 
@@ -82,8 +82,8 @@ Merge commit:
 Post-merge Linux Debug and Release CI:
 39271745832 — SUCCESS.
 
-Phase 1F is complete. Phase 1G is IN PROGRESS.
-Phase 1 overall remains IN PROGRESS.
+Phase 1F and Phase 1G are both complete.
+Phase 1 Networking Foundation is COMPLETE.
 
 ### Phase 1G Detailed Progress
 
@@ -93,8 +93,8 @@ Phase 1 overall remains IN PROGRESS.
   integration and initial cross-platform CI.
 - 1G-D: COMPLETE — Reset isolation, connection churn,
   deterministic fairness tests and Linux CI acceptance.
-- 1G-E: IN PROGRESS — Final documentation, PR review,
-  merge and post-merge acceptance.
+- 1G-E: COMPLETE — Documentation, PR #3 merge and
+  post-merge cross-platform acceptance.
 
 Implementation commits:
 
@@ -103,7 +103,9 @@ Implementation commits:
 - f7ed0d5564e411f6598015748a9256f6c85d6745 —
   reset hardening, churn tests and fairness-test corrections.
 
-PR #3 remains OPEN and DRAFT.
+PR #3: MERGED on 2026-10-19.
+Merge commit:
+adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 
 macOS Debug and Release: 10/10 tests passed.
 Dispatch repetitions: 100/100 in both configurations.
@@ -127,12 +129,22 @@ Verified in both Linux Debug and Release:
 - Native epoll repetitions: 15/15 PASS.
 - Executable version check: PASS.
 
-PR #3 review, merge and post-merge verification remain.
+Final PR-head Linux acceptance:
+39289273326 — SUCCESS.
+
+Post-merge Linux Debug and Release CI:
+39290777669 — SUCCESS.
+
+Both configurations passed the complete 10-test suite,
+10 external smoke repetitions, 20 repetitions each of
+connection-manager and connection-dispatch integration,
+and 15 native epoll repetitions.
 
 The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
-Phase 1G is not complete until the acceptance gate,
-documentation commit, and PR merge have passed.
+
+Phase 1 networking acceptance: COMPLETE.
+Next milestone: Phase 2A — RESP2 Value Model (NOT STARTED).
 
 ### Acceptance Gate
 

@@ -117,8 +117,9 @@ and registration changes correctly.
 Readiness and registration semantics were validated
 through Phase 1F. Phase 1G adds a continuous executable
 smoke loop and external multi-client integration tests.
-Phase 1G Linux Debug and Release acceptance passed.
-PR #3 merge and post-merge verification remain.
+Phase 1G passed Linux Debug and Release acceptance.
+PR #3 merged as adf0210; post-merge CI 39290777669
+also passed in both configurations.
 
 ---
 
@@ -447,8 +448,8 @@ Any paid infrastructure requires approval.
 ## ADR-013 — Transport-Only Smoke Serving Mode
 
 **Status:** Accepted
-**Implementation:** Phase 1G implementation and
-Linux validation complete; merge pending
+**Implementation:** Phase 1G COMPLETE;
+merged and cross-platform validated
 
 ### Decision
 
@@ -498,7 +499,11 @@ Implemented and validated through Phase 1F:
 
 Phase 1G implemented the external transport smoke
 tests and serving loop. Linux acceptance passed in
-workflow 39288146570. PR #3 closure remains.
+workflow 39288146570; PR #3 was merged and post-merge
+workflow 39290777669 succeeded.
+
+Phase 1 Networking Foundation is COMPLETE.
+Phase 2A RESP2 Value Model is next.
 
 ## Phase 2
 

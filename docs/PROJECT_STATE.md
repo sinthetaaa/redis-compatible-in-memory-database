@@ -3,11 +3,11 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-19
-- Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1G-E — Documentation and acceptance review
-- Status: PHASE 1 IN PROGRESS; 1G IN PROGRESS
-- Last committed milestone: 1G-E.3a — Linux CI smoke shell correction (3db387d)
-- Exact next task: Commit successful Linux acceptance evidence, review PR #3, verify its final CI, then merge and validate main.
+- Current phase: Phase 2 — RESP2 Protocol Engine (NOT STARTED)
+- Current subphase: 2A — RESP2 Value Model (NEXT; NOT STARTED)
+- Status: PHASE 1 COMPLETE; PHASE 2 NOT STARTED
+- Last completed milestone: 1G-E — PR #3 merged and post-merge CI passed
+- Exact next task: After Phase 1 documentation closure, create the Phase 2A feature branch, inspect the current architecture and design the RESP2 value representation before implementation.
 - Implementation maturity: Cross-platform networking library and continuously running transport-only TCP smoke server with multi-client process integration tests
 - Working TCP database: NOT IMPLEMENTED
 
@@ -58,13 +58,17 @@
 - Phase 1G branch: phase1g/multi-client-smoke.
 - Phase 1G implementation: 4b94facef34a6760a17f71efe18e384c68593ef4.
 - Phase 1G hardening: f7ed0d5564e411f6598015748a9256f6c85d6745.
-- Phase 1G PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/3 (OPEN, DRAFT).
+- Phase 1G PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/3 (MERGED).
 - Phase 1G CI failure: 39283579738 (workflow shell continuation error).
 - Phase 1G documentation checkpoint: 10c9dc9.
 - Phase 1G CI correction: 3db387d0c70460c4ccf395b3da6f5f2f76ffb007.
 - Phase 1G Linux acceptance: 39288146570 (Debug and Release SUCCESS).
-- Current development branch: phase1g/multi-client-smoke.
-- Target base: main at 7977ca101edf409c7b77c28a405edf74d5805b80.
+- Phase 1G acceptance documentation: 1775aca0f5c211332b1613ba59a7342315cfd547.
+- Phase 1G final PR-head CI: 39289273326 (SUCCESS).
+- Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
+- Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
+- Current development branch: main.
+- Phase 1G merged main: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Current HEAD and working-tree state must always be checked directly through Git.
 
 ## 4. Local Environment
@@ -93,7 +97,7 @@
 | Phase | Description | Status |
 |---|---|---|
 | 0 | Repository and Environment Foundation | COMPLETE |
-| 1 | Networking Foundation | IN PROGRESS |
+| 1 | Networking Foundation | COMPLETE |
 | 2 | RESP2 Protocol Engine | NOT STARTED |
 | 3 | Command Framework | NOT STARTED |
 | 4 | Core String Database | NOT STARTED |
@@ -129,7 +133,7 @@
 - 1D: COMPLETE — Native kqueue implementation tested on macOS.
 - 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
 - 1F: COMPLETE — A-E validated and merged through PR #2.
-- 1G: IN PROGRESS — Implementation and Linux testing passed; PR merge and post-merge verification pending.
+- 1G: COMPLETE — PR #3 merged; macOS and Linux post-merge acceptance passed.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
@@ -510,7 +514,7 @@ Verified results:
 - Merge commit: 290bc71035bbaa0e93a6c0d12a228f7eb9ff4427.
 - Post-merge Linux CI: 39271745832 SUCCESS.
 - Phase 1F acceptance: COMPLETE.
-- Phase 1G: IN PROGRESS.
+- Phase 1G: COMPLETE.
 
 The networking library is implemented and tested.
 The executable continuously serves multiple clients
@@ -520,7 +524,8 @@ Redis commands remain unimplemented.
 ### Phase 1G — 2026-10-19
 
 Feature branch: `phase1g/multi-client-smoke`.
-PR #3: OPEN, DRAFT.
+PR #3: MERGED on 2026-10-19.
+Merge commit: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 
 Committed checkpoints:
 
@@ -563,9 +568,20 @@ Verified for BOTH Linux Debug and Release:
 - Executable version verification: PASS.
 
 Linux implementation acceptance: PASS.
-PR merge and post-merge verification remain.
 
-Phase 1G remains IN PROGRESS. PR #3 is not merged.
+Final PR-head Linux CI: 39289273326 SUCCESS.
+PR #3: MERGED.
+Merge commit: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
+Post-merge Linux CI: 39290777669 SUCCESS.
+
+Both Debug and Release on the merged macOS main
+passed all 10 CTest tests. Main was synchronized
+with origin/main and the worktree was clean.
+
+Phase 1G: COMPLETE.
+Phase 1 Networking Foundation: COMPLETE.
+Phase 2A: NEXT, NOT STARTED.
+
 No RESP2, database commands, storage or persistence
 have been implemented.
 
@@ -669,20 +685,27 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Record Linux success from workflow 39288146570.
-2. Commit and push the Phase 1G acceptance documents.
-3. Verify the final PR-head Linux CI run succeeds.
-4. Audit PR #3 changes and confirm its base and head.
-5. Confirm no unrelated changes or open failures.
-6. Merge PR #3 into main after all gates pass.
-7. Fetch and synchronize local main.
-8. Verify the merge commit and clean working tree.
-9. Verify post-merge Linux Debug and Release CI.
-10. Record Phase 1G closure and Phase 1 completion.
-11. Identify Phase 2A as the next unstarted milestone.
+Phase 1 networking work has passed its acceptance gate
+and was merged through PR #3.
 
-No Redis commands, RESP2 protocol handling,
-persistent storage or database execution exist yet.
+1. Verify this Phase 1 closure checkpoint is committed,
+   pushed and synchronized with origin/main.
+2. Verify the post-closure documentation CI result.
+3. Start Phase 2A from the clean current main branch.
+4. Create a dedicated Phase 2A feature branch.
+5. Inspect the existing C++ source and protocol ADR.
+6. Define the RESP2 value model and ownership invariants.
+7. Specify binary-safe strings, arrays, integers and
+   error/simple-string response representations.
+8. Decide error handling, resource bounds and test cases.
+9. Implement and validate Phase 2A in isolation.
+10. Commit, push and update the project-state record.
+
+Phase 2A is NOT STARTED at this checkpoint.
+
+The executable currently supports only an explicit
+transport-level TCP echo smoke mode.
+It is not a functioning Redis database.
 
 ## 17. Continuation Instructions
 
