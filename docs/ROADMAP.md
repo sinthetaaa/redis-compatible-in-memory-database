@@ -52,9 +52,9 @@ roadmap, including all 169 subphases.
 
 # Phase 1 — Networking Foundation
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
 
-- [ ] 1A — RAII socket abstraction
+- [x] 1A — RAII socket abstraction
 - [ ] 1B — TCP listener
 - [ ] 1C — Event-loop interface
 - [ ] 1D — macOS kqueue implementation

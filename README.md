@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Early development — build foundation complete.**
+**Project status: Phase 1 in progress — RAII descriptor ownership implemented.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -42,6 +42,8 @@ Implemented and validated:
 - Debug and Release build presets.
 - Executable version and help commands.
 - Automated baseline tests.
+- Move-only POSIX file-descriptor ownership with RAII.
+- Unix socket-pair ownership and cleanup tests.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
@@ -153,10 +155,14 @@ clang-format --dry-run --Werror \
   include/redisdb/server/Version.hpp \
   src/server/Version.cpp \
   src/main.cpp \
-  tests/unit/version_test.cpp
+  tests/unit/version_test.cpp \
+  include/redisdb/net/UniqueFd.hpp \
+  src/net/UniqueFd.cpp \
+  tests/unit/unique_fd_test.cpp
 ```
 
-The initial tests cover version reporting only.
+Current tests cover version reporting and
+POSIX descriptor ownership using real socket pairs.
 
 Future tests will cover networking, protocol parsing,
 command behavior, persistence and recovery.
@@ -297,7 +303,9 @@ documentation, commits and GitHub synchronization.
 
 Phase 0 — Repository and Environment Foundation is complete.
 
-Phase 1A — RAII Socket Abstraction is the next implementation milestone.
+Phase 1A — RAII Socket Abstraction is complete.
+
+Phase 1B — TCP Listener is the next implementation milestone.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

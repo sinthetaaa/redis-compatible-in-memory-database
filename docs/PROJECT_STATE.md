@@ -3,12 +3,12 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-19
-- Current phase: Phase 1 — Networking Foundation (next)
-- Current subphase: 1A — RAII Socket Abstraction (not started)
-- Status: PHASE 0 COMPLETE; PHASE 1 NOT STARTED
-- Last completed milestone: 0E — Baseline Validation
-- Exact next task: Begin Phase 1A by designing and implementing the RAII socket/file-descriptor abstraction with tests.
-- Implementation maturity: Build skeleton only
+- Current phase: Phase 1 — Networking Foundation
+- Current subphase: 1B — TCP Listener (next)
+- Status: PHASE 1 IN PROGRESS
+- Last completed milestone: 1A — RAII Socket Abstraction
+- Exact next task: Begin Phase 1B — implement a non-blocking TCP listener with RAII socket ownership and integration tests.
+- Implementation maturity: Build foundation plus POSIX file-descriptor RAII
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -34,7 +34,8 @@
 - Phase 0D commit: 409eff47c627eb4d3c54846e06826b6659760446
 - Phase 0D remote synchronization: PASS
 - Working tree after 0D: CLEAN
-- Phase 0E completion record: This revision; verify its commit SHA after push.
+- Phase 0E commit: 0cc4594d692f10f9a70ed6c9ae6107b0610a624f
+- Phase 1A commit: This revision; obtain exact SHA from Git after push.
 - Branch tracking: origin/main
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -64,7 +65,7 @@
 | Phase | Description | Status |
 |---|---|---|
 | 0 | Repository and Environment Foundation | COMPLETE |
-| 1 | Networking Foundation | NOT STARTED |
+| 1 | Networking Foundation | IN PROGRESS |
 | 2 | RESP2 Protocol Engine | NOT STARTED |
 | 3 | Command Framework | NOT STARTED |
 | 4 | Core String Database | NOT STARTED |
@@ -92,6 +93,16 @@
 - 0D: COMPLETE — Documentation foundation and validation.
 - 0E: COMPLETE — Fresh-build acceptance audit passed.
 
+### Phase 1 Detail
+
+- 1A: COMPLETE — Move-only POSIX descriptor ownership validated.
+- 1B: NOT STARTED — TCP listener.
+- 1C: NOT STARTED — Event-loop interface.
+- 1D: NOT STARTED — macOS kqueue implementation.
+- 1E: NOT STARTED — Linux epoll implementation.
+- 1F: NOT STARTED — Connection lifecycle.
+- 1G: NOT STARTED — Multi-client smoke tests.
+
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
 ## 6. Implemented Architecture
@@ -107,10 +118,15 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Basic automated test registration.
 - Compiler warning configuration.
 - clang-format configuration.
+- Move-only POSIX descriptor wrapper: redisdb::net::UniqueFd.
+- Automatic descriptor cleanup via RAII.
+- Explicit release/reset and move ownership transfer.
+- Real Unix socket-pair ownership tests.
+- Dedicated redisdb-fd-tests executable.
 
 ### Not Yet Implemented
 
-- TCP sockets and listener.
+- TCP listener and client connection lifecycle.
 - kqueue and epoll.
 - Multiple client connections.
 - RESP2 parser and serializer.
@@ -161,6 +177,17 @@ No durability or crash-recovery guarantees exist yet.
 - docs/DECISIONS.md
 - docs/ARCHITECTURE.md
 
+### Phase 1A
+
+- CMakeLists.txt (modified)
+- include/redisdb/net/UniqueFd.hpp (created)
+- src/net/UniqueFd.cpp (created)
+- tests/unit/unique_fd_test.cpp (created)
+- README.md (updated)
+- docs/ROADMAP.md (updated)
+- docs/PROJECT_STATE.md (updated)
+- docs/ARCHITECTURE.md (updated)
+
 ## 10. Validation Results
 
 ### Phase 0C — 2026-10-19
@@ -202,8 +229,28 @@ Redis commands, storage, persistence or recovery.
 
 These are foundation tests only.
 
-No networking, database, persistence or benchmark
-tests have been executed.
+No TCP listener, RESP2, database, persistence or
+benchmark tests have been executed.
+
+### Phase 1A — 2026-10-19
+
+- Apple Clang C++20 Debug build: PASS
+- Apple Clang C++20 Release build: PASS
+- Debug tests: 3/3 PASS
+- Release tests: 3/3 PASS
+- Dedicated UniqueFd test: PASS
+- Repeated UniqueFd test: 25/25 PASS
+- Compile-time move-only ownership checks: PASS
+- Real Unix socket-pair send/receive test: PASS
+- Scope-based descriptor cleanup test: PASS
+- Move construction and assignment tests: PASS
+- release/reset ownership tests: PASS
+- clang-format: PASS
+- CMake integration and staged file-set checks: PASS
+
+These tests validate file-descriptor ownership on macOS.
+They are not evidence of a working TCP listener,
+Linux portability, or complete networking correctness.
 
 ## 11. Benchmarks
 
@@ -242,7 +289,7 @@ Approved architecture:
 - Crash recovery.
 - Documented Redis-compatible command subset.
 
-See `docs/DECISIONS.md` after Phase 0D completion.
+See `docs/DECISIONS.md` for the accepted architecture decisions.
 
 Approved decisions are not proof of implementation.
 
@@ -305,16 +352,16 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify and push the Phase 0E completion checkpoint.
-2. Start Phase 1A — RAII Socket Abstraction.
-3. Inspect the current CMake and source organization.
-4. Define move-only file-descriptor ownership semantics.
-5. Implement guarded resource acquisition and cleanup.
-6. Add tests for ownership transfer and error paths.
-7. Validate Debug and Release builds.
-8. Update project-state documentation.
-9. Commit and push the validated Phase 1A milestone.
-10. Continue to Phase 1B only after the 1A gate passes.
+1. Verify the Phase 1A commit and push.
+2. Begin Phase 1B — TCP Listener.
+3. Inspect UniqueFd and existing CMake targets.
+4. Design safe socket creation, bind, listen and accept.
+5. Configure non-blocking mode and local bind defaults.
+6. Handle EAGAIN, EINTR and socket lifecycle errors.
+7. Write real loopback TCP integration tests.
+8. Validate Debug and Release builds.
+9. Update documentation, commit and push Phase 1B.
+10. Continue to Phase 1C after its validation gate.
 
 ## 17. Continuation Instructions
 

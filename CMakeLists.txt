@@ -30,6 +30,7 @@ endfunction()
 add_library(
     redisdb-core STATIC
     src/server/Version.cpp
+    src/net/UniqueFd.cpp
 )
 
 target_compile_features(
@@ -89,5 +90,27 @@ if(BUILD_TESTING)
         PROPERTIES
             PASS_REGULAR_EXPRESSION
                 "redisdb-server 0.1.0-dev"
+    )
+
+    add_executable(
+        redisdb-fd-tests
+        tests/unit/unique_fd_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-fd-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-fd-tests)
+
+    add_test(
+        NAME unit.unique_fd
+        COMMAND redisdb-fd-tests
+    )
+
+    set_tests_properties(
+        unit.unique_fd
+        PROPERTIES TIMEOUT 10
     )
 endif()

@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Approved design; implementation pending
+**Architecture state:** Approved design; Phase 1A descriptor ownership implemented
 
 This document describes the intended system.
 
@@ -170,6 +170,30 @@ KqueuePoller
 EpollPoller
 SocketUtils
 ```
+
+## Implemented Foundation — Phase 1A
+
+`redisdb::net::UniqueFd` provides a move-only,
+RAII-owned POSIX file descriptor.
+
+Implemented files:
+
+- `include/redisdb/net/UniqueFd.hpp`
+- `src/net/UniqueFd.cpp`
+- `tests/unit/unique_fd_test.cpp`
+
+Supported operations:
+
+- `get()` — inspect the borrowed descriptor.
+- `release()` — relinquish ownership without closing.
+- `reset()` — close or replace an owned descriptor.
+- Move construction and move assignment.
+- Automatic cleanup during destruction.
+
+Copy construction and assignment are disabled.
+The wrapper assumes exclusive ownership of adopted FDs.
+Close errors cannot be reported from the destructor.
+No TCP listener or event loop exists yet.
 
 ## 4.1 TCP Listener
 
