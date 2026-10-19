@@ -1,4 +1,4 @@
-name: Phase 1E Linux epoll validation
+name: Networking Linux validation
 
 on:
   push:
@@ -48,6 +48,14 @@ jobs:
 
       - name: Run full test suite
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+      - name: Repeat connection lifecycle integration tests
+        run: |
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -R '^(integration\\.connection_manager|integration\\.connection_dispatch)$' \
+            --repeat until-fail:20 \
+            --output-on-failure
 
       - name: Repeat native epoll integration test
         run: |
