@@ -6,6 +6,7 @@ import re
 import select
 import signal
 import socket
+import struct
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -289,6 +290,100 @@ def test_connection_limit_and_recovery():
     print("PASS: Existing clients remain isolated")
 
 
+
+def test_streaming_and_connection_churn():
+    with running_server(max_clients=8) as (process, port):
+        with connect(port) as stream:
+            total_bytes = 0
+
+            for iteration in range(64):
+                payload = (
+                    b"\\x00\\xff\\r\\n"
+                    + bytes([iteration]) * (2048 + iteration)
+                    + b"END"
+                )
+
+                split_at = len(payload) // 3
+
+                # Two application writes; TCP is still
+                # free to combine or split segments.
+                stream.sendall(payload[:split_at])
+                stream.sendall(payload[split_at:])
+
+                actual = receive_exact(stream, len(payload))
+
+                check(
+                    actual == payload,
+                    "Streaming echo mismatch",
+                )
+
+                total_bytes += len(payload)
+
+        # Exercise repeated socket cleanup, listener
+        # availability and fresh registration lifetimes.
+        for iteration in range(48):
+            with connect(port) as client:
+                exchange(
+                    client,
+                    b"churn:"
+                    + iteration.to_bytes(2, "big")
+                    + b"\\x00\\xff",
+                )
+
+        with connect(port) as final_client:
+            exchange(final_client, b"still-healthy")
+
+        check(
+            process.poll() is None,
+            "Streaming/churn terminated the server",
+        )
+
+    check(total_bytes > 128 * 1024, "Insufficient stream data")
+
+    print("PASS: More than 128 KiB of streamed echo")
+    print("PASS: 48 sequential connection lifetimes")
+    print("PASS: Server remains healthy after churn")
+
+
+def test_abrupt_reset_isolation():
+    with running_server(max_clients=4) as (process, port):
+        with connect(port) as healthy:
+            victim = connect(port)
+
+            try:
+                # SO_LINGER(1, 0) requests an abortive
+                # TCP close on macOS and Linux.
+                linger = struct.pack("ii", 1, 0)
+
+                victim.setsockopt(
+                    socket.SOL_SOCKET,
+                    socket.SO_LINGER,
+                    linger,
+                )
+
+                victim.sendall(b"reset-client-payload")
+            finally:
+                victim.close()
+
+            for iteration in range(12):
+                exchange(
+                    healthy,
+                    b"healthy-after-reset:"
+                    + iteration.to_bytes(2, "big"),
+                )
+
+            with connect(port) as newcomer:
+                exchange(newcomer, b"newcomer-alive")
+
+            check(
+                process.poll() is None,
+                "Reset client terminated the server",
+            )
+
+    print("PASS: Abrupt TCP reset isolated")
+    print("PASS: Existing and new clients remain healthy")
+
+
 def test_duplicate_port():
     with running_server() as (process, port):
         second = subprocess.run(
@@ -358,6 +453,8 @@ def main():
     test_concurrent_clients()
     test_half_close_and_isolation()
     test_connection_limit_and_recovery()
+    test_streaming_and_connection_churn()
+    test_abrupt_reset_isolation()
     test_duplicate_port()
     test_signal_shutdown(signal.SIGTERM)
     test_signal_shutdown(signal.SIGINT)

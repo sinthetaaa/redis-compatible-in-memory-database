@@ -36,7 +36,20 @@ void validate_socket(int fd) {
 
     if (::setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enabled,
                      static_cast<socklen_t>(sizeof(enabled))) == -1) {
-        throw_errno("setsockopt(SO_NOSIGPIPE)");
+        const int error = errno;
+
+        // On macOS, a peer can reset its connection
+        // between accept() and socket configuration.
+        // SO_NOSIGPIPE may then fail with EINVAL.
+        //
+        // These peer-disconnection errors are local
+        // to the accepted socket. Other setup errors
+        // must still propagate to the server.
+        if (error == EINVAL || error == ENOTCONN || error == ECONNRESET || error == EPIPE) {
+            throw Connection::DisconnectedDuringSetup(error);
+        }
+
+        throw std::system_error(error, std::generic_category(), "setsockopt(SO_NOSIGPIPE)");
     }
 #endif
 }

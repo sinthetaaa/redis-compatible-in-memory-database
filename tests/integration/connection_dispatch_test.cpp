@@ -12,8 +12,10 @@ using NativePoller = redisdb::net::EpollPoller;
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 
+#include <cerrno>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -927,28 +929,64 @@ void test_healthy_client_progress_under_pressure() {
 
     ConnectionManager manager(TcpListener::bind_loopback(0), poller, limits);
 
+    // Accept the two connections separately so their
+    // identities are known without relying on FD or
+    // registration-token numbering.
+    // Wait for kernel listener readiness before
+    // each non-blocking accept_ready() call.
+    //
+    // Polling the listener directly observes
+    // readiness without consuming EventPoller
+    // notifications or accepting connections.
+    const auto accept_when_readable = [&manager](const char* failure_message) -> RegistrationToken {
+        pollfd listener_readiness{};
+        listener_readiness.fd = manager.listener_fd();
+        listener_readiness.events = POLLIN;
+
+        int ready = 0;
+
+        do {
+            ready = ::poll(&listener_readiness, 1, 1000);
+        } while (ready == -1 && errno == EINTR);
+
+        check(ready == 1, failure_message);
+
+        check((listener_readiness.revents & POLLIN) != 0, failure_message);
+
+        check((listener_readiness.revents & (POLLERR | POLLHUP | POLLNVAL)) == 0,
+              "listener reported an unexpected error");
+
+        const auto accepted = manager.accept_ready(1);
+
+        check(accepted.tokens.size() == 1, failure_message);
+
+        return accepted.tokens.front();
+    };
+
     UniqueFd slow = connect_loopback(manager.listener_port());
+
+    const RegistrationToken slow_token = accept_when_readable("slow client was not accepted");
+
     UniqueFd fast = connect_loopback(manager.listener_port());
 
-    for (int i = 0; i < 5 && manager.connection_count() < 2; ++i) {
-        (void)manager.poll_once(1000ms);
-    }
+    const RegistrationToken fast_token = accept_when_readable("healthy client was not accepted");
 
     check(manager.connection_count() == 2, "two-client fairness setup failed");
 
     send_exact(slow.get(), "S");
 
     const auto ready = poller.wait(1000ms);
-    RegistrationToken slow_token = redisdb::net::InvalidToken;
+
+    bool slow_read_ready = false;
 
     for (const auto& event : ready) {
-        if (manager.find(event.token)) {
-            slow_token = event.token;
-            break;
+        if (event.token == slow_token &&
+            redisdb::net::contains_all(event.events, EventMask::Read)) {
+            slow_read_ready = true;
         }
     }
 
-    check(slow_token != redisdb::net::InvalidToken, "slow connection token missing");
+    check(slow_read_ready, "slow connection was not readable");
 
     const auto setup = manager.dispatch_ready(ready);
     check(setup.bytes_received == 1, "slow connection setup read failed");
@@ -965,15 +1003,13 @@ void test_healthy_client_progress_under_pressure() {
 
     bool fast_processed = false;
     bool slow_read_while_paused = false;
-    RegistrationToken fast_token = redisdb::net::InvalidToken;
-
     manager.set_input_handler([&](Connection& connection) {
         const std::string payload(connection.input());
         connection.consume_input(payload.size());
 
         if (payload == "F") {
+            check(connection.token() == fast_token, "healthy payload reached the wrong connection");
             fast_processed = true;
-            fast_token = connection.token();
             connection.queue_output("OK");
         }
 
@@ -986,6 +1022,30 @@ void test_healthy_client_progress_under_pressure() {
     // interest is disabled.
     send_exact(slow.get(), "Q");
     send_exact(fast.get(), "F");
+
+    // The slow connection is already write-ready.
+    // Without this precondition, ten immediate polls
+    // can finish before the healthy client's bytes
+    // become kernel-readable, especially in Release.
+    //
+    // poll() only observes readiness; it does not
+    // consume the data or dispatch application I/O.
+    const Connection* fast_connection = manager.find(fast_token);
+
+    check(fast_connection != nullptr, "healthy accepted connection missing");
+
+    pollfd fast_readiness{};
+    fast_readiness.fd = fast_connection->fd();
+    fast_readiness.events = POLLIN;
+
+    int readiness_result = 0;
+
+    do {
+        readiness_result = ::poll(&fast_readiness, 1, 1000);
+    } while (readiness_result == -1 && errno == EINTR);
+
+    check(readiness_result == 1 && (fast_readiness.revents & POLLIN) != 0,
+          "healthy request was not kernel-readable before fairness test");
 
     bool fast_response_drained = false;
 

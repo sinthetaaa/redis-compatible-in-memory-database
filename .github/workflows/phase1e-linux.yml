@@ -49,6 +49,28 @@ jobs:
       - name: Run full test suite
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
 
+      - name: Repeat external TCP server smoke test
+        run: |
+          set -euo pipefail
+
+          pattern='^integration[.]server_smoke$'
+
+          ctest \\
+            --test-dir build/${{ matrix.preset }} \\
+            -N \\
+            -R "$pattern" \\
+            | tee "$RUNNER_TEMP/phase1g-selected-tests.txt"
+
+          grep -Eq \\
+            '^[[:space:]]*Total Tests: 1[[:space:]]*$' \\
+            "$RUNNER_TEMP/phase1g-selected-tests.txt"
+
+          ctest \\
+            --test-dir build/${{ matrix.preset }} \\
+            -R "$pattern" \\
+            --repeat until-fail:10 \\
+            --output-on-failure
+
       - name: Repeat connection lifecycle integration tests
         run: |
           set -euo pipefail
