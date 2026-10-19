@@ -91,9 +91,10 @@ Phase 1 overall remains IN PROGRESS.
 - 1G-B: COMPLETE — Explicit native TCP smoke serving loop.
 - 1G-C: COMPLETE — Permanent external multi-client CTest
   integration and initial cross-platform CI.
-- 1G-D: IN PROGRESS — Reset isolation, connection churn,
-  deterministic fairness regression and Linux CI acceptance.
-- 1G-E: IN PROGRESS — Documentation and final PR acceptance.
+- 1G-D: COMPLETE — Reset isolation, connection churn,
+  deterministic fairness tests and Linux CI acceptance.
+- 1G-E: IN PROGRESS — Final documentation, PR review,
+  merge and post-merge acceptance.
 
 Implementation commits:
 
@@ -109,9 +110,24 @@ Dispatch repetitions: 100/100 in both configurations.
 Smoke repetitions: 10/10 in both configurations.
 Repeated full Release suites: 5/5 passed.
 
-Linux workflow 39283579738 was queued at the latest
-documentation checkpoint. Its results must be verified
-before declaring Phase 1G accepted.
+Linux workflow 39283579738 failed because the new
+CI smoke-test step contained incorrect Bash line
+continuations. The full Linux test suites passed.
+
+Commit 3db387d corrected the workflow syntax.
+
+Linux workflow 39288146570: SUCCESS.
+
+Verified in both Linux Debug and Release:
+
+- Full CTest suite: 10/10 PASS.
+- TCP smoke repetitions: 10/10 PASS.
+- Connection manager repetitions: 20/20 PASS.
+- Connection dispatch repetitions: 20/20 PASS.
+- Native epoll repetitions: 15/15 PASS.
+- Executable version check: PASS.
+
+PR #3 review, merge and post-merge verification remain.
 
 The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.

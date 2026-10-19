@@ -6,8 +6,8 @@
 - Current phase: Phase 1 — Networking Foundation
 - Current subphase: 1G-E — Documentation and acceptance review
 - Status: PHASE 1 IN PROGRESS; 1G IN PROGRESS
-- Last committed milestone: 1G-D.3 — Reset hardening and fairness-test stabilization (f7ed0d5)
-- Exact next task: Verify Linux workflow 39283579738, complete Phase 1G documentation, and close PR #3 only after acceptance passes.
+- Last committed milestone: 1G-E.3a — Linux CI smoke shell correction (3db387d)
+- Exact next task: Commit successful Linux acceptance evidence, review PR #3, verify its final CI, then merge and validate main.
 - Implementation maturity: Cross-platform networking library and continuously running transport-only TCP smoke server with multi-client process integration tests
 - Working TCP database: NOT IMPLEMENTED
 
@@ -59,7 +59,10 @@
 - Phase 1G implementation: 4b94facef34a6760a17f71efe18e384c68593ef4.
 - Phase 1G hardening: f7ed0d5564e411f6598015748a9256f6c85d6745.
 - Phase 1G PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/3 (OPEN, DRAFT).
-- Phase 1G Linux workflow: 39283579738 (acceptance result not yet verified).
+- Phase 1G CI failure: 39283579738 (workflow shell continuation error).
+- Phase 1G documentation checkpoint: 10c9dc9.
+- Phase 1G CI correction: 3db387d0c70460c4ccf395b3da6f5f2f76ffb007.
+- Phase 1G Linux acceptance: 39288146570 (Debug and Release SUCCESS).
 - Current development branch: phase1g/multi-client-smoke.
 - Target base: main at 7977ca101edf409c7b77c28a405edf74d5805b80.
 - Current HEAD and working-tree state must always be checked directly through Git.
@@ -126,7 +129,7 @@
 - 1D: COMPLETE — Native kqueue implementation tested on macOS.
 - 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
 - 1F: COMPLETE — A-E validated and merged through PR #2.
-- 1G: IN PROGRESS — Smoke serving and regression tests implemented; final acceptance pending.
+- 1G: IN PROGRESS — Implementation and Linux testing passed; PR merge and post-merge verification pending.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
@@ -542,8 +545,25 @@ handled during admission without terminating the server.
 The existing fairness test was updated to wait for actual
 kernel listener and healthy-client readiness.
 
-Linux workflow: 39283579738.
-Linux Debug/Release acceptance: PENDING VERIFICATION.
+Linux workflow 39283579738: FAILED due to
+malformed shell line continuations in the smoke
+repetition step. Full suites had passed.
+
+The workflow was corrected in commit 3db387d.
+
+Linux workflow 39288146570: SUCCESS.
+
+Verified for BOTH Linux Debug and Release:
+
+- Full automated suite: 10/10 PASS.
+- External TCP smoke: 10/10 repetitions.
+- Connection manager: 20/20 repetitions.
+- Connection dispatch: 20/20 repetitions.
+- Native epoll: 15/15 repetitions.
+- Executable version verification: PASS.
+
+Linux implementation acceptance: PASS.
+PR merge and post-merge verification remain.
 
 Phase 1G remains IN PROGRESS. PR #3 is not merged.
 No RESP2, database commands, storage or persistence
@@ -649,21 +669,20 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify Linux workflow 39283579738 for commit f7ed0d5.
-2. Confirm Linux Debug and Release both discover 10 tests.
-3. Confirm external smoke is repeated 10 times in each.
-4. Confirm connection lifecycle and epoll regressions pass.
-5. Resolve any CI failure before declaring acceptance.
-6. Review and commit Phase 1G documentation updates.
-7. Push and verify feature-branch HEAD synchronization.
-8. Verify the final Linux CI run for the documentation commit.
-9. Review PR #3 and its exact changes against main.
-10. Merge PR #3 only after all Phase 1G gates pass.
-11. Confirm merged main, post-merge CI and clean worktree.
-12. Close Phase 1 and identify Phase 2A as next.
+1. Record Linux success from workflow 39288146570.
+2. Commit and push the Phase 1G acceptance documents.
+3. Verify the final PR-head Linux CI run succeeds.
+4. Audit PR #3 changes and confirm its base and head.
+5. Confirm no unrelated changes or open failures.
+6. Merge PR #3 into main after all gates pass.
+7. Fetch and synchronize local main.
+8. Verify the merge commit and clean working tree.
+9. Verify post-merge Linux Debug and Release CI.
+10. Record Phase 1G closure and Phase 1 completion.
+11. Identify Phase 2A as the next unstarted milestone.
 
-The smoke server is not a Redis-compatible database.
-Do not advertise RESP2 or Redis command support yet.
+No Redis commands, RESP2 protocol handling,
+persistent storage or database execution exist yet.
 
 ## 17. Continuation Instructions
 

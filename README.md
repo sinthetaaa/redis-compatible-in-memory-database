@@ -204,9 +204,10 @@ Linux CI validates Debug and Release configurations,
 including repeated connection-manager, dispatch and
 native epoll integration tests.
 
-The current CTest suite includes a real external
-server-process smoke test. Linux CI repetition is
-under Phase 1G acceptance review.
+The CTest suite includes a real external
+server-process smoke test. Linux Debug and Release
+acceptance passed in GitHub Actions run 39288146570,
+including repeated smoke, lifecycle and epoll tests.
 
 Future work includes RESP2 parsing, command execution,
 persistence, recovery and the production serving path.
@@ -361,7 +362,8 @@ Phase 1F — Connection Lifecycle is complete.
 
 Phase 1G — Multi-Client Smoke Tests is IN PROGRESS.
 Implementation and local robustness tests are complete.
-Linux acceptance, final documentation and PR merge remain.
+Linux acceptance has passed. Final PR review, merge
+and post-merge verification remain.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
