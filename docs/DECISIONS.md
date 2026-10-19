@@ -127,8 +127,8 @@ also passed in both configurations.
 
 **Status:** Accepted
 **Implementation:** Partial — Phase 2A value
-model completed and merged; serializer and parser
-remain unimplemented
+model complete; Phase 2B serializer implemented
+and Linux validated in draft PR #5; parser pending
 
 ### Decision
 
@@ -509,7 +509,10 @@ Phase 2A RESP2 Value Model is COMPLETE.
 PR #4 was merged as 861f049 and post-merge
 Linux workflow 39304412144 succeeded.
 
-Phase 2B Response Serializer is NEXT, NOT STARTED.
+Phase 2B Response Serializer is IN PROGRESS.
+Draft PR #5 passed Linux Debug and Release
+validation in workflow 39311216460.
+Phase 2C incremental parsing is NOT STARTED.
 
 ## Phase 2
 

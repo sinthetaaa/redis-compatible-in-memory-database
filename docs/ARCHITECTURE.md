@@ -601,12 +601,51 @@ Final PR-head CI: 39298460768 SUCCESS.
 Merge commit: 861f0491fdb8af490ed6da820a8024541f26f9fa.
 Post-merge CI: 39304412144 SUCCESS.
 
-Phase 2A is complete. Phase 2B response serialization
-has not started.
+Phase 2A is complete. At its closure checkpoint,
+Phase 2B response serialization had not started.
 
 This value model does not implement RESP2 wire
 serialization, incremental parsing or command
 execution. Those remain separate later milestones.
+
+## Phase 2B Response Serializer — IN PROGRESS
+
+Files:
+
+- `include/redisdb/protocol/RespSerializer.hpp`
+- `src/protocol/RespSerializer.cpp`
+- `tests/unit/resp_serializer_test.cpp`
+
+`RespSerializer` encodes an immutable `RespValue`
+into an owned binary-safe `std::string`.
+
+The implementation first measures the exact
+serialized output size and validates configured
+resource limits. It then reserves output storage
+and writes the RESP2 wire framing.
+
+Integer and length fields use `std::to_chars`.
+
+Initial serializer limits:
+
+- Maximum encoded output: 1 MiB.
+- Maximum elements per array: 65,536.
+- Maximum nested array depth: 32.
+
+Output-size checks use subtraction-based bounds
+checks to prevent arithmetic overflow.
+
+All seven RESP2 value alternatives are supported,
+including distinct null arrays and null bulk strings.
+
+The serializer has no socket, parser, database or
+command execution dependencies.
+
+Implementation: 7835524.
+PR #5: OPEN, DRAFT.
+Initial Linux CI: 39311216460 SUCCESS.
+
+Phase 2C incremental parsing has NOT STARTED.
 
 ## Parsing Model
 

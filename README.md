@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phase 2A value model COMPLETE; Phase 2B serializer NEXT.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phase 2A COMPLETE; Phase 2B serializer implementation under acceptance in draft PR #5.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -395,7 +395,34 @@ Post-merge Linux Debug and Release CI:
 Phase 2A implementation, merge and post-merge
 acceptance are complete.
 
-Phase 2B — Response Serializer is NEXT, NOT STARTED.
+Phase 2B — Response Serializer is IN PROGRESS.
+
+A standalone bounded RESP2 wire serializer is
+implemented in commit 7835524.
+
+It supports all seven RESP2 value categories,
+binary-safe bulk strings, recursive arrays,
+signed integers and distinct null encodings.
+
+Two-pass size accounting validates limits before
+allocating and writing the encoded response.
+
+Default serializer limits:
+
+- Output bytes: 1 MiB.
+- Elements per array: 65,536.
+- Array nesting depth: 32.
+
+Local macOS Debug and Release: 12/12 tests passed.
+Serializer repetitions: 30/30 per configuration.
+
+Initial Linux Debug and Release CI:
+39311216460 — SUCCESS.
+
+PR #5: OPEN, DRAFT.
+
+Final documentation, review, merge and post-merge
+acceptance remain. Phase 2C has NOT STARTED.
 
 The server still operates only in transport smoke mode;
 it does not parse RESP2 or execute Redis commands.

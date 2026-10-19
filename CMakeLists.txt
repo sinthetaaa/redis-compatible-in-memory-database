@@ -31,6 +31,7 @@ add_library(
     redisdb-core STATIC
     src/server/Version.cpp
     src/protocol/RespValue.cpp
+    src/protocol/RespSerializer.cpp
     src/net/UniqueFd.cpp
     src/net/TcpListener.cpp
     src/net/Connection.cpp
@@ -133,6 +134,28 @@ if(BUILD_TESTING)
 
     set_tests_properties(
         unit.resp_value
+        PROPERTIES TIMEOUT 10
+    )
+
+    add_executable(
+        redisdb-resp-serializer-tests
+        tests/unit/resp_serializer_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-resp-serializer-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-resp-serializer-tests)
+
+    add_test(
+        NAME unit.resp_serializer
+        COMMAND redisdb-resp-serializer-tests
+    )
+
+    set_tests_properties(
+        unit.resp_serializer
         PROPERTIES TIMEOUT 10
     )
 
