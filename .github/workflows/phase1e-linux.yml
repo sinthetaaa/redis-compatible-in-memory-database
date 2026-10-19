@@ -55,20 +55,20 @@ jobs:
 
           pattern='^integration[.]server_smoke$'
 
-          ctest \\
-            --test-dir build/${{ matrix.preset }} \\
-            -N \\
-            -R "$pattern" \\
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -N \
+            -R "$pattern" \
             | tee "$RUNNER_TEMP/phase1g-selected-tests.txt"
 
-          grep -Eq \\
-            '^[[:space:]]*Total Tests: 1[[:space:]]*$' \\
+          grep -Eq \
+            '^[[:space:]]*Total Tests: 1[[:space:]]*$' \
             "$RUNNER_TEMP/phase1g-selected-tests.txt"
 
-          ctest \\
-            --test-dir build/${{ matrix.preset }} \\
-            -R "$pattern" \\
-            --repeat until-fail:10 \\
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -R "$pattern" \
+            --repeat until-fail:10 \
             --output-on-failure
 
       - name: Repeat connection lifecycle integration tests
