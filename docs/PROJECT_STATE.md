@@ -4,11 +4,11 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1F — Connection Lifecycle (next)
+- Current subphase: 1F-E.3 — Final acceptance and PR merge
 - Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1E — Linux epoll Implementation
-- Exact next task: Begin Phase 1F — implement event-loop-driven connection lifecycle management using the existing TCP listener and native platform pollers.
-- Implementation maturity: Build foundation, descriptor RAII, TCP listener and native macOS kqueue plus Linux epoll backends
+- Last completed milestone: 1F-E.2 — Documentation synchronization
+- Exact next task: Verify the documentation checkpoint and Linux CI, review PR #2, then merge only after final acceptance passes.
+- Implementation maturity: Cross-platform networking library with connection ownership, dispatch, idle handling, backpressure and failure isolation
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -29,7 +29,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: main
+- Branch: phase1f/connection-lifecycle (draft PR #2)
 - Phase 0C commit: b2c668f180495dfc76bd47bf906ff34fe4e90b0b
 - Phase 0D commit: 409eff47c627eb4d3c54846e06826b6659760446
 - Phase 0D remote synchronization: PASS
@@ -40,10 +40,18 @@
 - Phase 1C commit: d7dffafc6f0474ee8a4950caf16d47418f39e86e
 - Phase 1D commit: 142fd98b69e01bbd62aac627732233a9d397a9a6
 - Phase 1E implementation commit: 912cac4437ebed2531624da00ec3a11d7ae6bfc3
-- Phase 1E documentation commit: This revision; verify SHA after push.
+- Phase 1E merge commit: fb242b2f3d72d29b198cbc2356ccfd57319b607e.
 - Phase 1E Linux CI run: 39233458374 (Debug and Release passed).
 - Phase 1E pull request: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/1
-- Branch tracking: origin/main
+- Branch tracking: origin/phase1f/connection-lifecycle
+- Phase 1F-A/B: c8ec996 — Connection ownership and admission.
+- Phase 1F-C: 50ead92 — Readiness dispatch.
+- Phase 1F-D: 6881b04 — Lifecycle and backpressure.
+- Phase 1F-D: f5bdacc — Socket failure isolation.
+- Phase 1F-E.1: a01ae98 — Enhanced Linux CI.
+- Phase 1F-E.1b: 51a363b — CI test-selection correction.
+- Phase 1F PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/2.
+- Verified Linux CI run: 39256465515.
 - Current HEAD and working-tree state must always be checked directly through Git.
 
 ## 4. Local Environment
@@ -107,7 +115,7 @@
 - 1C: COMPLETE — Portable event-poller contract and test double validated.
 - 1D: COMPLETE — Native kqueue implementation tested on macOS.
 - 1E: COMPLETE — Native Linux epoll validated on Ubuntu 24.04 x86-64.
-- 1F: NOT STARTED — Connection lifecycle.
+- 1F: IN PROGRESS — A-D and E.1-E.2 complete; E.3 acceptance pending.
 - 1G: NOT STARTED — Multi-client smoke tests.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
@@ -158,12 +166,22 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Zero, finite and infinite wait handling.
 - Linux socket and TCP integration tests.
 - Ubuntu Debug/Release GitHub Actions validation.
+- RAII-owned nonblocking Connection objects.
+- ConnectionManager admission and ownership.
+- Bounded accept, receive and send operations.
+- Readiness dispatch and transport callbacks.
+- Event coalescing and stale-token handling.
+- Input/output safety limits and backpressure.
+- Configurable idle eviction and polling deadlines.
+- Half-close output draining and connection cleanup.
+- Callback and unexpected socket failure isolation.
+- Native macOS and Linux connection integration tests.
 
 ### Not Yet Implemented
 
-- Event-loop-driven TCP serving and managed client connection lifecycle.
-- Running event loop and platform poller integration.
-- Concurrent client processing through the event loop.
+- Continuous TCP serving in redisdb-server; library-level connection management is implemented.
+- Continuous executable event loop; native poller and ConnectionManager integration is tested.
+- External multi-client serving smoke tests.
 - RESP2 parser and serializer.
 - Command execution.
 - In-memory key-value database.
@@ -441,6 +459,34 @@ establish Linux ARM64 compatibility or a running
 database server. The connection lifecycle and
 continuous serving loop remain unimplemented.
 
+### Phase 1F — 2026-10-19
+
+Implementation checkpoints:
+
+- 1F-A/B: c8ec996.
+- 1F-C: 50ead92.
+- 1F-D: 6881b04 and f5bdacc.
+- 1F-E.1: a01ae98.
+- 1F-E.1b: 51a363b.
+
+Verified results:
+
+- macOS Debug: 9/9 tests passed.
+- macOS Release: 9/9 tests passed.
+- macOS dispatch integration: 20/20 repetitions passed.
+- Linux Debug full test suite: PASS.
+- Linux Release full test suite: PASS.
+- Linux connection-manager test: 20/20 repetitions per configuration.
+- Linux connection-dispatch test: 20/20 repetitions per configuration.
+- Linux native epoll repetitions: PASS.
+- Linux test discovery: exactly two lifecycle tests selected.
+- GitHub Actions: 39256465515 SUCCESS.
+- Draft PR #2: final acceptance pending.
+
+The networking library is implemented and tested.
+The executable does not yet continuously serve TCP
+clients or implement Redis commands.
+
 ## 11. Benchmarks
 
 NOT STARTED.
@@ -450,7 +496,7 @@ performance claims are currently supported.
 
 ## 12. Deployment State
 
-- Linux build: NOT VALIDATED
+- Linux build: VALIDATED on Ubuntu 24.04 x86-64 in Debug and Release; deployment not started
 - Docker packaging: NOT IMPLEMENTED
 - Local container test: NOT STARTED
 - Remote Linux deployment: NOT STARTED
@@ -508,7 +554,7 @@ Container validation is deferred.
 
 Local platform is macOS arm64.
 
-Linux epoll and Linux runtime behavior remain untested.
+Linux epoll and connection lifecycle tests have passed on Ubuntu 24.04 x86-64. Linux ARM64 and deployment remain untested.
 
 ### Compatibility
 
@@ -541,18 +587,15 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Revalidate the Phase 1E documentation commit in CI.
-2. Finalize PR #1 and merge into main after CI passes.
-3. Synchronize local main and verify a clean worktree.
-4. Begin Phase 1F — Connection Lifecycle.
-5. Design Connection ownership and connection states.
-6. Integrate TcpListener and native EventPoller.
-7. Design unique registration-token allocation.
-8. Implement safe accept, register and disconnect paths.
-9. Handle non-blocking reads, writes and backpressure.
-10. Implement idle-connection and cleanup behavior.
-11. Write real socket lifecycle tests.
-12. Validate macOS and Linux before completing Phase 1F.
+1. Verify the Phase 1F-E.2 documentation commit and push.
+2. Confirm Linux Debug and Release CI on the latest PR head.
+3. Update PR #2 with accurate implementation and validation results.
+4. Complete Phase 1F-E.3 final acceptance review.
+5. Merge PR #2 only after the acceptance gate passes.
+6. Synchronize local main and verify clean Git status.
+7. Begin Phase 1G on a new feature branch.
+8. Implement continuous TCP serving and multi-client smoke tests.
+9. Preserve the approved RESP2 and database roadmap.
 
 ## 17. Continuation Instructions
 

@@ -88,7 +88,7 @@ Do not claim multithreaded command execution.
 ## ADR-003 — Platform-Specific Event Multiplexing
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** kqueue, epoll and connection dispatch validated through Phase 1F
 
 ### Decision
 
@@ -114,8 +114,9 @@ entire request can be read or response can be written.
 Handle EAGAIN, EINTR, EOF, errors, socket lifetimes
 and registration changes correctly.
 
-Exact readiness and registration semantics will
-be finalized in Phase 1.
+Readiness and registration semantics have been
+implemented and integration-tested through Phase 1F.
+Phase 1G still requires external serving smoke tests.
 
 ---
 
@@ -448,10 +449,18 @@ relevant phases rather than decided prematurely.
 
 ## Phase 1
 
-- Poller event representation.
-- Edge-triggered versus level-triggered behavior.
-- File-descriptor ownership details.
-- Connection lifecycle and removal semantics.
+Implemented and validated through Phase 1F:
+
+- Portable readiness-event representation.
+- Level-triggered kqueue and epoll backends.
+- RAII descriptor ownership.
+- Registration-token-safe connection lifecycle.
+- Bounded I/O, idle handling and backpressure.
+
+Remaining:
+
+- Phase 1F final acceptance and merge.
+- Phase 1G external multi-client smoke tests.
 
 ## Phase 2
 
