@@ -1,0 +1,93 @@
+cmake_minimum_required(VERSION 3.25)
+
+project(
+    RedisCompatibleDB
+    VERSION 0.1.0
+    LANGUAGES CXX
+)
+
+include(CTest)
+
+function(redisdb_enable_warnings target_name)
+    if(MSVC)
+        target_compile_options(
+            ${target_name}
+            PRIVATE /W4
+        )
+    else()
+        target_compile_options(
+            ${target_name}
+            PRIVATE
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wconversion
+                -Wshadow
+        )
+    endif()
+endfunction()
+
+add_library(
+    redisdb-core STATIC
+    src/server/Version.cpp
+)
+
+target_compile_features(
+    redisdb-core PUBLIC cxx_std_20
+)
+
+set_target_properties(
+    redisdb-core
+    PROPERTIES CXX_EXTENSIONS OFF
+)
+
+target_include_directories(
+    redisdb-core
+    PUBLIC
+        "${PROJECT_SOURCE_DIR}/include"
+)
+
+redisdb_enable_warnings(redisdb-core)
+
+add_executable(
+    redisdb-server
+    src/main.cpp
+)
+
+target_link_libraries(
+    redisdb-server
+    PRIVATE redisdb-core
+)
+
+redisdb_enable_warnings(redisdb-server)
+
+if(BUILD_TESTING)
+    add_executable(
+        redisdb-tests
+        tests/unit/version_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-tests)
+
+    add_test(
+        NAME unit.version
+        COMMAND redisdb-tests
+    )
+
+    add_test(
+        NAME cli.version
+        COMMAND redisdb-server --version
+    )
+
+    set_tests_properties(
+        cli.version
+        PROPERTIES
+            PASS_REGULAR_EXPRESSION
+                "redisdb-server 0.1.0-dev"
+    )
+endif()
