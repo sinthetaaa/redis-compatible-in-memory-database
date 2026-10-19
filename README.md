@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — macOS kqueue and Linux epoll backends validated.**
+**Project status: Phase 1 in progress — Connection lifecycle implemented and cross-platform validated; final Phase 1F acceptance pending.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -52,12 +52,21 @@ Implemented and validated:
 - Native macOS kqueue implementation and integration tests.
 - Native Linux epoll implementation and integration tests.
 - Ubuntu Debug and Release validation through GitHub Actions.
+- RAII-managed connections and bounded nonblocking I/O.
+- ConnectionManager admission and registration management.
+- Readiness dispatch and stale registration-token handling.
+- Coalescing of separate Read/Write readiness notifications.
+- Output backpressure with high and low watermarks.
+- Configurable idle eviction and deadline-aware polling.
+- Half-close handling and queued-output draining.
+- Per-connection callback and socket failure isolation.
+- Native macOS and Linux connection integration tests.
 - Kernel-backed read/write readiness and hangup detection.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
 
-- Event-loop-driven TCP serving.
+- A continuously running TCP serving loop in redisdb-server.
 - Redis protocol processing.
 - Database command execution.
 - In-memory key/value storage.
@@ -160,34 +169,22 @@ ctest --preset release --output-on-failure
 Check source formatting:
 
 ```bash
-clang-format --dry-run --Werror \
-  include/redisdb/server/Version.hpp \
-  src/server/Version.cpp \
-  src/main.cpp \
-  tests/unit/version_test.cpp \
-  include/redisdb/net/UniqueFd.hpp \
-  src/net/UniqueFd.cpp \
-  tests/unit/unique_fd_test.cpp \
-  include/redisdb/net/TcpListener.hpp \
-  src/net/TcpListener.cpp \
-  tests/integration/tcp_listener_test.cpp \
-  include/redisdb/net/EventPoller.hpp \
-  tests/unit/event_poller_test.cpp \
-  include/redisdb/net/KqueuePoller.hpp \
-  src/net/KqueuePoller.cpp \
-  tests/integration/kqueue_poller_test.cpp \
-  include/redisdb/net/EpollPoller.hpp \
-  src/net/EpollPoller.cpp \
-  tests/integration/epoll_poller_test.cpp
+find include src tests -type f \( -name '*.hpp' -o -name '*.cpp' \) -print0 |
+  xargs -0 clang-format --dry-run --Werror
 ```
 
-Current tests cover version reporting, POSIX descriptor
-ownership, loopback TCP behavior, portable event-poller
-contracts and native kqueue/epoll readiness.
+Current tests cover version reporting, descriptor
+ownership, TCP listener behavior, native kqueue/epoll
+readiness, connection admission, event dispatch,
+backpressure, idle eviction and client failures.
 
-Future tests will cover connection lifecycle, event-loop
-processing, protocol parsing, command behavior,
-persistence and recovery.
+Linux CI validates Debug and Release configurations,
+including repeated connection-manager, dispatch and
+native epoll integration tests.
+
+Future work includes the continuously running server
+entry point, external multi-client smoke tests, RESP2
+parsing, command execution, persistence and recovery.
 
 ## Planned Architecture
 

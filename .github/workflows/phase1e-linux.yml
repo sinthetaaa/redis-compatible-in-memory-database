@@ -1,4 +1,4 @@
-name: Phase 1E Linux epoll validation
+name: Networking Linux validation
 
 on:
   push:
@@ -48,6 +48,30 @@ jobs:
 
       - name: Run full test suite
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+      - name: Repeat connection lifecycle integration tests
+        run: |
+          set -euo pipefail
+
+          # Explicit literal-dot matching avoids shell
+          # and YAML backslash-escaping mistakes.
+          pattern='^integration[.](connection_manager|connection_dispatch)$'
+
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -N \
+            -R "$pattern" \
+            | tee "$RUNNER_TEMP/phase1f-selected-tests.txt"
+
+          # A green job with zero selected tests is
+          # not a valid acceptance result.
+          grep -Eq             '^[[:space:]]*Total Tests: 2[[:space:]]*$'             "$RUNNER_TEMP/phase1f-selected-tests.txt"
+
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -R "$pattern" \
+            --repeat until-fail:20 \
+            --output-on-failure
 
       - name: Repeat native epoll integration test
         run: |

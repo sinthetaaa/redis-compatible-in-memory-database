@@ -6,15 +6,20 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Approved design; networking foundations through Phase 1E implemented
+**Architecture state:** Connection lifecycle implemented and cross-platform validated through Phase 1F-D; final Phase 1F acceptance pending
 
 This document describes the intended system.
 
-The build foundation, descriptor-ownership wrapper,
-loopback TCP listener, portable event-poller interface,
-macOS kqueue and Linux epoll backends are implemented.
-The serving loop, protocol engine and database execution
-path remain unimplemented.
+The build foundation, descriptor ownership, TCP listener,
+portable EventPoller, native kqueue and epoll backends,
+and ConnectionManager are implemented and tested.
+
+The networking library provides bounded nonblocking I/O,
+readiness dispatch, admission control, idle eviction,
+backpressure and per-client failure isolation.
+
+The executable serving loop, RESP2 protocol engine
+and database execution path remain unimplemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -308,10 +313,12 @@ The fake implementation does not observe actual
 kernel readiness, block for real elapsed time,
 or establish kqueue/epoll compatibility.
 
-The native macOS backend was implemented in Phase 1D.
-The Linux backend remains Phase 1E.
-The running server loop and client lifecycle
-remain future work.
+The macOS kqueue backend was completed in Phase 1D,
+the Linux epoll backend in Phase 1E, and connection
+lifecycle management through Phase 1F.
+
+The continuously running executable server loop
+remains future work.
 
 ## Implemented Kernel Poller — Phase 1D
 
@@ -454,7 +461,43 @@ Planned policies include:
 - Read suspension when appropriate.
 - Disconnection at hard safety limits.
 
-Limits will be selected and tested in Phase 11.
+Preliminary buffer limits and output watermarks
+were implemented and tested in Phase 1F.
+Phase 11 will address broader robustness and tuning.
+
+## Implemented Connection Lifecycle — Phase 1F
+
+`Connection` owns a nonblocking socket, bounded input
+and output buffers, and activity timestamps.
+
+`ConnectionManager` owns the listener and accepted
+connections, and borrows a native EventPoller.
+
+Implemented invariants:
+
+- Unique tokens identify registration lifetimes.
+- Poller removal precedes socket destruction.
+- Accept, read and write operations use finite budgets.
+- Duplicate readiness events are coalesced by token.
+- Stale registration tokens are ignored.
+- Admission limits suspend listener registration.
+- Listener resumption uses a fresh registration token.
+- Output high watermarks suspend client reads.
+- Low watermarks allow reads to resume.
+- EOF connections drain queued output before closing.
+- Configured idle deadlines bound indefinite polling.
+- Callback and unexpected client socket failures are isolated.
+- Shared listener or poller failures remain visible.
+
+These behaviors are tested with macOS kqueue and
+Linux epoll integration tests.
+
+The input handler is transport-level, not a Redis
+protocol parser or command dispatcher.
+
+The redisdb-server executable remains a bootstrap CLI.
+Continuous serving and external multi-client smoke tests
+are subsequent networking work.
 
 # 5. RESP2 Protocol Subsystem
 

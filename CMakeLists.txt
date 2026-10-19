@@ -32,6 +32,8 @@ add_library(
     src/server/Version.cpp
     src/net/UniqueFd.cpp
     src/net/TcpListener.cpp
+    src/net/Connection.cpp
+    src/net/ConnectionManager.cpp
 )
 
 if(APPLE)
@@ -170,6 +172,76 @@ if(BUILD_TESTING)
         unit.event_poller
         PROPERTIES TIMEOUT 10
     )
+
+    add_executable(
+        redisdb-connection-tests
+        tests/unit/connection_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-connection-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-connection-tests)
+
+    add_test(
+        NAME unit.connection
+        COMMAND redisdb-connection-tests
+    )
+
+    set_tests_properties(
+        unit.connection
+        PROPERTIES TIMEOUT 10
+    )
+
+    if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_executable(
+            redisdb-manager-tests
+            tests/integration/connection_manager_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-manager-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(redisdb-manager-tests)
+
+        add_test(
+            NAME integration.connection_manager
+            COMMAND redisdb-manager-tests
+        )
+
+        set_tests_properties(
+            integration.connection_manager
+            PROPERTIES TIMEOUT 20
+        )
+    endif()
+
+    if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_executable(
+            redisdb-dispatch-tests
+            tests/integration/connection_dispatch_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-dispatch-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(redisdb-dispatch-tests)
+
+        add_test(
+            NAME integration.connection_dispatch
+            COMMAND redisdb-dispatch-tests
+        )
+
+        set_tests_properties(
+            integration.connection_dispatch
+            PROPERTIES TIMEOUT 20
+        )
+    endif()
 
     if(APPLE)
         add_executable(
