@@ -17,6 +17,7 @@ ConnectionManager::ConnectionManager(TcpListener listener, EventPoller& poller, 
     }
 
     if (limits_.max_connections == 0 || limits_.max_accept_per_call == 0 ||
+        limits_.max_read_per_event == 0 || limits_.max_write_per_event == 0 ||
         limits_.connection.max_input_bytes == 0 || limits_.connection.max_output_bytes == 0) {
         throw std::invalid_argument("connection manager limits must be positive");
     }
@@ -192,6 +193,120 @@ bool ConnectionManager::close_connection(RegistrationToken token) {
     }
 
     return true;
+}
+
+void ConnectionManager::set_input_handler(InputHandler handler) {
+    input_handler_ = std::move(handler);
+}
+
+void ConnectionManager::refresh_interest(RegistrationToken token) {
+    Connection* connection = find(token);
+
+    if (connection == nullptr) {
+        throw std::logic_error("unknown connection registration token");
+    }
+
+    if (connection->received_eof() && !connection->wants_write()) {
+        throw std::logic_error("EOF connection has no pending output");
+    }
+
+    EventMask interest = connection->received_eof() ? EventMask::Write : EventMask::Read;
+
+    if (connection->wants_write()) {
+        interest |= EventMask::Write;
+    }
+
+    poller_.modify(connection->fd(), interest);
+}
+
+ConnectionManager::DispatchResult
+ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
+    DispatchResult stats;
+
+    for (const ReadyEvent& event : events) {
+        if (is_listener_event(event.token)) {
+            if (contains_all(event.events, EventMask::Read)) {
+                const auto accepted = accept_ready(limits_.max_accept_per_call);
+
+                stats.accepted += accepted.tokens.size();
+            }
+
+            continue;
+        }
+
+        Connection* connection = find(event.token);
+
+        if (connection == nullptr) {
+            ++stats.stale_events;
+            continue;
+        }
+
+        if (contains_all(event.events, EventMask::Error)) {
+            if (close_connection(event.token)) {
+                ++stats.closed;
+            }
+
+            continue;
+        }
+
+        const bool readable = contains_all(event.events, EventMask::Read) ||
+                              contains_all(event.events, EventMask::Hangup);
+
+        if (readable && !connection->received_eof()) {
+            const auto received = connection->receive_once(limits_.max_read_per_event);
+
+            stats.bytes_received += received.bytes_read;
+
+            if (received.bytes_read > 0 && input_handler_) {
+                try {
+                    input_handler_(*connection);
+                } catch (...) {
+                    (void)close_connection(event.token);
+                    throw;
+                }
+            }
+
+            // Temporary hard input limit.
+            // Detailed backpressure follows in 1F-D.
+            if (connection->input().size() >= limits_.connection.max_input_bytes) {
+                if (close_connection(event.token)) {
+                    ++stats.closed;
+                }
+
+                continue;
+            }
+        }
+
+        if (contains_all(event.events, EventMask::Write) && connection->wants_write()) {
+            const auto written = connection->flush_once(limits_.max_write_per_event);
+
+            stats.bytes_sent += written.bytes_written;
+
+            if (written.peer_disconnected) {
+                if (close_connection(event.token)) {
+                    ++stats.closed;
+                }
+
+                continue;
+            }
+        }
+
+        if (connection->received_eof() && !connection->wants_write()) {
+            if (close_connection(event.token)) {
+                ++stats.closed;
+            }
+
+            continue;
+        }
+
+        refresh_interest(event.token);
+    }
+
+    return stats;
+}
+
+ConnectionManager::DispatchResult ConnectionManager::poll_once(std::chrono::milliseconds timeout) {
+    return dispatch_ready(poller_.wait(timeout));
 }
 
 } // namespace redisdb::net

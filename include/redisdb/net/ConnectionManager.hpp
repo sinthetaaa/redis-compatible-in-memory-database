@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -31,6 +32,8 @@ class ConnectionManager final {
     struct Limits {
         std::size_t max_connections = 1024;
         std::size_t max_accept_per_call = 32;
+        std::size_t max_read_per_event = 8192;
+        std::size_t max_write_per_event = 8192;
         Connection::Limits connection{};
     };
 
@@ -42,6 +45,20 @@ class ConnectionManager final {
         bool would_block = false;
         bool capacity_reached = false;
     };
+
+    struct DispatchResult {
+        std::size_t accepted = 0;
+        std::size_t bytes_received = 0;
+        std::size_t bytes_sent = 0;
+        std::size_t closed = 0;
+        std::size_t stale_events = 0;
+    };
+
+    // A transport callback, not a protocol parser.
+    // May consume input and queue output.
+    // Must not remove connections or mutate manager
+    // registrations during invocation.
+    using InputHandler = std::function<void(Connection&)>;
 
     ConnectionManager(TcpListener listener, EventPoller& poller);
 
@@ -91,6 +108,14 @@ class ConnectionManager final {
     // using a fresh, never-reused token.
     [[nodiscard]] bool close_connection(RegistrationToken token);
 
+    void set_input_handler(InputHandler handler);
+
+    void refresh_interest(RegistrationToken token);
+
+    [[nodiscard]] DispatchResult dispatch_ready(const std::vector<ReadyEvent>& events);
+
+    [[nodiscard]] DispatchResult poll_once(std::chrono::milliseconds timeout);
+
   private:
     [[nodiscard]] RegistrationToken allocate_token();
 
@@ -106,6 +131,7 @@ class ConnectionManager final {
     RegistrationToken listener_token_ = InvalidToken;
     RegistrationToken next_token_ = 1;
     bool listener_registered_ = false;
+    InputHandler input_handler_;
 };
 
 } // namespace redisdb::net

@@ -219,6 +219,30 @@ if(BUILD_TESTING)
         )
     endif()
 
+    if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_executable(
+            redisdb-dispatch-tests
+            tests/integration/connection_dispatch_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-dispatch-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(redisdb-dispatch-tests)
+
+        add_test(
+            NAME integration.connection_dispatch
+            COMMAND redisdb-dispatch-tests
+        )
+
+        set_tests_properties(
+            integration.connection_dispatch
+            PROPERTIES TIMEOUT 20
+        )
+    endif()
+
     if(APPLE)
         add_executable(
             redisdb-kqueue-tests
