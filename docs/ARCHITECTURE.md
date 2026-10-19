@@ -608,7 +608,7 @@ This value model does not implement RESP2 wire
 serialization, incremental parsing or command
 execution. Those remain separate later milestones.
 
-## Phase 2B Response Serializer — IN PROGRESS
+## Phase 2B Response Serializer — COMPLETE
 
 Files:
 
@@ -642,10 +642,14 @@ The serializer has no socket, parser, database or
 command execution dependencies.
 
 Implementation: 7835524.
-PR #5: OPEN, DRAFT.
+PR #5: MERGED.
 Initial Linux CI: 39311216460 SUCCESS.
+Final PR-head CI: 39314875934 SUCCESS.
+Merge commit: 0fa0269257a9c34f7aa4bb5b909bb0a5d976882c.
+Post-merge CI: 39320475360 SUCCESS.
 
-Phase 2C incremental parsing has NOT STARTED.
+Phase 2B is complete.
+Phase 2C incremental parsing is NEXT, NOT STARTED.
 
 ## Parsing Model
 

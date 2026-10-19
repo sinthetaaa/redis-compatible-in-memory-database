@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phase 2A COMPLETE; Phase 2B Response Serializer IN PROGRESS.
+Phases 2A and 2B COMPLETE; Phase 2C Incremental Parser NEXT.
 
 ### Acceptance Gate
 
@@ -156,7 +156,7 @@ simultaneous connections without resource leaks.
 **Status:** IN PROGRESS
 
 - [x] 2A — RESP value model
-- [ ] 2B — Response serializer
+- [x] 2B — Response serializer
 - [ ] 2C — Incremental parser
 - [ ] 2D — Fragmented request handling
 - [ ] 2E — Pipelining
@@ -230,8 +230,11 @@ Phase 2C through 2G: NOT STARTED.
   implementation committed and pushed.
 - 2B.2: COMPLETE — Draft PR #5 created; Linux
   Debug and Release validation passed.
-- 2B.3: IN PROGRESS — Documentation synchronization,
-  final review, merge and post-merge acceptance.
+- 2B.3: COMPLETE — Documentation synchronized
+  and final PR-head Linux acceptance passed.
+- 2B.4: COMPLETE — PR #5 merged into main;
+  macOS and Linux post-merge tests passed.
+- 2B.5: COMPLETE — Formal milestone closure recorded.
 
 Implementation commit:
 7835524ca00acd02e9ec16f8bd297b59b750e2c9.
@@ -240,6 +243,13 @@ PR #5:
 https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/5
 
 Initial Linux workflow 39311216460: SUCCESS.
+Final PR-head workflow 39314875934: SUCCESS.
+
+PR #5: MERGED.
+Merge commit:
+0fa0269257a9c34f7aa4bb5b909bb0a5d976882c.
+
+Post-merge Linux workflow 39320475360: SUCCESS.
 
 Both Linux Debug and Release passed 12/12 tests.
 The serializer unit test and existing networking
@@ -255,11 +265,17 @@ Serializer implementation:
 - Checked cumulative response-size accounting.
 - Output, array-element and nesting-depth limits.
 
-Phase 2B remains IN PROGRESS pending final PR
-acceptance, merge and post-merge Linux validation.
+Phase 2B: COMPLETE.
 
-Phase 2C through 2G have NOT STARTED.
-The server has no RESP2 network integration.
+The standalone bounded serializer is validated
+on macOS and Linux in Debug and Release.
+
+Phase 2C — Incremental Parser: NEXT, NOT STARTED.
+Phase 2D through 2G: NOT STARTED.
+
+The running server remains transport-only.
+No RESP2 parsing, command execution, or
+database storage is implemented.
 
 ### Acceptance Gate
 

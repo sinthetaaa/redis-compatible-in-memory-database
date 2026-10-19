@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phase 2A COMPLETE; Phase 2B serializer implementation under acceptance in draft PR #5.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A and 2B COMPLETE; Phase 2C Incremental Parser NEXT.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -395,7 +395,7 @@ Post-merge Linux Debug and Release CI:
 Phase 2A implementation, merge and post-merge
 acceptance are complete.
 
-Phase 2B — Response Serializer is IN PROGRESS.
+Phase 2B — Response Serializer is COMPLETE.
 
 A standalone bounded RESP2 wire serializer is
 implemented in commit 7835524.
@@ -419,10 +419,21 @@ Serializer repetitions: 30/30 per configuration.
 Initial Linux Debug and Release CI:
 39311216460 — SUCCESS.
 
-PR #5: OPEN, DRAFT.
+Final PR-head Linux Debug and Release CI:
+39314875934 — SUCCESS.
 
-Final documentation, review, merge and post-merge
-acceptance remain. Phase 2C has NOT STARTED.
+Post-merge Linux Debug and Release CI:
+39320475360 — SUCCESS.
+
+PR #5: MERGED on 2026-10-20.
+Merge commit:
+0fa0269257a9c34f7aa4bb5b909bb0a5d976882c.
+
+Phase 2B implementation, final review, merge,
+and post-merge acceptance are complete.
+
+Phase 2C — Incremental RESP2 Parser is NEXT,
+NOT STARTED.
 
 The server still operates only in transport smoke mode;
 it does not parse RESP2 or execute Redis commands.
