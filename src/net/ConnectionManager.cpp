@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
 
 namespace redisdb::net {
@@ -18,7 +19,8 @@ ConnectionManager::ConnectionManager(TcpListener listener, EventPoller& poller, 
 
     if (limits_.max_connections == 0 || limits_.max_accept_per_call == 0 ||
         limits_.max_read_per_event == 0 || limits_.max_write_per_event == 0 ||
-        limits_.connection.max_input_bytes == 0 || limits_.connection.max_output_bytes == 0) {
+        limits_.idle_timeout.count() < 0 || limits_.connection.max_input_bytes == 0 ||
+        limits_.connection.max_output_bytes == 0) {
         throw std::invalid_argument("connection manager limits must be positive");
     }
 
@@ -185,6 +187,7 @@ bool ConnectionManager::close_connection(RegistrationToken token) {
     poller_.remove(it->second->fd());
 
     connections_.erase(it);
+    read_paused_.erase(token);
 
     // If the listener was suspended at capacity,
     // resume it with a fresh registration token.
@@ -199,6 +202,10 @@ void ConnectionManager::set_input_handler(InputHandler handler) {
     input_handler_ = std::move(handler);
 }
 
+bool ConnectionManager::read_paused(RegistrationToken token) const noexcept {
+    return read_paused_.contains(token);
+}
+
 void ConnectionManager::refresh_interest(RegistrationToken token) {
     Connection* connection = find(token);
 
@@ -206,24 +213,92 @@ void ConnectionManager::refresh_interest(RegistrationToken token) {
         throw std::logic_error("unknown connection registration token");
     }
 
-    if (connection->received_eof() && !connection->wants_write()) {
+    const std::size_t pending = connection->pending_output_bytes();
+
+    if (connection->received_eof() && pending == 0) {
         throw std::logic_error("EOF connection has no pending output");
     }
 
-    EventMask interest = connection->received_eof() ? EventMask::Write : EventMask::Read;
+    const std::size_t maximum = limits_.connection.max_output_bytes;
 
-    if (connection->wants_write()) {
+    // Pause at 75% and resume at 50%.
+    //
+    // Subtraction avoids overflow when maximum
+    // is near SIZE_MAX.
+    const std::size_t high_water = maximum - maximum / 4;
+
+    const std::size_t low_water = maximum / 2;
+
+    const bool previously_paused = read_paused_.contains(token);
+
+    const bool should_pause = connection->received_eof() ||
+                              (previously_paused ? pending > low_water : pending >= high_water);
+
+    EventMask interest = EventMask::None;
+
+    if (!should_pause) {
+        interest |= EventMask::Read;
+    }
+
+    if (pending > 0) {
         interest |= EventMask::Write;
     }
 
-    poller_.modify(connection->fd(), interest);
+    if (!valid_interest(interest)) {
+        throw std::logic_error("backpressure produced invalid interest");
+    }
+
+    // Allocate tracking state before modifying
+    // the native poller. If modify() throws,
+    // restore the previous tracking state.
+    if (should_pause && !previously_paused) {
+        read_paused_.insert(token);
+    }
+
+    try {
+        poller_.modify(connection->fd(), interest);
+    } catch (...) {
+        if (should_pause && !previously_paused) {
+            read_paused_.erase(token);
+        }
+
+        throw;
+    }
+
+    if (!should_pause) {
+        read_paused_.erase(token);
+    }
 }
 
 ConnectionManager::DispatchResult
 ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
     DispatchResult stats;
 
+    // kqueue may report separate Read and Write
+    // events for the same registration. Merge their
+    // flags before dispatching each token once.
+    //
+    // Preserve first-seen token order and enforce
+    // one read/write budget per readiness batch.
+    std::unordered_map<RegistrationToken, std::size_t> positions;
+
+    std::vector<ReadyEvent> combined;
+
+    positions.reserve(events.size());
+    combined.reserve(events.size());
+
     for (const ReadyEvent& event : events) {
+        const auto [it, inserted] = positions.try_emplace(event.token, combined.size());
+
+        if (inserted) {
+            combined.push_back(event);
+        } else {
+            combined[it->second].events |= event.events;
+            ++stats.duplicate_events;
+        }
+    }
+
+    for (const ReadyEvent& event : combined) {
         if (is_listener_event(event.token)) {
             if (contains_all(event.events, EventMask::Read)) {
                 const auto accepted = accept_ready(limits_.max_accept_per_call);
@@ -252,7 +327,7 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
         const bool readable = contains_all(event.events, EventMask::Read) ||
                               contains_all(event.events, EventMask::Hangup);
 
-        if (readable && !connection->received_eof()) {
+        if (readable && !connection->received_eof() && !read_paused_.contains(event.token)) {
             const auto received = connection->receive_once(limits_.max_read_per_event);
 
             stats.bytes_received += received.bytes_read;
@@ -260,9 +335,24 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
             if (received.bytes_read > 0 && input_handler_) {
                 try {
                     input_handler_(*connection);
+                } catch (const std::length_error&) {
+                    // A callback exceeded a buffer
+                    // boundary. Drop only this client.
+                    if (close_connection(event.token)) {
+                        ++stats.closed;
+                    }
+
+                    ++stats.output_limit_closes;
+                    continue;
                 } catch (...) {
-                    (void)close_connection(event.token);
-                    throw;
+                    // A faulty input handler must not
+                    // terminate the whole event loop.
+                    if (close_connection(event.token)) {
+                        ++stats.closed;
+                    }
+
+                    ++stats.handler_failures;
+                    continue;
                 }
             }
 
@@ -305,8 +395,68 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
     return stats;
 }
 
+std::size_t ConnectionManager::reap_idle_connections(std::chrono::steady_clock::time_point now) {
+    if (limits_.idle_timeout.count() == 0) {
+        return 0;
+    }
+
+    std::vector<RegistrationToken> expired;
+
+    for (const auto& [token, connection] : connections_) {
+        const auto last = connection->last_activity();
+
+        if (now >= last && now - last >= limits_.idle_timeout) {
+            expired.push_back(token);
+        }
+    }
+
+    std::size_t closed = 0;
+
+    for (RegistrationToken token : expired) {
+        if (close_connection(token)) {
+            ++closed;
+        }
+    }
+
+    return closed;
+}
+
 ConnectionManager::DispatchResult ConnectionManager::poll_once(std::chrono::milliseconds timeout) {
-    return dispatch_ready(poller_.wait(timeout));
+    if (!valid_wait_timeout(timeout)) {
+        throw std::invalid_argument("invalid connection manager wait timeout");
+    }
+
+    auto effective_timeout = timeout;
+
+    // An indefinite poll must not prevent the manager
+    // from enforcing a configured idle deadline.
+    if (limits_.idle_timeout.count() > 0) {
+        const auto now = std::chrono::steady_clock::now();
+
+        for (const auto& [token, connection] : connections_) {
+            (void)token;
+
+            const auto deadline = connection->last_activity() + limits_.idle_timeout;
+
+            if (deadline <= now) {
+                effective_timeout = std::chrono::milliseconds{0};
+                break;
+            }
+
+            const auto remaining = std::chrono::ceil<std::chrono::milliseconds>(deadline - now);
+
+            if (effective_timeout == std::chrono::milliseconds{-1} ||
+                remaining < effective_timeout) {
+                effective_timeout = remaining;
+            }
+        }
+    }
+
+    auto stats = dispatch_ready(poller_.wait(effective_timeout));
+
+    stats.closed += reap_idle_connections(std::chrono::steady_clock::now());
+
+    return stats;
 }
 
 } // namespace redisdb::net

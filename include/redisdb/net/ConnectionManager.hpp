@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace redisdb::net {
@@ -34,6 +35,8 @@ class ConnectionManager final {
         std::size_t max_accept_per_call = 32;
         std::size_t max_read_per_event = 8192;
         std::size_t max_write_per_event = 8192;
+        // Zero disables idle eviction.
+        std::chrono::milliseconds idle_timeout{0};
         Connection::Limits connection{};
     };
 
@@ -52,6 +55,11 @@ class ConnectionManager final {
         std::size_t bytes_sent = 0;
         std::size_t closed = 0;
         std::size_t stale_events = 0;
+        // Additional records coalesced by token,
+        // including records with distinct flags.
+        std::size_t duplicate_events = 0;
+        std::size_t handler_failures = 0;
+        std::size_t output_limit_closes = 0;
     };
 
     // A transport callback, not a protocol parser.
@@ -112,9 +120,17 @@ class ConnectionManager final {
 
     void refresh_interest(RegistrationToken token);
 
+    // True when reading is suspended because of
+    // output pressure or received EOF.
+    [[nodiscard]] bool read_paused(RegistrationToken token) const noexcept;
+
     [[nodiscard]] DispatchResult dispatch_ready(const std::vector<ReadyEvent>& events);
 
     [[nodiscard]] DispatchResult poll_once(std::chrono::milliseconds timeout);
+
+    // Explicit clock input supports deterministic tests.
+    // Returns the number of connections evicted.
+    [[nodiscard]] std::size_t reap_idle_connections(std::chrono::steady_clock::time_point now);
 
   private:
     [[nodiscard]] RegistrationToken allocate_token();
@@ -132,6 +148,7 @@ class ConnectionManager final {
     RegistrationToken next_token_ = 1;
     bool listener_registered_ = false;
     InputHandler input_handler_;
+    std::unordered_set<RegistrationToken> read_paused_;
 };
 
 } // namespace redisdb::net
