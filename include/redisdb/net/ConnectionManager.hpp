@@ -1,0 +1,111 @@
+#pragma once
+
+#include "redisdb/net/Connection.hpp"
+#include "redisdb/net/EventPoller.hpp"
+#include "redisdb/net/TcpListener.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
+namespace redisdb::net {
+
+// Single-threaded owner of accepted TCP connections.
+//
+// Owns:
+//   - TcpListener
+//   - Each accepted Connection
+//
+// Borrows:
+//   - EventPoller, which must outlive this manager
+//
+// A connection is unregistered before its socket
+// is closed.
+//
+// Phase 1F-B manages registration and ownership.
+// Event dispatch is added in Phase 1F-C.
+class ConnectionManager final {
+  public:
+    struct Limits {
+        std::size_t max_connections = 1024;
+        std::size_t max_accept_per_call = 32;
+        Connection::Limits connection{};
+    };
+
+    struct AcceptResult {
+        // Newly accepted, successfully registered
+        // connection identities.
+        std::vector<RegistrationToken> tokens;
+
+        bool would_block = false;
+        bool capacity_reached = false;
+    };
+
+    ConnectionManager(TcpListener listener, EventPoller& poller);
+
+    ConnectionManager(TcpListener listener, EventPoller& poller, Limits limits);
+
+    ~ConnectionManager() noexcept;
+
+    ConnectionManager(const ConnectionManager&) = delete;
+    ConnectionManager& operator=(const ConnectionManager&) = delete;
+
+    ConnectionManager(ConnectionManager&&) = delete;
+    ConnectionManager& operator=(ConnectionManager&&) = delete;
+
+    [[nodiscard]] int listener_fd() const noexcept { return listener_.fd(); }
+
+    [[nodiscard]] std::uint16_t listener_port() const noexcept { return listener_.port(); }
+
+    [[nodiscard]] bool listener_registered() const noexcept { return listener_registered_; }
+
+    [[nodiscard]] RegistrationToken listener_token() const noexcept {
+        return listener_registered_ ? listener_token_ : InvalidToken;
+    }
+
+    [[nodiscard]] bool is_listener_event(RegistrationToken token) const noexcept {
+        return listener_registered_ && token != InvalidToken && token == listener_token_;
+    }
+
+    [[nodiscard]] std::size_t connection_count() const noexcept { return connections_.size(); }
+
+    [[nodiscard]] Connection* find(RegistrationToken token) noexcept;
+
+    [[nodiscard]] const Connection* find(RegistrationToken token) const noexcept;
+
+    // Accept up to min(budget, max_accept_per_call).
+    //
+    // Stops on EAGAIN, budget exhaustion or capacity.
+    // Registers each accepted FD with Read interest.
+    //
+    // An invalid zero budget throws.
+    [[nodiscard]] AcceptResult accept_ready(std::size_t budget);
+
+    // Idempotent for absent connection tokens.
+    // Unregisters before closing the owned socket.
+    //
+    // If capacity had been reached, a successful
+    // close resumes the listening registration
+    // using a fresh, never-reused token.
+    [[nodiscard]] bool close_connection(RegistrationToken token);
+
+  private:
+    [[nodiscard]] RegistrationToken allocate_token();
+
+    void suspend_listener();
+    void resume_listener();
+
+    TcpListener listener_;
+    EventPoller& poller_;
+    Limits limits_;
+
+    std::unordered_map<RegistrationToken, std::unique_ptr<Connection>> connections_;
+
+    RegistrationToken listener_token_ = InvalidToken;
+    RegistrationToken next_token_ = 1;
+    bool listener_registered_ = false;
+};
+
+} // namespace redisdb::net
