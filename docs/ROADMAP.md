@@ -55,7 +55,7 @@ roadmap, including all 169 subphases.
 **Status:** IN PROGRESS
 
 - [x] 1A — RAII socket abstraction
-- [ ] 1B — TCP listener
+- [x] 1B — TCP listener
 - [ ] 1C — Event-loop interface
 - [ ] 1D — macOS kqueue implementation
 - [ ] 1E — Linux epoll implementation

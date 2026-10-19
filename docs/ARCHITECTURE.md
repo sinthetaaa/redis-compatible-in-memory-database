@@ -6,13 +6,14 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Approved design; Phase 1A descriptor ownership implemented
+**Architecture state:** Approved design; Phase 1A and 1B networking primitives implemented
 
 This document describes the intended system.
 
-Only the CMake-based build skeleton, core version
-library, CLI bootstrap, and baseline tests exist
-at the completion of Phase 0C.
+The build foundation, descriptor-ownership wrapper
+and standalone loopback TCP listener are implemented.
+The event loop, protocol engine and database server
+execution path have not yet been implemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -193,7 +194,38 @@ Supported operations:
 Copy construction and assignment are disabled.
 The wrapper assumes exclusive ownership of adopted FDs.
 Close errors cannot be reported from the destructor.
-No TCP listener or event loop exists yet.
+The TCP listener is implemented in Phase 1B.
+No event loop or connection manager exists yet.
+
+## Implemented Networking — Phase 1B
+
+`redisdb::net::TcpListener` owns an IPv4 listening
+socket using `UniqueFd`.
+
+Implemented files:
+
+- `include/redisdb/net/TcpListener.hpp`
+- `src/net/TcpListener.cpp`
+- `tests/integration/tcp_listener_test.cpp`
+
+Validated behavior:
+
+- Binds specifically to `127.0.0.1`.
+- Defaults to port `6380` with backlog `128`.
+- Accepts port `0` for OS-assigned test ports.
+- Configures `O_NONBLOCK` and `FD_CLOEXEC`.
+- Uses `SO_REUSEADDR` on the listening socket.
+- Provides `fd()`, `port()` and `accept_one()`.
+- Returns `std::nullopt` for no pending connection.
+- Returns an owning `UniqueFd` for accepted clients.
+- Retries interrupted and aborted accepts.
+- Rejects invalid backlogs and invalid listener state.
+- Propagates unexpected socket errors as exceptions.
+- Cleans up listening and accepted descriptors via RAII.
+
+The listener is not yet integrated with a polling loop.
+No command handling, RESP2 parsing or persistent data
+storage occurs in the server executable.
 
 ## 4.1 TCP Listener
 

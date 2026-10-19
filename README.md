@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 in progress — RAII descriptor ownership implemented.**
+**Project status: Phase 1 in progress — RAII descriptors and TCP listener implemented.**
 
 The current executable is a bootstrap CLI.
 It does not yet accept TCP connections or execute
@@ -44,11 +44,13 @@ Implemented and validated:
 - Automated baseline tests.
 - Move-only POSIX file-descriptor ownership with RAII.
 - Unix socket-pair ownership and cleanup tests.
+- Non-blocking, loopback-only IPv4 TCP listener.
+- Real TCP connection and listener integration tests.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
 
-- TCP networking.
+- Event-loop-driven TCP serving.
 - Redis protocol processing.
 - Database command execution.
 - In-memory key/value storage.
@@ -158,14 +160,17 @@ clang-format --dry-run --Werror \
   tests/unit/version_test.cpp \
   include/redisdb/net/UniqueFd.hpp \
   src/net/UniqueFd.cpp \
-  tests/unit/unique_fd_test.cpp
+  tests/unit/unique_fd_test.cpp \
+  include/redisdb/net/TcpListener.hpp \
+  src/net/TcpListener.cpp \
+  tests/integration/tcp_listener_test.cpp
 ```
 
-Current tests cover version reporting and
-POSIX descriptor ownership using real socket pairs.
+Current tests cover version reporting, POSIX descriptor
+ownership, and real loopback TCP listener behavior.
 
-Future tests will cover networking, protocol parsing,
-command behavior, persistence and recovery.
+Future tests will cover event-loop processing, protocol
+parsing, command behavior, persistence and recovery.
 
 ## Planned Architecture
 
@@ -305,7 +310,9 @@ Phase 0 — Repository and Environment Foundation is complete.
 
 Phase 1A — RAII Socket Abstraction is complete.
 
-Phase 1B — TCP Listener is the next implementation milestone.
+Phase 1B — TCP Listener is complete.
+
+Phase 1C — Event-Loop Interface is the next milestone.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

@@ -31,6 +31,7 @@ add_library(
     redisdb-core STATIC
     src/server/Version.cpp
     src/net/UniqueFd.cpp
+    src/net/TcpListener.cpp
 )
 
 target_compile_features(
@@ -112,5 +113,27 @@ if(BUILD_TESTING)
     set_tests_properties(
         unit.unique_fd
         PROPERTIES TIMEOUT 10
+    )
+
+    add_executable(
+        redisdb-listener-tests
+        tests/integration/tcp_listener_test.cpp
+    )
+
+    target_link_libraries(
+        redisdb-listener-tests
+        PRIVATE redisdb-core
+    )
+
+    redisdb_enable_warnings(redisdb-listener-tests)
+
+    add_test(
+        NAME integration.tcp_listener
+        COMMAND redisdb-listener-tests
+    )
+
+    set_tests_properties(
+        integration.tcp_listener
+        PROPERTIES TIMEOUT 20
     )
 endif()

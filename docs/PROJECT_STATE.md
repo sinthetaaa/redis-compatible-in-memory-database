@@ -4,11 +4,11 @@
 
 - Updated: 2026-10-19
 - Current phase: Phase 1 — Networking Foundation
-- Current subphase: 1B — TCP Listener (next)
+- Current subphase: 1C — Event-Loop Interface (next)
 - Status: PHASE 1 IN PROGRESS
-- Last completed milestone: 1A — RAII Socket Abstraction
-- Exact next task: Begin Phase 1B — implement a non-blocking TCP listener with RAII socket ownership and integration tests.
-- Implementation maturity: Build foundation plus POSIX file-descriptor RAII
+- Last completed milestone: 1B — TCP Listener
+- Exact next task: Begin Phase 1C — design the portable event-loop interface, event masks, registration lifecycle and readiness API with tests.
+- Implementation maturity: Build foundation, POSIX descriptor RAII and tested loopback TCP listener
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -35,7 +35,8 @@
 - Phase 0D remote synchronization: PASS
 - Working tree after 0D: CLEAN
 - Phase 0E commit: 0cc4594d692f10f9a70ed6c9ae6107b0610a624f
-- Phase 1A commit: This revision; obtain exact SHA from Git after push.
+- Phase 1A commit: 1981e8b806944f19783f1de30c581eae1b41871b
+- Phase 1B commit: This revision; verify exact SHA from Git after push.
 - Branch tracking: origin/main
 - Current HEAD and working-tree state must always be checked directly through Git.
 
@@ -96,7 +97,7 @@
 ### Phase 1 Detail
 
 - 1A: COMPLETE — Move-only POSIX descriptor ownership validated.
-- 1B: NOT STARTED — TCP listener.
+- 1B: COMPLETE — Non-blocking loopback TCP listener validated.
 - 1C: NOT STARTED — Event-loop interface.
 - 1D: NOT STARTED — macOS kqueue implementation.
 - 1E: NOT STARTED — Linux epoll implementation.
@@ -123,12 +124,18 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Explicit release/reset and move ownership transfer.
 - Real Unix socket-pair ownership tests.
 - Dedicated redisdb-fd-tests executable.
+- TcpListener with loopback-only IPv4 binding.
+- Non-blocking and close-on-exec descriptor configuration.
+- Ephemeral port support and configurable listen backlog.
+- accept_one() returning owned client descriptors.
+- Dedicated redisdb-listener-tests executable.
+- Real TCP loopback connection and payload tests.
 
 ### Not Yet Implemented
 
-- TCP listener and client connection lifecycle.
+- Event-loop-driven TCP serving and managed client connection lifecycle.
 - kqueue and epoll.
-- Multiple client connections.
+- Concurrent client processing through the event loop.
 - RESP2 parser and serializer.
 - Command execution.
 - In-memory key-value database.
@@ -188,6 +195,17 @@ No durability or crash-recovery guarantees exist yet.
 - docs/PROJECT_STATE.md (updated)
 - docs/ARCHITECTURE.md (updated)
 
+### Phase 1B
+
+- CMakeLists.txt (modified)
+- include/redisdb/net/TcpListener.hpp (created)
+- src/net/TcpListener.cpp (created)
+- tests/integration/tcp_listener_test.cpp (created)
+- README.md (updated)
+- docs/ROADMAP.md (updated)
+- docs/PROJECT_STATE.md (updated)
+- docs/ARCHITECTURE.md (updated)
+
 ## 10. Validation Results
 
 ### Phase 0C — 2026-10-19
@@ -229,7 +247,7 @@ Redis commands, storage, persistence or recovery.
 
 These are foundation tests only.
 
-No TCP listener, RESP2, database, persistence or
+No event-loop, RESP2, database, persistence or
 benchmark tests have been executed.
 
 ### Phase 1A — 2026-10-19
@@ -251,6 +269,30 @@ benchmark tests have been executed.
 These tests validate file-descriptor ownership on macOS.
 They are not evidence of a working TCP listener,
 Linux portability, or complete networking correctness.
+
+### Phase 1B — 2026-10-19
+
+- Apple Clang C++20 Debug build: PASS
+- Debug automated tests: 4/4 PASS
+- Apple Clang C++20 Release build: PASS
+- Release automated tests: 4/4 PASS
+- Integration test discovered by CTest: PASS
+- Repeated TCP integration test: 20/20 PASS
+- Loopback IPv4 bind and ephemeral port: PASS
+- Listener O_NONBLOCK and FD_CLOEXEC: PASS
+- Empty non-blocking accept: PASS
+- Accepted client socket flags: PASS
+- Real TCP send/receive: PASS
+- Four queued client connections: PASS
+- Move construction, assignment and RAII cleanup: PASS
+- Invalid backlog handling: PASS
+- Duplicate listener bind handling: PASS
+- Invalid moved-from listener handling: PASS
+- CMake integration and staged file review: PASS
+
+Scope: macOS loopback component tests only.
+The server executable still has no TCP serving loop.
+Linux validation, event multiplexing and RESP2 are pending.
 
 ## 11. Benchmarks
 
@@ -352,16 +394,17 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-1. Verify the Phase 1A commit and push.
-2. Begin Phase 1B — TCP Listener.
-3. Inspect UniqueFd and existing CMake targets.
-4. Design safe socket creation, bind, listen and accept.
-5. Configure non-blocking mode and local bind defaults.
-6. Handle EAGAIN, EINTR and socket lifecycle errors.
-7. Write real loopback TCP integration tests.
-8. Validate Debug and Release builds.
-9. Update documentation, commit and push Phase 1B.
-10. Continue to Phase 1C after its validation gate.
+1. Verify and push the Phase 1B milestone commit.
+2. Begin Phase 1C — Event-Loop Interface.
+3. Inspect UniqueFd and TcpListener interfaces.
+4. Define read/write/error event masks.
+5. Define poller registration and modification semantics.
+6. Define readiness events and timeout behavior.
+7. Define descriptor lifetime and stale-event safeguards.
+8. Write interface-level tests and test doubles.
+9. Validate Debug and Release builds.
+10. Document, commit and push Phase 1C.
+11. Proceed to macOS kqueue in Phase 1D.
 
 ## 17. Continuation Instructions
 
