@@ -127,10 +127,10 @@ also passed in both configurations.
 
 **Status:** Accepted
 **Implementation:** Partial — Phase 2A value model,
-Phase 2B serializer and Phase 2C standalone parser
-completed and merged. RESP2 network integration
-and persistent fragmented-input handling remain
-unimplemented.
+Phase 2B serializer and Phase 2C parser merged.
+Phase 2D fragmented-input adapter is implemented
+and Linux validated in draft PR #7. Production
+RESP2 serving and command execution remain pending.
 
 ### Decision
 
@@ -486,6 +486,67 @@ or the Phase 3 command-dispatch architecture.
 
 ---
 
+## ADR-014 — Reuse Connection Buffer for RESP2 Framing
+
+**Status:** Accepted
+**Implementation:** Phase 2D IN PROGRESS
+
+### Decision
+
+Use the existing owned Connection input buffer
+to accumulate fragmented RESP2 frames.
+
+Introduce a separate protocol adapter that
+invokes the stateless RespParser without owning
+another socket receive buffer.
+
+Consume only fully decoded RESP2 frames.
+
+Preserve incomplete frames without consumption.
+
+Preserve invalid input for caller-level failure
+handling rather than silently discarding it.
+
+Choose a default 64 KiB framed-input limit,
+matching the existing Connection input cap.
+
+Require explicit coordination when using larger
+custom receive and parser limits.
+
+Keep the transport-only smoke server unchanged.
+
+### Rationale
+
+Connection already implements bounded nonblocking
+reads and owns the persistent input string.
+
+A second buffer would duplicate state, allocation,
+and consumption responsibilities.
+
+The small adapter isolates framing semantics
+from TCP ownership and native event polling.
+
+### Consequences
+
+Phase 2D tests exercise real loopback TCP with
+the native ConnectionManager and event poller.
+
+Malformed clients are isolated in the test handler
+through existing manager failure handling.
+
+The adapter does not implement a production
+protocol endpoint or error-response policy.
+
+One-frame extraction is intentional.
+Pipelining and ordered response dispatch remain
+Phase 2E responsibilities.
+
+Implementation commit: 4f2535a.
+Draft PR #7.
+Linux workflow 39376269629: SUCCESS.
+
+---
+
 # Outstanding Implementation Decisions
 
 These questions are intentionally deferred to their
@@ -519,8 +580,11 @@ Phase 2C single-frame parsing is COMPLETE.
 PR #6 merged as 68dd831.
 Post-merge Linux workflow 39370627026 succeeded.
 
-Phase 2D fragmented-input handling is NEXT,
-NOT STARTED. Pipelining remains Phase 2E.
+Phase 2D fragmented-input handling is IN PROGRESS.
+PR #7 is open and draft. Initial Linux Debug and
+Release workflow 39376269629 succeeded.
+
+Phase 2E pipelining remains NOT STARTED.
 
 ## Phase 2
 

@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A, 2B and 2C COMPLETE; Phase 2D Fragmented Request Handling NEXT.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A, 2B and 2C COMPLETE; Phase 2D Fragmented Request Handling IN PROGRESS in draft PR #7.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -478,13 +478,53 @@ post-merge acceptance are complete.
 The parser is validated on macOS and Linux
 in Debug and Release.
 
-Phase 2D — Fragmented Request Handling is NEXT,
-NOT STARTED.
+Phase 2D — Fragmented Request Handling is IN PROGRESS.
 
-Persistent input buffering and fragmentation
-integration belong to Phase 2D. Multi-frame
-pipelining belongs to Phase 2E.
-Phase 2D through 2G are NOT STARTED.
+Implementation commit:
+4f2535a97e6bf3350222896818337cfb294eae11.
+
+PR #7: OPEN, DRAFT.
+
+The RespFramedInput adapter connects the existing
+Connection input buffer to RespParser.
+
+It extracts one RESP2 frame per call:
+
+- Complete: return an owned value and consume
+  exactly the completed wire frame.
+- NeedMore: retain incomplete input unchanged.
+- Invalid: retain malformed input for caller policy.
+
+The default adapter frame limit is 64 KiB,
+matching the default Connection input limit.
+Custom configurations must coordinate these limits.
+
+Dedicated integration tests use real POSIX stream
+sockets and native kqueue/epoll TCP dispatch.
+
+The tests cover byte-by-byte fragmentation,
+binary strings, nested arrays, independent clients,
+malformed input, incomplete EOF, declared lengths,
+exact buffer boundaries and coalesced frames.
+
+macOS Debug: 15/15 tests PASS.
+macOS Release: 15/15 tests PASS.
+Both Phase 2D tests: 20/20 repetitions each,
+in each local build configuration.
+
+Initial Linux workflow 39376269629: SUCCESS.
+Linux Debug and Release: 15/15 tests PASS each.
+
+The adapter is not yet wired into a production
+RESP2 command-serving endpoint.
+
+The --smoke-echo server remains unchanged.
+
+Final PR-head CI, review, merge and formal
+Phase 2D closure remain outstanding.
+
+Phase 2E pipelining, Phase 2F hardening and
+Phase 2G fuzz-test infrastructure are NOT STARTED.
 
 The server still operates only in transport smoke mode;
 it does not parse RESP2 over TCP or execute Redis commands.

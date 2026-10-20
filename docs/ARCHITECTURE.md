@@ -702,9 +702,74 @@ Persistent receive buffers and fragmented network
 input belong to Phase 2D. Multi-frame pipelining
 belongs to Phase 2E.
 
-Phase 2D is NEXT, NOT STARTED.
+At Phase 2C closure, Phase 2D was next.
+The following Phase 2D record captures its
+subsequent adapter and TCP-test implementation.
 
-No parser-to-socket integration exists yet.
+No production parser-to-socket integration
+exists yet.
+
+## Phase 2D Fragmented Input Adapter — IN PROGRESS
+
+Files:
+
+- `include/redisdb/protocol/RespFramedInput.hpp`
+- `src/protocol/RespFramedInput.cpp`
+- `tests/integration/resp_framed_input_test.cpp`
+- `tests/integration/resp_fragmented_dispatch_test.cpp`
+
+The adapter receives an existing Connection
+reference and uses its owned input buffer.
+
+No new per-connection input buffer is introduced.
+
+For each explicit poll call:
+
+- Complete: returns an owned RESP2 value and
+  consumes the exact completed frame.
+- NeedMore: retains every buffered byte.
+- Invalid: preserves input and reports an error
+  for the caller to apply its close policy.
+
+The adapter defaults to a 64 KiB frame limit,
+coordinated with Connection's default input limit.
+
+The core RespParser retains its separate 1 MiB
+default profile when instantiated independently.
+
+Custom Connection and adapter limits must be
+configured consistently.
+
+ConnectionManager already supplies bounded,
+nonblocking TCP reads and per-client isolation.
+
+Native integration tests install a test-specific
+input handler and exercise real loopback TCP
+through kqueue on macOS and epoll on Linux.
+
+The integration tests reject malformed frames
+through the manager's existing handler-failure
+cleanup path. The adapter itself does not close
+sockets or send protocol error responses.
+
+Exactly one complete frame is extracted per
+adapter call. A second buffered frame is left
+for an explicit later call.
+
+Automatic multi-frame draining and response
+ordering belong to Phase 2E.
+
+No production Redis command-serving endpoint
+is implemented in this phase.
+
+The --smoke-echo executable remains unchanged.
+
+Implementation: 4f2535a.
+PR #7: OPEN, DRAFT.
+Initial Linux CI: 39376269629 SUCCESS.
+
+Phase 2D remains IN PROGRESS pending final
+review, PR merge and post-merge acceptance.
 
 ## Parsing Model
 
