@@ -49,6 +49,30 @@ jobs:
       - name: Run full test suite
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
 
+      - name: Repeat RESP2 pipeline regressions
+        run: |
+          set -euo pipefail
+
+          pattern='^integration[.](resp_pipeline|resp_pipeline_dispatch|resp_pipeline_scheduler_hardening)$'
+
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -N \
+            -R "$pattern" \
+            | tee "$RUNNER_TEMP/phase2e-selected-tests.txt"
+
+          # Never accept a green run that discovers
+          # fewer than the three pipeline targets.
+          grep -Eq \
+            '^[[:space:]]*Total Tests: 3[[:space:]]*$' \
+            "$RUNNER_TEMP/phase2e-selected-tests.txt"
+
+          ctest \
+            --test-dir build/${{ matrix.preset }} \
+            -R "$pattern" \
+            --repeat until-fail:20 \
+            --output-on-failure
+
       - name: Repeat external TCP server smoke test
         run: |
           set -euo pipefail
