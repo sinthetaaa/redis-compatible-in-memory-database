@@ -234,6 +234,30 @@ if(BUILD_TESTING)
         )
 
         add_executable(
+            redisdb-resp-pipeline-dispatch-tests
+            tests/integration/resp_pipeline_dispatch_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-resp-pipeline-dispatch-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(
+            redisdb-resp-pipeline-dispatch-tests
+        )
+
+        add_test(
+            NAME integration.resp_pipeline_dispatch
+            COMMAND redisdb-resp-pipeline-dispatch-tests
+        )
+
+        set_tests_properties(
+            integration.resp_pipeline_dispatch
+            PROPERTIES TIMEOUT 30
+        )
+
+        add_executable(
             redisdb-resp-fragmented-dispatch-tests
             tests/integration/resp_fragmented_dispatch_test.cpp
         )

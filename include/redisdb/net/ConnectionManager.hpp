@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <unordered_map>
@@ -35,6 +36,8 @@ class ConnectionManager final {
         std::size_t max_accept_per_call = 32;
         std::size_t max_read_per_event = 8192;
         std::size_t max_write_per_event = 8192;
+        // Bounded number of deferred clients per poll.
+        std::size_t max_deferred_per_poll = 32;
         // Zero disables idle eviction.
         std::chrono::milliseconds idle_timeout{0};
         Connection::Limits connection{};
@@ -69,6 +72,15 @@ class ConnectionManager final {
     // Must not remove connections or mutate manager
     // registrations during invocation.
     using InputHandler = std::function<void(Connection&)>;
+
+    // Optional transport-independent resumption contract.
+    //
+    // AwaitRead: wait for another socket read.
+    // Continue: schedule another bounded processing turn.
+    // AwaitWrite: resume only after output makes progress.
+    enum class InputAction { AwaitRead, Continue, AwaitWrite };
+
+    using ResumableInputHandler = std::function<InputAction(Connection&)>;
 
     ConnectionManager(TcpListener listener, EventPoller& poller);
 
@@ -120,6 +132,10 @@ class ConnectionManager final {
 
     void set_input_handler(InputHandler handler);
 
+    // Exclusive with the legacy input handler.
+    // Its callback must not mutate manager registrations.
+    void set_resumable_input_handler(ResumableInputHandler handler);
+
     void refresh_interest(RegistrationToken token);
 
     // True when reading is suspended because of
@@ -137,6 +153,10 @@ class ConnectionManager final {
   private:
     [[nodiscard]] RegistrationToken allocate_token();
 
+    void enqueue_deferred(RegistrationToken token);
+    [[nodiscard]] bool run_resumable(RegistrationToken token, DispatchResult& stats);
+    [[nodiscard]] DispatchResult run_deferred();
+
     void suspend_listener();
     void resume_listener();
 
@@ -150,7 +170,13 @@ class ConnectionManager final {
     RegistrationToken next_token_ = 1;
     bool listener_registered_ = false;
     InputHandler input_handler_;
+    ResumableInputHandler resumable_input_handler_;
+
     std::unordered_set<RegistrationToken> read_paused_;
+
+    std::deque<RegistrationToken> deferred_tokens_;
+    std::unordered_set<RegistrationToken> deferred_pending_;
+    std::unordered_set<RegistrationToken> waiting_for_write_;
 };
 
 } // namespace redisdb::net

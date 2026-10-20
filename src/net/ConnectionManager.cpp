@@ -20,8 +20,8 @@ ConnectionManager::ConnectionManager(TcpListener listener, EventPoller& poller, 
 
     if (limits_.max_connections == 0 || limits_.max_accept_per_call == 0 ||
         limits_.max_read_per_event == 0 || limits_.max_write_per_event == 0 ||
-        limits_.idle_timeout.count() < 0 || limits_.connection.max_input_bytes == 0 ||
-        limits_.connection.max_output_bytes == 0) {
+        limits_.max_deferred_per_poll == 0 || limits_.idle_timeout.count() < 0 ||
+        limits_.connection.max_input_bytes == 0 || limits_.connection.max_output_bytes == 0) {
         throw std::invalid_argument("connection manager limits must be positive");
     }
 
@@ -201,6 +201,8 @@ bool ConnectionManager::close_connection(RegistrationToken token) {
 
     connections_.erase(it);
     read_paused_.erase(token);
+    deferred_pending_.erase(token);
+    waiting_for_write_.erase(token);
 
     // If the listener was suspended at capacity,
     // resume it with a fresh registration token.
@@ -212,7 +214,116 @@ bool ConnectionManager::close_connection(RegistrationToken token) {
 }
 
 void ConnectionManager::set_input_handler(InputHandler handler) {
+    if (handler && resumable_input_handler_) {
+        throw std::logic_error("legacy and resumable input handlers are exclusive");
+    }
+
     input_handler_ = std::move(handler);
+}
+
+void ConnectionManager::set_resumable_input_handler(ResumableInputHandler handler) {
+    if (handler && input_handler_) {
+        throw std::logic_error("legacy and resumable input handlers are exclusive");
+    }
+
+    resumable_input_handler_ = std::move(handler);
+
+    if (!resumable_input_handler_) {
+        deferred_tokens_.clear();
+        deferred_pending_.clear();
+        waiting_for_write_.clear();
+    }
+}
+
+void ConnectionManager::enqueue_deferred(RegistrationToken token) {
+    if (deferred_pending_.insert(token).second) {
+        deferred_tokens_.push_back(token);
+    }
+}
+
+bool ConnectionManager::run_resumable(RegistrationToken token, DispatchResult& stats) {
+    Connection* connection = find(token);
+
+    if (!connection || !resumable_input_handler_) {
+        return connection != nullptr;
+    }
+
+    try {
+        const InputAction action = resumable_input_handler_(*connection);
+
+        if (action == InputAction::AwaitRead) {
+            deferred_pending_.erase(token);
+            waiting_for_write_.erase(token);
+        } else if (action == InputAction::Continue) {
+            waiting_for_write_.erase(token);
+            enqueue_deferred(token);
+        } else if (action == InputAction::AwaitWrite) {
+            if (!connection->wants_write()) {
+                throw std::logic_error("write continuation without queued output");
+            }
+
+            deferred_pending_.erase(token);
+            waiting_for_write_.insert(token);
+        } else {
+            throw std::logic_error("unknown input action");
+        }
+    } catch (const std::length_error&) {
+        if (close_connection(token)) {
+            ++stats.closed;
+        }
+
+        ++stats.output_limit_closes;
+        return false;
+    } catch (...) {
+        if (close_connection(token)) {
+            ++stats.closed;
+        }
+
+        ++stats.handler_failures;
+        return false;
+    }
+
+    return true;
+}
+
+ConnectionManager::DispatchResult ConnectionManager::run_deferred() {
+    DispatchResult stats;
+
+    // Snapshot the queue length: clients requeued during
+    // this pass cannot run again in the same deferred pass.
+    const std::size_t budget = std::min(deferred_tokens_.size(), limits_.max_deferred_per_poll);
+
+    for (std::size_t index = 0; index < budget; ++index) {
+        const RegistrationToken token = deferred_tokens_.front();
+
+        deferred_tokens_.pop_front();
+
+        if (deferred_pending_.erase(token) == 0) {
+            continue;
+        }
+
+        if (!run_resumable(token, stats)) {
+            continue;
+        }
+
+        Connection* connection = find(token);
+
+        if (!connection) {
+            continue;
+        }
+
+        if (connection->received_eof() && !connection->wants_write()) {
+            if (close_connection(token)) {
+                ++stats.closed;
+            }
+
+            continue;
+        }
+
+        refresh_interest(token);
+    }
+
+    return stats;
 }
 
 bool ConnectionManager::read_paused(RegistrationToken token) const noexcept {
@@ -244,7 +355,13 @@ void ConnectionManager::refresh_interest(RegistrationToken token) {
 
     const bool previously_paused = read_paused_.contains(token);
 
-    const bool should_pause = connection->received_eof() ||
+    const bool waiting_output = waiting_for_write_.contains(token);
+
+    const bool full_with_deferred =
+        connection->input().size() >= limits_.connection.max_input_bytes &&
+        deferred_pending_.contains(token);
+
+    const bool should_pause = connection->received_eof() || waiting_output || full_with_deferred ||
                               (previously_paused ? pending > low_water : pending >= high_water);
 
     EventMask interest = EventMask::None;
@@ -362,33 +479,52 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
 
             stats.bytes_received += received.bytes_read;
 
-            if (received.bytes_read > 0 && input_handler_) {
-                try {
-                    input_handler_(*connection);
-                } catch (const std::length_error&) {
-                    // A callback exceeded a buffer
-                    // boundary. Drop only this client.
-                    if (close_connection(event.token)) {
-                        ++stats.closed;
+            if (received.bytes_read > 0) {
+                if (resumable_input_handler_) {
+                    if (!run_resumable(event.token, stats)) {
+                        continue;
                     }
+                } else if (input_handler_) {
+                    try {
+                        input_handler_(*connection);
+                    } catch (const std::length_error&) {
+                        if (close_connection(event.token)) {
+                            ++stats.closed;
+                        }
 
-                    ++stats.output_limit_closes;
-                    continue;
-                } catch (...) {
-                    // A faulty input handler must not
-                    // terminate the whole event loop.
-                    if (close_connection(event.token)) {
-                        ++stats.closed;
+                        ++stats.output_limit_closes;
+                        continue;
+                    } catch (...) {
+                        if (close_connection(event.token)) {
+                            ++stats.closed;
+                        }
+
+                        ++stats.handler_failures;
+                        continue;
                     }
+                }
+            }
 
-                    ++stats.handler_failures;
+            // EOF may arrive after a previously completed
+            // read. Give otherwise unscheduled buffered
+            // input one final bounded processing turn.
+            if (received.peer_closed && resumable_input_handler_ && !connection->input().empty() &&
+                !deferred_pending_.contains(event.token) &&
+                !waiting_for_write_.contains(event.token)) {
+                if (!run_resumable(event.token, stats)) {
                     continue;
                 }
             }
 
             // Temporary hard input limit.
             // Detailed backpressure follows in 1F-D.
-            if (connection->input().size() >= limits_.connection.max_input_bytes) {
+            const bool full = connection->input().size() >= limits_.connection.max_input_bytes;
+
+            const bool can_resume =
+                resumable_input_handler_ && (deferred_pending_.contains(event.token) ||
+                                             waiting_for_write_.contains(event.token));
+
+            if (full && !can_resume) {
                 if (close_connection(event.token)) {
                     ++stats.closed;
                 }
@@ -413,6 +549,10 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
 
             stats.bytes_sent += written.bytes_written;
 
+            if (written.bytes_written > 0 && waiting_for_write_.erase(event.token) > 0) {
+                enqueue_deferred(event.token);
+            }
+
             if (written.peer_disconnected) {
                 if (close_connection(event.token)) {
                     ++stats.closed;
@@ -423,11 +563,22 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
         }
 
         if (connection->received_eof() && !connection->wants_write()) {
-            if (close_connection(event.token)) {
-                ++stats.closed;
+            // An EOF client may have complete requests
+            // deferred by the fairness budget or output
+            // backpressure. Process before final close.
+            if (resumable_input_handler_ && deferred_pending_.erase(event.token) > 0) {
+                if (!run_resumable(event.token, stats)) {
+                    continue;
+                }
             }
 
-            continue;
+            if (!connection->wants_write()) {
+                if (close_connection(event.token)) {
+                    ++stats.closed;
+                }
+
+                continue;
+            }
         }
 
         refresh_interest(event.token);
@@ -493,7 +644,20 @@ ConnectionManager::DispatchResult ConnectionManager::poll_once(std::chrono::mill
         }
     }
 
+    const bool had_deferred = !deferred_tokens_.empty();
+
+    auto deferred_stats = run_deferred();
+
+    // Deferred work must not block on new network input.
+    if (had_deferred) {
+        effective_timeout = std::chrono::milliseconds{0};
+    }
+
     auto stats = dispatch_ready(poller_.wait(effective_timeout));
+
+    stats.closed += deferred_stats.closed;
+    stats.handler_failures += deferred_stats.handler_failures;
+    stats.output_limit_closes += deferred_stats.output_limit_closes;
 
     stats.closed += reap_idle_connections(std::chrono::steady_clock::now());
 
