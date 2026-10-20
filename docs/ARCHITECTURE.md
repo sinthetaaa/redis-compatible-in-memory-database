@@ -651,7 +651,7 @@ Post-merge CI: 39320475360 SUCCESS.
 Phase 2B is complete.
 Phase 2C incremental parsing is NEXT, NOT STARTED.
 
-## Phase 2C Single-Frame RESP2 Parser — IN PROGRESS
+## Phase 2C Single-Frame RESP2 Parser — COMPLETE
 
 Files:
 
@@ -691,13 +691,18 @@ The parser consumes at most one complete value,
 leaving trailing input to the caller.
 
 Implementation: 82b7dc9.
-PR #6: OPEN, DRAFT.
+PR #6: MERGED.
 Initial Linux workflow: 39327039720 SUCCESS.
+Final PR-head CI: 39332004304 SUCCESS.
+Merge commit: 68dd83137ca27a35c78907907b731ef8c1fedf4a.
+Post-merge CI: 39370627026 SUCCESS.
 
-Phase 2C is not yet complete.
+Phase 2C is complete.
 Persistent receive buffers and fragmented network
 input belong to Phase 2D. Multi-frame pipelining
 belongs to Phase 2E.
+
+Phase 2D is NEXT, NOT STARTED.
 
 No parser-to-socket integration exists yet.
 

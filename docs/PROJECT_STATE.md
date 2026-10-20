@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-20
 - Current phase: Phase 2 — RESP2 Protocol Engine (IN PROGRESS)
-- Current subphase: 2C — Incremental RESP2 Parser (IN PROGRESS)
-- Status: PHASE 1 COMPLETE; PHASE 2A COMPLETE; PHASE 2B COMPLETE; PHASE 2C IN PROGRESS
-- Last completed milestone: 2C.2 — Parser committed, draft PR #6 created and Linux CI passed
-- Exact next task: Commit Phase 2C documentation, verify final PR-head Linux CI and complete source review before merging.
+- Current subphase: 2D — Fragmented Request Handling (NEXT; NOT STARTED)
+- Status: PHASE 1 COMPLETE; PHASE 2A COMPLETE; PHASE 2B COMPLETE; PHASE 2C COMPLETE; PHASE 2 IN PROGRESS
+- Last completed milestone: 2C.4 — PR #6 merged and post-merge Linux CI passed
+- Exact next task: Commit and verify Phase 2C closure documentation, then establish the Phase 2D feature branch and design persistent fragmented-request buffering before implementation.
 - Implementation maturity: Cross-platform networking, transport-only TCP smoke server, owned RESP2 value model, standalone bounded serializer and stateless single-frame parser; no RESP2 network integration
 - Working TCP database: NOT IMPLEMENTED
 
@@ -29,7 +29,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: phase2c/resp2-incremental-parser
+- Branch: main
 - Phase 2C starting baseline: 1e7c726969cc437fdecfc0532785de84c24bd4be
 - Phase 2B starting baseline: b16dd382e213ae541a91d4f298f288fa80b68aa7
 - Phase 2A starting baseline: 3e06210adbb1dae0f1bc4549e06af5ec551f8dc2
@@ -70,10 +70,14 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: phase2c/resp2-incremental-parser.
+- Current development branch: main.
 - Phase 2C implementation: 82b7dc98dbb99c83146d95c90fb3feb1408e4a8a.
-- Phase 2C PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/6 (OPEN, DRAFT).
-- Phase 2C initial Linux CI: 39327039720 (Debug and Release SUCCESS).
+- Phase 2C documentation: 9e873ddcb1130a5ba20155f9f61e805e1aa519b2.
+- Phase 2C PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/6 (MERGED).
+- Phase 2C initial Linux CI: 39327039720 (SUCCESS).
+- Phase 2C final PR-head Linux CI: 39332004304 (SUCCESS).
+- Phase 2C merge commit: 68dd83137ca27a35c78907907b731ef8c1fedf4a.
+- Phase 2C post-merge Linux CI: 39370627026 (SUCCESS).
 - Phase 2B implementation: 7835524ca00acd02e9ec16f8bd297b59b750e2c9.
 - Phase 2B documentation: 7c8aa375a94fa9e3a5f084f276bdd3cd164d6b11.
 - Phase 2B PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/5 (MERGED).
@@ -162,10 +166,9 @@
 - 2B: COMPLETE — Bounded RESP2 serializer
   merged through PR #5 and validated on macOS
   and Linux in Debug and Release.
-- 2C: IN PROGRESS — Stateless single-frame
-  parser implemented, committed and Linux validated.
-  PR #6 is open and draft; final review and merge
-  remain outstanding.
+- 2C: COMPLETE — Stateless bounded RESP2 parser
+  merged through PR #6 and validated on macOS
+  and Linux in Debug and Release.
 - 2D: NOT STARTED — Fragmented request handling.
 - 2E: NOT STARTED — Pipelining.
 - 2F: NOT STARTED — Malformed input and resource limits.
@@ -744,7 +747,8 @@ Branch: `phase2c/resp2-incremental-parser`.
 Base: 1e7c726969cc437fdecfc0532785de84c24bd4be.
 Implementation: 82b7dc98dbb99c83146d95c90fb3feb1408e4a8a.
 
-PR #6: OPEN, DRAFT.
+PR #6: MERGED on 2026-10-20.
+Merge commit: 68dd83137ca27a35c78907907b731ef8c1fedf4a.
 
 Implemented:
 
@@ -786,11 +790,21 @@ Linux Debug and Release:
 - Repeated TCP smoke and lifecycle: PASS.
 - Native epoll regressions: PASS.
 
-Phase 2C: IN PROGRESS.
-Final documentation, review, merge and
-post-merge acceptance remain outstanding.
+Final PR-head Linux CI: 39332004304 SUCCESS.
+PR #6: MERGED.
+Merge commit: 68dd83137ca27a35c78907907b731ef8c1fedf4a.
+Post-merge Linux CI: 39370627026 SUCCESS.
 
-Phase 2D through 2G: NOT STARTED.
+Both merged macOS Debug and Release builds
+passed all 13 CTest tests.
+
+Linux Debug and Release each passed all 13 tests,
+including unit.resp_parser and the existing
+networking regression suites.
+
+Phase 2C: COMPLETE.
+Phase 2D: NEXT, NOT STARTED.
+Phase 2E through 2G: NOT STARTED.
 
 The parser is not connected to the TCP server.
 Persistent input buffering, pipelining, command
@@ -896,31 +910,34 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-Phases 2A and 2B are formally complete.
-Phase 2C parser implementation is committed
-and initially validated on macOS and Linux.
+Phase 2A RESP2 Value Model is complete.
+Phase 2B RESP2 Response Serializer is complete.
+Phase 2C Incremental RESP2 Parser is complete.
 
-PR #6 remains open and draft.
+PR #6 merged successfully.
+Post-merge macOS and Linux acceptance passed.
 
-1. Commit and push Phase 2C documentation.
-2. Verify final PR-head Linux Debug and Release CI.
-3. Review parser correctness and limit invariants.
-4. Confirm exact intended PR file scope.
-5. Verify synchronized feature branch and clean tree.
-6. Complete final Phase 2C acceptance checks.
-7. Mark PR #6 ready and merge only after gates pass.
-8. Fast-forward local main to the merge commit.
-9. Run merged macOS Debug and Release suites.
-10. Verify post-merge Linux Debug and Release CI.
-11. Record formal Phase 2C milestone closure.
-12. Start Phase 2D only after closure acceptance.
+1. Commit and push this Phase 2C closure record.
+2. Verify synchronized clean main and origin/main.
+3. Verify post-closure Linux Debug and Release CI.
+4. Establish Phase 2D's clean baseline.
+5. Create a dedicated Phase 2D feature branch.
+6. Review RespParser and ConnectionManager APIs.
+7. Design bounded per-connection receive buffers.
+8. Define append, parse, retain and consume behavior.
+9. Specify fragmentation and EOF handling.
+10. Specify ownership and lifecycle invariants.
+11. Define per-client memory and backpressure limits.
+12. Write fragmented-request integration tests.
+13. Validate macOS Debug and Release.
+14. Validate Linux Debug and Release.
+15. Keep Phase 2E pipelining separate from Phase 2D.
 
-Phase 2C is IN PROGRESS.
-Phase 2D Fragmented Request Handling is NOT STARTED.
+Phase 2D is NEXT, NOT STARTED.
 Phase 2E through 2G are NOT STARTED.
 
-The executable remains a transport-only TCP
-echo server. No Redis commands are executed.
+The running server remains transport-only.
+No Redis commands or persistent keyspace exist.
 
 ## 17. Continuation Instructions
 

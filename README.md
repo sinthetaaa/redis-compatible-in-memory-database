@@ -8,11 +8,11 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A and 2B COMPLETE; Phase 2C standalone parser implemented and under acceptance in draft PR #6.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A, 2B and 2C COMPLETE; Phase 2D Fragmented Request Handling NEXT.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
-It does not parse RESP2 or execute Redis commands.
+It does not parse RESP2 over TCP or execute Redis commands.
 
 ## Project Goals
 
@@ -432,7 +432,7 @@ Merge commit:
 Phase 2B implementation, final review, merge,
 and post-merge acceptance are complete.
 
-Phase 2C — Incremental RESP2 Parser is IN PROGRESS.
+Phase 2C — Incremental RESP2 Parser is COMPLETE.
 
 A bounded, stateless RESP2 single-frame parser
 is implemented in commit 82b7dc9.
@@ -461,10 +461,25 @@ Parser unit-test repetitions: 30/30 per configuration.
 Initial Linux Debug and Release workflow:
 39327039720 — SUCCESS.
 
-PR #6: OPEN, DRAFT.
+Final PR-head Linux Debug and Release workflow:
+39332004304 — SUCCESS.
 
-Final documentation, PR review, merge and
-post-merge acceptance remain.
+Post-merge Linux Debug and Release workflow:
+39370627026 — SUCCESS.
+
+PR #6: MERGED on 2026-10-20.
+
+Merge commit:
+68dd83137ca27a35c78907907b731ef8c1fedf4a.
+
+Phase 2C implementation, review, merge and
+post-merge acceptance are complete.
+
+The parser is validated on macOS and Linux
+in Debug and Release.
+
+Phase 2D — Fragmented Request Handling is NEXT,
+NOT STARTED.
 
 Persistent input buffering and fragmentation
 integration belong to Phase 2D. Multi-frame
@@ -472,7 +487,7 @@ pipelining belongs to Phase 2E.
 Phase 2D through 2G are NOT STARTED.
 
 The server still operates only in transport smoke mode;
-it does not parse RESP2 or execute Redis commands.
+it does not parse RESP2 over TCP or execute Redis commands.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).

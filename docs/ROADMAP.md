@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A and 2B COMPLETE; Phase 2C Parser IN PROGRESS.
+Phases 2A, 2B and 2C COMPLETE; Phase 2D NEXT.
 
 ### Acceptance Gate
 
@@ -157,7 +157,7 @@ simultaneous connections without resource leaks.
 
 - [x] 2A — RESP value model
 - [x] 2B — Response serializer
-- [ ] 2C — Incremental parser
+- [x] 2C — Incremental parser
 - [ ] 2D — Fragmented request handling
 - [ ] 2E — Pipelining
 - [ ] 2F — Malformed-input and resource-limit handling
@@ -271,7 +271,7 @@ Phase 2B: COMPLETE.
 The standalone bounded serializer is validated
 on macOS and Linux in Debug and Release.
 
-Phase 2C — Incremental Parser: IN PROGRESS.
+Phase 2C — Incremental Parser: COMPLETE.
 Phase 2D through 2G: NOT STARTED.
 
 The standalone parser has been implemented, but
@@ -288,11 +288,11 @@ is not integrated with the running TCP server.
   and pushed after correcting a test namespace.
 - 2C.2: COMPLETE — Draft PR #6 created and
   initial Linux Debug/Release acceptance passed.
-- 2C.3: IN PROGRESS — Documentation synchronization,
-  final PR-head CI and source review.
-- 2C.4: NOT STARTED — PR merge and post-merge
-  macOS/Linux acceptance.
-- 2C.5: NOT STARTED — Formal milestone closure.
+- 2C.3: COMPLETE — Documentation synchronized,
+  final PR-head Linux acceptance passed.
+- 2C.4: COMPLETE — PR #6 merged into main;
+  macOS and Linux post-merge tests passed.
+- 2C.5: COMPLETE — Formal milestone closure recorded.
 
 Implementation commit:
 82b7dc98dbb99c83146d95c90fb3feb1408e4a8a.
@@ -301,6 +301,14 @@ PR #6:
 https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/6
 
 Initial Linux workflow 39327039720: SUCCESS.
+Final PR-head workflow 39332004304: SUCCESS.
+
+PR #6: MERGED.
+
+Merge commit:
+68dd83137ca27a35c78907907b731ef8c1fedf4a.
+
+Post-merge Linux workflow 39370627026: SUCCESS.
 
 Linux Debug and Release each passed all 13 tests,
 including unit.resp_parser and unit.resp_serializer.
@@ -320,10 +328,15 @@ Parser implementation:
 - Parser/serializer round-trip regressions.
 - Incomplete prefix and invalid framing tests.
 
-Phase 2C remains IN PROGRESS until final PR
-acceptance, merge and post-merge verification.
+Phase 2C: COMPLETE.
 
-Phase 2D through 2G remain NOT STARTED.
+The bounded single-frame parser is validated
+on macOS and Linux in Debug and Release.
+
+Phase 2D — Fragmented Request Handling:
+NEXT, NOT STARTED.
+
+Phase 2E through 2G: NOT STARTED.
 
 The server remains transport-smoke-only.
 No RESP2 network execution or database storage
