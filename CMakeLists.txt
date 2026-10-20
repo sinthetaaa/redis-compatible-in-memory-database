@@ -33,6 +33,7 @@ add_library(
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
+    src/protocol/RespFramedInput.cpp
     src/net/UniqueFd.cpp
     src/net/TcpListener.cpp
     src/net/Connection.cpp
@@ -181,6 +182,56 @@ if(BUILD_TESTING)
         unit.resp_parser
         PROPERTIES TIMEOUT 10
     )
+
+    if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_executable(
+            redisdb-resp-framed-input-tests
+            tests/integration/resp_framed_input_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-resp-framed-input-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(
+            redisdb-resp-framed-input-tests
+        )
+
+        add_test(
+            NAME integration.resp_framed_input
+            COMMAND redisdb-resp-framed-input-tests
+        )
+
+        set_tests_properties(
+            integration.resp_framed_input
+            PROPERTIES TIMEOUT 20
+        )
+
+        add_executable(
+            redisdb-resp-fragmented-dispatch-tests
+            tests/integration/resp_fragmented_dispatch_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-resp-fragmented-dispatch-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(
+            redisdb-resp-fragmented-dispatch-tests
+        )
+
+        add_test(
+            NAME integration.resp_fragmented_dispatch
+            COMMAND redisdb-resp-fragmented-dispatch-tests
+        )
+
+        set_tests_properties(
+            integration.resp_fragmented_dispatch
+            PROPERTIES TIMEOUT 20
+        )
+    endif()
 
     add_test(
         NAME cli.version
