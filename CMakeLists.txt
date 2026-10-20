@@ -34,6 +34,7 @@ add_library(
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
     src/protocol/RespFramedInput.cpp
+    src/protocol/RespPipeline.cpp
     src/net/UniqueFd.cpp
     src/net/TcpListener.cpp
     src/net/Connection.cpp
@@ -205,6 +206,30 @@ if(BUILD_TESTING)
 
         set_tests_properties(
             integration.resp_framed_input
+            PROPERTIES TIMEOUT 20
+        )
+
+        add_executable(
+            redisdb-resp-pipeline-tests
+            tests/integration/resp_pipeline_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-resp-pipeline-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(
+            redisdb-resp-pipeline-tests
+        )
+
+        add_test(
+            NAME integration.resp_pipeline
+            COMMAND redisdb-resp-pipeline-tests
+        )
+
+        set_tests_properties(
+            integration.resp_pipeline
             PROPERTIES TIMEOUT 20
         )
 

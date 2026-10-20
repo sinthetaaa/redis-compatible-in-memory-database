@@ -16,8 +16,12 @@ RespFramedInput::RespFramedInput()
 // must configure a compatible parser frame budget.
 RespFramedInput::RespFramedInput(RespParser::Limits limits) : parser_(limits) {}
 
+ParseResult RespFramedInput::peek(const net::Connection& connection) const {
+    return parser_.parse(connection.input());
+}
+
 ParseResult RespFramedInput::poll(net::Connection& connection) const {
-    ParseResult result = parser_.parse(connection.input());
+    ParseResult result = peek(connection);
 
     if (result.status != ParseStatus::Complete) {
         // NeedMore and Invalid never consume input.
