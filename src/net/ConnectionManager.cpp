@@ -204,6 +204,11 @@ bool ConnectionManager::close_connection(RegistrationToken token) {
     deferred_pending_.erase(token);
     waiting_for_write_.erase(token);
 
+    // Remove closed clients from the scheduler queue,
+    // not just its membership set. Otherwise repeated
+    // connection churn can accumulate stale tokens.
+    std::erase(deferred_tokens_, token);
+
     // If the listener was suspended at capacity,
     // resume it with a fresh registration token.
     if (!listener_registered_) {
@@ -249,12 +254,27 @@ bool ConnectionManager::run_resumable(RegistrationToken token, DispatchResult& s
     }
 
     try {
+        const std::size_t input_before = connection->input().size();
+
+        const std::size_t output_before = connection->pending_output_bytes();
+
         const InputAction action = resumable_input_handler_(*connection);
 
         if (action == InputAction::AwaitRead) {
             deferred_pending_.erase(token);
             waiting_for_write_.erase(token);
         } else if (action == InputAction::Continue) {
+            // Continue is a request for immediate future
+            // CPU time. It must make observable progress
+            // or a broken handler can monopolize the loop.
+            const bool consumed_input = connection->input().size() < input_before;
+
+            const bool queued_output = connection->pending_output_bytes() > output_before;
+
+            if (!consumed_input && !queued_output) {
+                throw std::logic_error("resumable input handler made no progress");
+            }
+
             waiting_for_write_.erase(token);
             enqueue_deferred(token);
         } else if (action == InputAction::AwaitWrite) {
@@ -309,6 +329,18 @@ ConnectionManager::DispatchResult ConnectionManager::run_deferred() {
         Connection* connection = find(token);
 
         if (!connection) {
+            continue;
+        }
+
+        // A full receive buffer cannot accept another
+        // socket read. If no continuation is scheduled,
+        // the callback cannot release any space.
+        if (connection->input().size() >= limits_.connection.max_input_bytes &&
+            !deferred_pending_.contains(token) && !waiting_for_write_.contains(token)) {
+            if (close_connection(token)) {
+                ++stats.closed;
+            }
+
             continue;
         }
 

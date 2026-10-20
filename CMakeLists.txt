@@ -258,6 +258,30 @@ if(BUILD_TESTING)
         )
 
         add_executable(
+            redisdb-resp-pipeline-scheduler-hardening-tests
+            tests/integration/resp_pipeline_scheduler_hardening_test.cpp
+        )
+
+        target_link_libraries(
+            redisdb-resp-pipeline-scheduler-hardening-tests
+            PRIVATE redisdb-core
+        )
+
+        redisdb_enable_warnings(
+            redisdb-resp-pipeline-scheduler-hardening-tests
+        )
+
+        add_test(
+            NAME integration.resp_pipeline_scheduler_hardening
+            COMMAND redisdb-resp-pipeline-scheduler-hardening-tests
+        )
+
+        set_tests_properties(
+            integration.resp_pipeline_scheduler_hardening
+            PROPERTIES TIMEOUT 30
+        )
+
+        add_executable(
             redisdb-resp-fragmented-dispatch-tests
             tests/integration/resp_fragmented_dispatch_test.cpp
         )
