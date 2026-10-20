@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A, 2B and 2C COMPLETE; Phase 2D Fragmented Request Handling IN PROGRESS in draft PR #7.**
+**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A, 2B, 2C and 2D COMPLETE; Phase 2E Pipelining NEXT.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -478,12 +478,15 @@ post-merge acceptance are complete.
 The parser is validated on macOS and Linux
 in Debug and Release.
 
-Phase 2D — Fragmented Request Handling is IN PROGRESS.
+Phase 2D — Fragmented Request Handling is COMPLETE.
 
 Implementation commit:
 4f2535a97e6bf3350222896818337cfb294eae11.
 
-PR #7: OPEN, DRAFT.
+PR #7: MERGED on 2026-10-20.
+
+Merge commit:
+f1bc679ed707404cbc8d0a569c2eadb9af4d6687.
 
 The RespFramedInput adapter connects the existing
 Connection input buffer to RespParser.
@@ -513,15 +516,28 @@ Both Phase 2D tests: 20/20 repetitions each,
 in each local build configuration.
 
 Initial Linux workflow 39376269629: SUCCESS.
+
+Final PR-head Linux workflow 39380341041:
+SUCCESS.
+
+Post-merge Linux workflow 39381045190:
+SUCCESS.
+
 Linux Debug and Release: 15/15 tests PASS each.
+Native epoll and repeated networking tests: PASS.
 
 The adapter is not yet wired into a production
 RESP2 command-serving endpoint.
 
 The --smoke-echo server remains unchanged.
 
-Final PR-head CI, review, merge and formal
-Phase 2D closure remain outstanding.
+Phase 2D implementation, documentation, review,
+merge and post-merge acceptance are complete.
+
+The fragmented-input adapter is validated on
+macOS and Linux in Debug and Release.
+
+Phase 2E — Pipelining is NEXT, NOT STARTED.
 
 Phase 2E pipelining, Phase 2F hardening and
 Phase 2G fuzz-test infrastructure are NOT STARTED.

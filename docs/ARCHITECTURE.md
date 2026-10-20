@@ -709,7 +709,7 @@ subsequent adapter and TCP-test implementation.
 No production parser-to-socket integration
 exists yet.
 
-## Phase 2D Fragmented Input Adapter — IN PROGRESS
+## Phase 2D Fragmented Input Adapter — COMPLETE
 
 Files:
 
@@ -765,11 +765,16 @@ is implemented in this phase.
 The --smoke-echo executable remains unchanged.
 
 Implementation: 4f2535a.
-PR #7: OPEN, DRAFT.
+PR #7: MERGED.
 Initial Linux CI: 39376269629 SUCCESS.
+Final PR-head CI: 39380341041 SUCCESS.
+Merge commit: f1bc679ed707404cbc8d0a569c2eadb9af4d6687.
+Post-merge CI: 39381045190 SUCCESS.
 
-Phase 2D remains IN PROGRESS pending final
-review, PR merge and post-merge acceptance.
+Phase 2D is complete and validated in
+macOS/Linux Debug and Release.
+
+Phase 2E Pipelining is NEXT, NOT STARTED.
 
 ## Parsing Model
 

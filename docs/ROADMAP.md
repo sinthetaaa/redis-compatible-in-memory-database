@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A, 2B and 2C COMPLETE; Phase 2D IN PROGRESS.
+Phases 2A, 2B, 2C and 2D COMPLETE; Phase 2E NEXT.
 
 ### Acceptance Gate
 
@@ -158,7 +158,7 @@ simultaneous connections without resource leaks.
 - [x] 2A — RESP value model
 - [x] 2B — Response serializer
 - [x] 2C — Incremental parser
-- [ ] 2D — Fragmented request handling
+- [x] 2D — Fragmented request handling
 - [ ] 2E — Pipelining
 - [ ] 2F — Malformed-input and resource-limit handling
 - [ ] 2G — Parser fuzz-test foundation
@@ -334,7 +334,9 @@ The bounded single-frame parser is validated
 on macOS and Linux in Debug and Release.
 
 Phase 2D — Fragmented Request Handling:
-IN PROGRESS.
+COMPLETE.
+
+Phase 2E — Pipelining: NEXT, NOT STARTED.
 
 Phase 2E through 2G: NOT STARTED.
 
@@ -353,11 +355,11 @@ has been implemented.
   added, tested, committed and pushed.
 - 2D.2: COMPLETE — Draft PR #7 created; initial
   Linux Debug and Release acceptance passed.
-- 2D.3: IN PROGRESS — Documentation synchronization,
-  final PR-head CI and final source review.
-- 2D.4: NOT STARTED — Controlled PR merge and
-  post-merge macOS/Linux validation.
-- 2D.5: NOT STARTED — Formal Phase 2D closure.
+- 2D.3: COMPLETE — Documentation synchronized,
+  final PR-head Linux CI and source review passed.
+- 2D.4: COMPLETE — PR #7 merged into main;
+  macOS and Linux post-merge tests passed.
+- 2D.5: COMPLETE — Formal Phase 2D closure recorded.
 
 Starting baseline:
 2515f7f1d10067113865f1d4e0ced9ce5d92c180.
@@ -368,9 +370,14 @@ Implementation:
 PR #7:
 https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7
 
-PR #7 status: OPEN, DRAFT.
+PR #7 status: MERGED.
+
+Merge commit:
+f1bc679ed707404cbc8d0a569c2eadb9af4d6687.
 
 Initial Linux workflow 39376269629: SUCCESS.
+Final PR-head workflow 39380341041: SUCCESS.
+Post-merge workflow 39381045190: SUCCESS.
 
 Linux Debug and Release both passed 15/15 CTest
 tests, including two Phase 2D integration targets.
@@ -397,10 +404,13 @@ Multiple frames can remain in Connection::input.
 Automatic pipelining and ordered responses belong
 to Phase 2E.
 
-Phase 2D: IN PROGRESS until final review, merge
-and post-merge closure acceptance.
+Phase 2D: COMPLETE.
 
-Phase 2E through 2G: NOT STARTED.
+The framed-input adapter and native TCP tests
+passed macOS and Linux Debug/Release acceptance.
+
+Phase 2E — Pipelining: NEXT, NOT STARTED.
+Phase 2F and 2G: NOT STARTED.
 
 ### Acceptance Gate
 

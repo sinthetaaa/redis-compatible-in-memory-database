@@ -126,11 +126,11 @@ also passed in both configurations.
 ## ADR-004 — RESP2 Protocol Compatibility
 
 **Status:** Accepted
-**Implementation:** Partial — Phase 2A value model,
-Phase 2B serializer and Phase 2C parser merged.
-Phase 2D fragmented-input adapter is implemented
-and Linux validated in draft PR #7. Production
-RESP2 serving and command execution remain pending.
+**Implementation:** Partial — Phases 2A through
+2D completed and merged. The RESP2 framed-input
+adapter is validated on native TCP tests.
+Production protocol serving, pipelining and
+Redis command execution remain pending.
 
 ### Decision
 
@@ -489,7 +489,7 @@ or the Phase 3 command-dispatch architecture.
 ## ADR-014 — Reuse Connection Buffer for RESP2 Framing
 
 **Status:** Accepted
-**Implementation:** Phase 2D IN PROGRESS
+**Implementation:** Phase 2D COMPLETE
 
 ### Decision
 
@@ -542,8 +542,11 @@ Pipelining and ordered response dispatch remain
 Phase 2E responsibilities.
 
 Implementation commit: 4f2535a.
-Draft PR #7.
-Linux workflow 39376269629: SUCCESS.
+PR #7: MERGED.
+Initial Linux workflow 39376269629: SUCCESS.
+Final PR-head CI 39380341041: SUCCESS.
+Merge commit: f1bc679ed707404cbc8d0a569c2eadb9af4d6687.
+Post-merge CI 39381045190: SUCCESS.
 
 ---
 
@@ -580,11 +583,12 @@ Phase 2C single-frame parsing is COMPLETE.
 PR #6 merged as 68dd831.
 Post-merge Linux workflow 39370627026 succeeded.
 
-Phase 2D fragmented-input handling is IN PROGRESS.
-PR #7 is open and draft. Initial Linux Debug and
-Release workflow 39376269629 succeeded.
+Phase 2D fragmented-input handling is COMPLETE.
+PR #7 merged as f1bc679.
+Post-merge Linux workflow 39381045190 succeeded.
 
-Phase 2E pipelining remains NOT STARTED.
+Phase 2E Pipelining is NEXT, NOT STARTED.
+Phase 2F and 2G remain NOT STARTED.
 
 ## Phase 2
 
