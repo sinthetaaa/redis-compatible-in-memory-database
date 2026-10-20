@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A, 2B and 2C COMPLETE; Phase 2D NEXT.
+Phases 2A, 2B and 2C COMPLETE; Phase 2D IN PROGRESS.
 
 ### Acceptance Gate
 
@@ -334,13 +334,73 @@ The bounded single-frame parser is validated
 on macOS and Linux in Debug and Release.
 
 Phase 2D — Fragmented Request Handling:
-NEXT, NOT STARTED.
+IN PROGRESS.
 
 Phase 2E through 2G: NOT STARTED.
 
 The server remains transport-smoke-only.
 No RESP2 network execution or database storage
 has been implemented.
+
+### Phase 2D Detailed Progress
+
+- 2D.0: COMPLETE — Verified Phase 2C closure,
+  established clean feature branch and reviewed
+  existing connection/parser interfaces.
+- 2D.1: COMPLETE — Framed-input adapter and POSIX
+  socket fragmentation tests validated locally.
+- 2D.1b: COMPLETE — Native loopback TCP integration
+  added, tested, committed and pushed.
+- 2D.2: COMPLETE — Draft PR #7 created; initial
+  Linux Debug and Release acceptance passed.
+- 2D.3: IN PROGRESS — Documentation synchronization,
+  final PR-head CI and final source review.
+- 2D.4: NOT STARTED — Controlled PR merge and
+  post-merge macOS/Linux validation.
+- 2D.5: NOT STARTED — Formal Phase 2D closure.
+
+Starting baseline:
+2515f7f1d10067113865f1d4e0ced9ce5d92c180.
+
+Implementation:
+4f2535a97e6bf3350222896818337cfb294eae11.
+
+PR #7:
+https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7
+
+PR #7 status: OPEN, DRAFT.
+
+Initial Linux workflow 39376269629: SUCCESS.
+
+Linux Debug and Release both passed 15/15 CTest
+tests, including two Phase 2D integration targets.
+
+Implementation details:
+
+- Reuses Connection::input and consume_input.
+- Adds no duplicate per-client receive buffer.
+- Uses RespParser for one-frame extraction.
+- Retains incomplete frames across TCP reads.
+- Returns owned binary-safe RESP2 values.
+- Consumes exactly one complete frame.
+- Retains invalid input for a caller policy.
+- Uses a 64 KiB default framed-input limit.
+- Tests native kqueue/epoll ConnectionManager
+  dispatch over real loopback TCP connections.
+- Keeps the smoke-echo executable unchanged.
+
+A test-specific input handler closes malformed
+clients through the existing manager failure path.
+This is not a production Redis server endpoint.
+
+Multiple frames can remain in Connection::input.
+Automatic pipelining and ordered responses belong
+to Phase 2E.
+
+Phase 2D: IN PROGRESS until final review, merge
+and post-merge closure acceptance.
+
+Phase 2E through 2G: NOT STARTED.
 
 ### Acceptance Gate
 
