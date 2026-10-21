@@ -127,9 +127,9 @@ also passed in both configurations.
 
 **Status:** Accepted
 **Implementation:** Partial — Phases 2A through
-2D completed and merged. The RESP2 framed-input
-adapter is validated on native TCP tests.
-Production protocol serving, pipelining and
+2D completed and merged; Phase 2E bounded pipeline and
+resumable event-loop integration implemented and validated
+in draft PR #8. Production RESP2 command serving and
 Redis command execution remain pending.
 
 ### Decision
@@ -550,6 +550,61 @@ Post-merge CI 39381045190: SUCCESS.
 
 ---
 
+## ADR-015 — Bounded FIFO RESP2 Pipelining and Resumable Scheduling
+
+**Status:** Accepted for Phase 2E implementation; merge pending.
+**Implementation:** Commits 861ebb4, 169d915 and 84d4ebc.
+**Validation:** Linux CI #39420606587 and #39422679453 SUCCESS.
+
+### Decision
+
+Process buffered RESP2 frames synchronously in FIFO order
+without a second receive buffer. Peek before consuming a
+frame. Before invoking a reply factory, reserve up to the
+configured maximum reply size in the existing connection
+output buffer. Queue the completed reply before consuming
+the request. Bound work per drain (default 16 frames).
+
+Keep protocol logic free of socket and poller dependencies.
+Add an optional transport-independent resumable handler to
+ConnectionManager instead of replacing the legacy echo path.
+Use `AwaitRead`, `Continue` and `AwaitWrite` to distinguish
+incomplete input, deferred CPU work and output pressure.
+Cap deferred client work per polling turn (default 32).
+
+Require progress before accepting `Continue`. Remove stale
+tokens on close; isolate invalid callbacks, malformed input,
+and output-cap failures to the affected connection.
+
+### Alternatives and rationale
+
+- Draining all frames per read was rejected because one busy
+  client could monopolize the event loop.
+- Requiring another socket read for buffered work was rejected
+  because complete requests could remain stranded.
+- Reexecuting a request while its reply is backpressured was
+  rejected due to duplication and side-effect risks.
+- Making ConnectionManager aware of RESP2 protocol result
+  types was rejected to keep networking transport-agnostic.
+- Replacing the smoke-echo handler was rejected because it
+  would regress the only executable serving mode.
+
+### Consequences and limits
+
+The reply factory remains test-only; there is no production
+Redis command executor or database endpoint. Custom parser,
+reply and connection buffer limits must be coordinated.
+Exceptions after side effects require a caller close policy;
+automatic retry is not guaranteed safe.
+
+The three new pipeline test targets are validated on both
+macOS and Linux in Debug and Release. PR #8 is a draft until
+final documentation review, Linux CI and merge acceptance.
+Phase 2F malformed/resource hardening and Phase 2G fuzzing
+remain separate future milestones.
+
+---
+
 # Outstanding Implementation Decisions
 
 These questions are intentionally deferred to their
@@ -587,7 +642,8 @@ Phase 2D fragmented-input handling is COMPLETE.
 PR #7 merged as f1bc679.
 Post-merge Linux workflow 39381045190 succeeded.
 
-Phase 2E Pipelining is NEXT, NOT STARTED.
+Phase 2E pipelining is IN PROGRESS (draft PR #8;
+implementation and Linux repetition CI validated).
 Phase 2F and 2G remain NOT STARTED.
 
 ## Phase 2

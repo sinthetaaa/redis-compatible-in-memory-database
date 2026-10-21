@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE. Phase 2 RESP2 Protocol Engine IN PROGRESS — Phases 2A, 2B, 2C and 2D COMPLETE; Phase 2E Pipelining NEXT.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2D are COMPLETE. Phase 2E pipelining implementation and Linux acceptance are validated; documentation, merge, and formal closure remain. Phases 2F-2G are NOT STARTED.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -68,12 +68,20 @@ Implemented and validated:
 - Abrupt reset isolation during accepted-socket setup.
 - SIGINT/SIGTERM smoke-server shutdown tests.
 - Repeated macOS Debug and Release smoke validation.
+- Owned RESP2 value model, bounded serializer and parser (library only).
+- Fragmented-input adapter reusing Connection's receive buffer.
+- Bounded FIFO RESP2 pipeline processor with output admission checks.
+- Transport-independent resumable handler with AwaitRead, Continue and AwaitWrite.
+- Deferred scheduling, output-pressure recovery and EOF handling.
+- Scheduler hardening for progress, input saturation and stale tokens.
+- Native macOS kqueue and Linux epoll RESP2 pipeline integration tests.
+- Linux Debug/Release pipeline repetition gates in GitHub Actions.
 - Formatting and compiler-warning configuration.
 
 Not yet implemented:
 
 - A production Redis-compatible TCP command-serving mode.
-- Redis protocol processing.
+- Production RESP2 TCP command-serving path (protocol exists only in library/test integrations).
 - Database command execution.
 - In-memory key/value storage.
 - Expiration or eviction.
@@ -537,13 +545,35 @@ merge and post-merge acceptance are complete.
 The fragmented-input adapter is validated on
 macOS and Linux in Debug and Release.
 
-Phase 2E — Pipelining is NEXT, NOT STARTED.
+Phase 2E — RESP2 Pipelining is IN PROGRESS.
 
-Phase 2E pipelining, Phase 2F hardening and
-Phase 2G fuzz-test infrastructure are NOT STARTED.
+The bounded RespPipeline processor handles multiple buffered
+requests in FIFO order, reserves reply capacity before dispatch,
+and preserves incomplete or backpressured input. A test-specific
+reply factory is not a Redis command executor.
 
-The server still operates only in transport smoke mode;
-it does not parse RESP2 over TCP or execute Redis commands.
+ConnectionManager now supports optional resumable input callbacks:
+AwaitRead, Continue and AwaitWrite. A bounded deferred work queue
+resumes buffered frames without requiring another client send.
+The transport-only smoke-echo pathway remains unchanged.
+
+Implementation commits: 861ebb4, 169d915 and 84d4ebc.
+Linux CI repetition commit: 3e4bc6f.
+Draft PR #8 is open; no merge has occurred.
+
+macOS Debug and Release: 18/18 CTest tests PASS each.
+Linux Debug and Release: 18/18 CTest tests PASS each.
+Initial Linux PR CI #39420606587: SUCCESS.
+Repeated Linux PR CI #39422679453: SUCCESS.
+Each Linux build ran all three new pipeline tests 20 additional times.
+
+Phase 2E.3 documentation synchronization is IN PROGRESS.
+Final PR-head CI, merge, post-merge acceptance and formal closure
+remain to be completed. Phase 2F hardening and Phase 2G parser
+fuzzing remain NOT STARTED.
+
+The executable still serves only raw TCP transport echo data;
+it does not parse RESP2 on its serving path or execute Redis commands.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
