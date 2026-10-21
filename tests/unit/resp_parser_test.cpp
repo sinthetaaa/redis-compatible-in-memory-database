@@ -417,6 +417,37 @@ void test_bulk_boundary_matrix_2f() {
                     RespValue::array({RespValue::integer(7), RespValue::bulk_string("abc")}));
 }
 
+void test_canonical_length_spellings_2f() {
+    const RespParser parser;
+
+    // RESP integer values may carry a leading '+' sign; this test
+    // restricts only bulk/array length fields, not integer values.
+    expect_complete(parser, ":+12\r\n", RespValue::integer(12));
+
+    // Canonical nonnegative lengths and exact null sentinels remain valid.
+    expect_complete(parser, "$-1\r\n", RespValue::null_bulk_string());
+    expect_complete(parser, "*-1\r\n", RespValue::null_array());
+    expect_complete(parser, "$0\r\n\r\n", RespValue::bulk_string(""));
+    expect_complete(parser, "*0\r\n", RespValue::array({}));
+    expect_complete(parser, "$1\r\na\r\n", RespValue::bulk_string("a"));
+    expect_complete(parser, "*1\r\n:7\r\n", RespValue::array({RespValue::integer(7)}));
+
+    // Noncanonical length spellings must not be silently interpreted
+    // as -1, zero, or a positive length. They must fail atomically.
+    const std::vector<std::string_view> invalid_lengths = {
+        "$-01\r\n",    "*-01\r\n", "$-0\r\n\r\n",  "*-0\r\n",
+        "$00\r\n\r\n", "*00\r\n",  "$01\r\na\r\n", "*01\r\n:7\r\n"};
+
+    for (std::string_view input : invalid_lengths) {
+        const auto result = parser.parse(input);
+        check(result.status == ParseStatus::Invalid,
+              "Phase 2F: noncanonical RESP2 length spelling must be Invalid");
+        check(!result.value.has_value(), "Invalid numeric length exposed a parsed value");
+        check(result.consumed_bytes == 0, "Invalid numeric length consumed input");
+        check(!result.error.empty(), "Invalid numeric length had no error explanation");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -437,6 +468,7 @@ int main() {
         test_binary_frame_with_trailing_bytes();
         test_early_bulk_terminator_rejection();
         test_bulk_boundary_matrix_2f();
+        test_canonical_length_spellings_2f();
 
         std::cout << "RESP2 parser tests passed.\n";
 
