@@ -187,11 +187,17 @@ ParseResult RespParser::parse_value(std::string_view input, std::size_t cursor,
 
         const std::size_t available = input.size() - cursor;
 
+        // A visible first terminator byte must already be CR,
+        // even when the following LF has not arrived yet.
+        if (available > length && input[cursor + length] != '\r') {
+            return invalid("Invalid RESP2 bulk terminator");
+        }
+
         if (available < length + 2) {
             return need_more();
         }
 
-        if (input[cursor + length] != '\r' || input[cursor + length + 1] != '\n') {
+        if (input[cursor + length + 1] != '\n') {
             return invalid("Invalid RESP2 bulk terminator");
         }
 

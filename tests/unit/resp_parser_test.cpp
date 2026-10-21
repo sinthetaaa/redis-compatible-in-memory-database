@@ -351,6 +351,72 @@ void test_binary_frame_with_trailing_bytes() {
     expect_complete(parser, remaining, RespValue::integer(99));
 }
 
+void test_early_bulk_terminator_rejection() {
+    const RespParser parser;
+
+    // Once the declared payload is complete, a known non-CR
+    // terminator byte is malformed even if the LF is absent.
+    const std::vector<std::string> invalid_prefixes = {"$3\r\nabcX", "$0\r\nX"};
+
+    for (const std::string& prefix : invalid_prefixes) {
+        const auto parsed = parser.parse(prefix);
+
+        check(parsed.status == ParseStatus::Invalid,
+              "Phase 2F: malformed first bulk terminator byte must be Invalid");
+        check(!parsed.value.has_value(), "Invalid exposed a bulk value");
+        check(parsed.consumed_bytes == 0, "Invalid consumed bulk input");
+        check(!parsed.error.empty(), "Invalid omitted its error explanation");
+    }
+
+    expect_need_more(parser, "$3\r\nabc\r");
+    expect_complete(parser, "$3\r\nabc\r\n", RespValue::bulk_string("abc"));
+    expect_invalid(parser, "$3\r\nabc\rX");
+}
+
+void test_bulk_boundary_matrix_2f() {
+    const RespParser parser;
+
+    // A missing payload byte or a possible CRLF suffix is incomplete.
+    expect_need_more(parser, "$3\r\nab");
+    expect_need_more(parser, "$3\r\nabc");
+    expect_need_more(parser, "$3\r\nabc\r");
+    expect_complete(parser, "$3\r\nabc\r\n", RespValue::bulk_string("abc"));
+
+    // A visible wrong terminator byte is already invalid, not NeedMore.
+    expect_invalid(parser, "$3\r\nabcX");
+    expect_invalid(parser, "$3\r\nabcX\n");
+    expect_invalid(parser, "$3\r\nabc\rX");
+
+    expect_need_more(parser, "$0\r\n");
+    expect_need_more(parser, "$0\r\n\r");
+    expect_complete(parser, "$0\r\n\r\n", RespValue::bulk_string(""));
+    expect_invalid(parser, "$0\r\nX");
+    expect_invalid(parser, "$0\r\n\rX");
+
+    // The CRLF terminator is included in the total frame-byte budget.
+    const RespParser exact(RespParser::Limits{9, 3, 3, 3, 8});
+    expect_need_more(exact, "$3\r\nabc\r");
+    expect_complete(exact, "$3\r\nabc\r\n", RespValue::bulk_string("abc"));
+    const RespParser too_small(RespParser::Limits{8, 3, 3, 3, 8});
+    expect_invalid(too_small, "$3\r\nabc");
+    expect_invalid(too_small, "$3\r\nabc\r");
+
+    // Embedded binary CRLF/NUL belong to the payload, never its terminator.
+    const std::string binary("\0\r\n", 3);
+    const std::string first = std::string("$3\r\n") + binary + "\r\n";
+    expect_complete(parser, first, RespValue::bulk_string(binary));
+    const auto first_result = parser.parse(first + ":7\r\n");
+    check(first_result.status == ParseStatus::Complete, "binary pipeline first frame incomplete");
+    check(first_result.consumed_bytes == first.size(), "binary pipeline consumed trailing frame");
+    expect_complete(parser, ":7\r\n", RespValue::integer(7));
+
+    // Child frame failure never exposes a partial enclosing array.
+    expect_need_more(parser, "*2\r\n:7\r\n$3\r\nabc\r");
+    expect_invalid(parser, "*2\r\n:7\r\n$3\r\nabcX");
+    expect_complete(parser, "*2\r\n:7\r\n$3\r\nabc\r\n",
+                    RespValue::array({RespValue::integer(7), RespValue::bulk_string("abc")}));
+}
+
 } // namespace
 
 int main() {
@@ -369,6 +435,8 @@ int main() {
         test_partial_and_invalid_arrays();
         test_nesting_depth_exact_boundary();
         test_binary_frame_with_trailing_bytes();
+        test_early_bulk_terminator_rejection();
+        test_bulk_boundary_matrix_2f();
 
         std::cout << "RESP2 parser tests passed.\n";
 
