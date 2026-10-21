@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A-2D COMPLETE; Phase 2E IN PROGRESS; Phases 2F-2G NOT STARTED.
+Phases 2A-2E COMPLETE; Phase 2F NEXT, NOT STARTED; Phase 2G NOT STARTED.
 
 ### Acceptance Gate
 
@@ -159,7 +159,7 @@ simultaneous connections without resource leaks.
 - [x] 2B — Response serializer
 - [x] 2C — Incremental parser
 - [x] 2D — Fragmented request handling
-- [ ] 2E — Pipelining
+- [x] 2E — Pipelining
 - [ ] 2F — Malformed-input and resource-limit handling
 - [ ] 2G — Parser fuzz-test foundation
 
@@ -413,7 +413,7 @@ At Phase 2D closure, Phase 2E pipelining was next.
 Phase 2E progress is recorded below.
 Phase 2F and 2G remain NOT STARTED.
 
-### Phase 2E Detailed Progress — IN PROGRESS
+### Phase 2E Detailed Progress — COMPLETE
 
 - 2E.0: COMPLETE — Verified Phase 2D formal closure at
   e36d3a113b2b038208ff1c8fbd9fe50221690461;
@@ -438,9 +438,9 @@ Phase 2F and 2G remain NOT STARTED.
   ba97b8bcbb11edacbbb7fb823cce02fa765118e8;
   macOS Debug/Release 18/18 and Linux post-merge
   CI #39627679647 SUCCESS, including repeat gates.
-- 2E.5: IN PROGRESS — Formal closure documentation on
-  main; commit, push and verify post-closure Linux CI
-  before establishing the Phase 2F baseline.
+- 2E.5: COMPLETE — Closure checkpoint 3315a3b on main;
+  post-closure Linux Debug/Release CI #39629733366
+  SUCCESS, including pipeline and networking repetitions.
 
 Branch: `phase2e/resp2-pipelining`.
 PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/8
@@ -449,8 +449,8 @@ Merge commit: ba97b8bcbb11edacbbb7fb823cce02fa765118e8.
 Final PR-head Linux CI #39625859355: SUCCESS.
 Post-merge Linux CI #39627679647: SUCCESS.
 
-The Phase 2E checkbox remains unchecked until 2E.5
-closure documentation and post-closure CI are accepted.
+Phase 2E is formally COMPLETE with 2E.5 accepted.
+Phase 2F is NEXT, NOT STARTED.
 The production executable still runs only transport echo;
 no Redis command-serving endpoint or data keyspace exists.
 Phase 2F and 2G remain NOT STARTED.

@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2D are COMPLETE. Phase 2E pipelining is IMPLEMENTED AND MERGED, with macOS/Linux post-merge acceptance passed; formal closure CI remains to be verified. Phases 2F-2G are NOT STARTED.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2E are COMPLETE and validated on macOS/Linux. Phase 2F malformed-input/resource-limit hardening is NEXT, NOT STARTED; Phase 2G parser fuzzing is NOT STARTED.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -545,7 +545,7 @@ merge and post-merge acceptance are complete.
 The fragmented-input adapter is validated on
 macOS and Linux in Debug and Release.
 
-Phase 2E — RESP2 Pipelining is MERGED; formal closure CI is pending.
+Phase 2E — RESP2 Pipelining is COMPLETE and formally closed.
 
 The bounded RespPipeline processor handles multiple buffered
 requests in FIFO order, reserves reply capacity before dispatch,
@@ -573,8 +573,9 @@ Phase 2E.3 documentation synchronization is COMPLETE.
 Final PR-head CI #39625859355: SUCCESS in Debug and Release.
 Phase 2E.4 controlled merge and post-merge acceptance: COMPLETE.
 Post-merge Linux CI #39627679647: SUCCESS in Debug and Release.
-Phase 2E.5 formal closure documentation is being prepared on main.
-Post-closure CI must pass before beginning Phase 2F.
+Phase 2E.5 closure checkpoint 3315a3b was committed on main.
+Post-closure Linux Debug/Release CI #39629733366: SUCCESS.
+Phase 2E is formally complete; Phase 2F is NEXT, NOT STARTED.
 Phase 2F hardening and Phase 2G fuzzing remain NOT STARTED.
 
 The executable still serves only raw TCP transport echo data;

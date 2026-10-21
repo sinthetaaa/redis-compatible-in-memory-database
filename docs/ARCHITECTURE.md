@@ -777,7 +777,7 @@ macOS/Linux Debug and Release.
 At Phase 2D closure, pipelining was the next milestone.
 The Phase 2E implementation is documented below.
 
-## Phase 2E Bounded Pipelining — MERGED, CLOSURE PENDING
+## Phase 2E Bounded Pipelining — COMPLETE
 
 Implementation files:
 
@@ -857,7 +857,8 @@ Phase 2E implementation commits: 861ebb4, 169d915, 84d4ebc.
 Linux regression CI commit: 3e4bc6f.
 PR #8: MERGED on 2026-10-21.
 Merge commit: ba97b8bcbb11edacbbb7fb823cce02fa765118e8.
-Phase 2E.5 formal closure and post-closure CI remain pending.
+Phase 2E.5 closure checkpoint 3315a3b: COMPLETE.
+Post-closure Linux CI #39629733366: SUCCESS (Debug/Release).
 
 Local macOS Debug and Release: 18/18 tests each.
 Linux Debug and Release: 18/18 tests each.

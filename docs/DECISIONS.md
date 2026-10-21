@@ -552,11 +552,12 @@ Post-merge CI 39381045190: SUCCESS.
 
 ## ADR-015 — Bounded FIFO RESP2 Pipelining and Resumable Scheduling
 
-**Status:** Accepted and merged through PR #8; formal closure pending.
+**Status:** Accepted and implemented; Phase 2E COMPLETE.
 **Implementation:** Commits 861ebb4, 169d915 and 84d4ebc.
 **Validation:** Linux CI #39420606587, #39422679453,
 #39625859355 and post-merge #39627679647 SUCCESS.
 **Merge:** ba97b8bcbb11edacbbb7fb823cce02fa765118e8.
+**Closure:** 3315a3b; Linux CI #39629733366 SUCCESS.
 
 ### Decision
 
@@ -644,8 +645,8 @@ Phase 2D fragmented-input handling is COMPLETE.
 PR #7 merged as f1bc679.
 Post-merge Linux workflow 39381045190 succeeded.
 
-Phase 2E pipelining is MERGED through PR #8; macOS/Linux
-post-merge acceptance passed; formal closure CI remains.
+Phase 2E pipelining is COMPLETE through PR #8; macOS/Linux
+post-closure acceptance passed in CI #39629733366.
 Phase 2F and 2G remain NOT STARTED.
 
 ## Phase 2
