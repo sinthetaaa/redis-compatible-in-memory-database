@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2D are COMPLETE. Phase 2E pipelining implementation and Linux acceptance are validated; documentation, merge, and formal closure remain. Phases 2F-2G are NOT STARTED.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2D are COMPLETE. Phase 2E pipelining is IMPLEMENTED AND MERGED, with macOS/Linux post-merge acceptance passed; formal closure CI remains to be verified. Phases 2F-2G are NOT STARTED.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -545,7 +545,7 @@ merge and post-merge acceptance are complete.
 The fragmented-input adapter is validated on
 macOS and Linux in Debug and Release.
 
-Phase 2E — RESP2 Pipelining is IN PROGRESS.
+Phase 2E — RESP2 Pipelining is MERGED; formal closure CI is pending.
 
 The bounded RespPipeline processor handles multiple buffered
 requests in FIFO order, reserves reply capacity before dispatch,
@@ -559,7 +559,9 @@ The transport-only smoke-echo pathway remains unchanged.
 
 Implementation commits: 861ebb4, 169d915 and 84d4ebc.
 Linux CI repetition commit: 3e4bc6f.
-Draft PR #8 is open; no merge has occurred.
+PR #8 MERGED on 2026-10-21.
+Merge commit: ba97b8bcbb11edacbbb7fb823cce02fa765118e8.
+Documentation commit: 7d1533ab00e9a0a95d4f62c9ea9ccfe4fcd03dd1.
 
 macOS Debug and Release: 18/18 CTest tests PASS each.
 Linux Debug and Release: 18/18 CTest tests PASS each.
@@ -567,10 +569,13 @@ Initial Linux PR CI #39420606587: SUCCESS.
 Repeated Linux PR CI #39422679453: SUCCESS.
 Each Linux build ran all three new pipeline tests 20 additional times.
 
-Phase 2E.3 documentation synchronization is IN PROGRESS.
-Final PR-head CI, merge, post-merge acceptance and formal closure
-remain to be completed. Phase 2F hardening and Phase 2G parser
-fuzzing remain NOT STARTED.
+Phase 2E.3 documentation synchronization is COMPLETE.
+Final PR-head CI #39625859355: SUCCESS in Debug and Release.
+Phase 2E.4 controlled merge and post-merge acceptance: COMPLETE.
+Post-merge Linux CI #39627679647: SUCCESS in Debug and Release.
+Phase 2E.5 formal closure documentation is being prepared on main.
+Post-closure CI must pass before beginning Phase 2F.
+Phase 2F hardening and Phase 2G fuzzing remain NOT STARTED.
 
 The executable still serves only raw TCP transport echo data;
 it does not parse RESP2 on its serving path or execute Redis commands.

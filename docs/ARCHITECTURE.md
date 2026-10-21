@@ -777,7 +777,7 @@ macOS/Linux Debug and Release.
 At Phase 2D closure, pipelining was the next milestone.
 The Phase 2E implementation is documented below.
 
-## Phase 2E Bounded Pipelining — IN PROGRESS
+## Phase 2E Bounded Pipelining — MERGED, CLOSURE PENDING
 
 Implementation files:
 
@@ -855,13 +855,21 @@ client rather than terminating the manager's event loop.
 
 Phase 2E implementation commits: 861ebb4, 169d915, 84d4ebc.
 Linux regression CI commit: 3e4bc6f.
-PR #8: OPEN DRAFT; Phase 2E is not yet merged.
+PR #8: MERGED on 2026-10-21.
+Merge commit: ba97b8bcbb11edacbbb7fb823cce02fa765118e8.
+Phase 2E.5 formal closure and post-closure CI remain pending.
 
 Local macOS Debug and Release: 18/18 tests each.
 Linux Debug and Release: 18/18 tests each.
 CI #39420606587: SUCCESS (initial).
 CI #39422679453: SUCCESS (20 additional repetitions
 per pipeline integration test in each build).
+Final PR-head CI #39625859355: SUCCESS.
+Post-merge Linux CI #39627679647: SUCCESS.
+Post-merge macOS and Linux Debug/Release: 18/18 tests each.
+Linux repeat gates: three pipeline tests 20 times each,
+TCP smoke 10 times, connection tests 20 times and epoll 15 times,
+in both Debug and Release.
 
 No production Redis request/command-serving endpoint is wired
 into `redisdb-server`. The `--smoke-echo` path still echoes raw

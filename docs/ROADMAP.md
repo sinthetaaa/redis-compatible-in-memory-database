@@ -432,18 +432,25 @@ Phase 2F and 2G remain NOT STARTED.
 - 2E.2B: COMPLETE — Three-test Linux repetition gate added
   in 3e4bc6f; both Linux jobs SUCCESS in #39422679453,
   including 20 additional repetitions per pipeline test.
-- 2E.3: IN PROGRESS — Synchronize five project documents;
-  validate locally, commit, push and verify PR-head CI.
-- 2E.4: NOT STARTED — Controlled PR #8 merge, macOS and
-  Linux post-merge acceptance.
-- 2E.5: NOT STARTED — Formal closure record on main,
-  with post-closure Linux Debug/Release CI verification.
+- 2E.3: COMPLETE — Five project documents synchronized
+  in 7d1533a; final PR-head Linux CI #39625859355 SUCCESS.
+- 2E.4: COMPLETE — PR #8 merged into main as
+  ba97b8bcbb11edacbbb7fb823cce02fa765118e8;
+  macOS Debug/Release 18/18 and Linux post-merge
+  CI #39627679647 SUCCESS, including repeat gates.
+- 2E.5: IN PROGRESS — Formal closure documentation on
+  main; commit, push and verify post-closure Linux CI
+  before establishing the Phase 2F baseline.
 
 Branch: `phase2e/resp2-pipelining`.
 PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/8
-PR state: OPEN DRAFT (not merged).
+PR state: MERGED on 2026-10-21.
+Merge commit: ba97b8bcbb11edacbbb7fb823cce02fa765118e8.
+Final PR-head Linux CI #39625859355: SUCCESS.
+Post-merge Linux CI #39627679647: SUCCESS.
 
-The Phase 2E checkbox remains unchecked until 2E.5 closes.
+The Phase 2E checkbox remains unchecked until 2E.5
+closure documentation and post-closure CI are accepted.
 The production executable still runs only transport echo;
 no Redis command-serving endpoint or data keyspace exists.
 Phase 2F and 2G remain NOT STARTED.
