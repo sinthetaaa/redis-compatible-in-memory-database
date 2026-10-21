@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A, 2B, 2C and 2D COMPLETE; Phase 2E NEXT.
+Phases 2A-2D COMPLETE; Phase 2E IN PROGRESS; Phases 2F-2G NOT STARTED.
 
 ### Acceptance Gate
 
@@ -409,8 +409,44 @@ Phase 2D: COMPLETE.
 The framed-input adapter and native TCP tests
 passed macOS and Linux Debug/Release acceptance.
 
-Phase 2E — Pipelining: NEXT, NOT STARTED.
-Phase 2F and 2G: NOT STARTED.
+At Phase 2D closure, Phase 2E pipelining was next.
+Phase 2E progress is recorded below.
+Phase 2F and 2G remain NOT STARTED.
+
+### Phase 2E Detailed Progress — IN PROGRESS
+
+- 2E.0: COMPLETE — Verified Phase 2D formal closure at
+  e36d3a113b2b038208ff1c8fbd9fe50221690461;
+  dedicated feature branch created and macOS baseline tested.
+- 2E.1: COMPLETE — Bounded, ordered RespPipeline processor,
+  peek-before-consume framing and output admission checks;
+  implementation 861ebb4.
+- 2E.1b: COMPLETE — Native event-loop resumable callbacks,
+  deferred work, write-pressure recovery and EOF tests;
+  implementation 169d915.
+- 2E.1c: COMPLETE — Progress safeguards, deferred token cleanup,
+  full-buffer stall handling and deterministic socket tests;
+  implementation 84d4ebc.
+- 2E.2A: COMPLETE — Draft PR #8 created; initial Linux
+  Debug/Release 18/18 CI #39420606587 SUCCESS.
+- 2E.2B: COMPLETE — Three-test Linux repetition gate added
+  in 3e4bc6f; both Linux jobs SUCCESS in #39422679453,
+  including 20 additional repetitions per pipeline test.
+- 2E.3: IN PROGRESS — Synchronize five project documents;
+  validate locally, commit, push and verify PR-head CI.
+- 2E.4: NOT STARTED — Controlled PR #8 merge, macOS and
+  Linux post-merge acceptance.
+- 2E.5: NOT STARTED — Formal closure record on main,
+  with post-closure Linux Debug/Release CI verification.
+
+Branch: `phase2e/resp2-pipelining`.
+PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/8
+PR state: OPEN DRAFT (not merged).
+
+The Phase 2E checkbox remains unchecked until 2E.5 closes.
+The production executable still runs only transport echo;
+no Redis command-serving endpoint or data keyspace exists.
+Phase 2F and 2G remain NOT STARTED.
 
 ### Acceptance Gate
 

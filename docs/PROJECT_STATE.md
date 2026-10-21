@@ -2,13 +2,13 @@
 
 ## 1. Snapshot
 
-- Updated: 2026-10-20
+- Updated: 2026-10-21
 - Current phase: Phase 2 — RESP2 Protocol Engine (IN PROGRESS)
-- Current subphase: 2E — Pipelining (NEXT; NOT STARTED)
-- Status: PHASE 1 COMPLETE; PHASE 2A COMPLETE; PHASE 2B COMPLETE; PHASE 2C COMPLETE; PHASE 2D COMPLETE; PHASE 2 IN PROGRESS
-- Last completed milestone: 2D.4 — PR #7 merged and post-merge Linux CI passed
-- Exact next task: Commit and verify Phase 2D closure documentation and its Linux CI, then establish the Phase 2E feature branch and design multi-frame processing and ordered responses.
-- Implementation maturity: Networking, transport-only smoke server, RESP2 value model, serializer, parser and test-validated fragmented-input adapter; no production RESP2 command endpoint
+- Current subphase: 2E.3 — Documentation synchronization (IN PROGRESS)
+- Status: PHASE 1 COMPLETE; PHASE 2A-2D COMPLETE; PHASE 2E IN PROGRESS (implementation and Linux CI validated); PHASE 2F-2G NOT STARTED
+- Last completed milestone: 2E.2B — Linux pipeline repetition CI #39422679453 passed in Debug and Release
+- Exact next task: Validate and commit the Phase 2E.3 five-file documentation update, push PR #8, verify final Linux Debug/Release CI, and review before merge.
+- Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
 ## 2. Project Identity
@@ -29,7 +29,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: main
+- Branch: phase2e/resp2-pipelining (draft PR #8; main remains Phase 2D baseline)
 - Phase 2D starting baseline: 2515f7f1d10067113865f1d4e0ced9ce5d92c180
 - Phase 2C starting baseline: 1e7c726969cc437fdecfc0532785de84c24bd4be
 - Phase 2B starting baseline: b16dd382e213ae541a91d4f298f288fa80b68aa7
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main.
+- Current development branch: phase2e/resp2-pipelining (draft PR #8).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -79,6 +79,15 @@
 - Phase 2D final PR-head Linux CI: 39380341041 (SUCCESS).
 - Phase 2D merge commit: f1bc679ed707404cbc8d0a569c2eadb9af4d6687.
 - Phase 2D post-merge Linux CI: 39381045190 (SUCCESS).
+- Phase 2D formal closure baseline on main: e36d3a113b2b038208ff1c8fbd9fe50221690461.
+- Phase 2E branch: phase2e/resp2-pipelining.
+- Phase 2E protocol pipeline commit: 861ebb464a79ffb1dd389aa37c34d9da85f4d3bb.
+- Phase 2E native event-loop commit: 169d915ee5507e3ef211321205ce14e2219a298b.
+- Phase 2E scheduler-hardening commit: 84d4ebcd1cede43c5e389aa8b24e8e15efa0f4e5.
+- Phase 2E CI repetition commit: 3e4bc6f1364d51de5d042b1175831d1537e00654.
+- Phase 2E PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/8 (OPEN DRAFT).
+- Phase 2E initial Linux CI: 39420606587 (SUCCESS).
+- Phase 2E repeated Linux CI: 39422679453 (SUCCESS).
 - Phase 2C implementation: 82b7dc98dbb99c83146d95c90fb3feb1408e4a8a.
 - Phase 2C documentation: 9e873ddcb1130a5ba20155f9f61e805e1aa519b2.
 - Phase 2C PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/6 (MERGED).
@@ -180,7 +189,7 @@
 - 2D: COMPLETE — Framed-input adapter and native
   TCP fragmentation tests merged through PR #7
   and validated on macOS and Linux.
-- 2E: NOT STARTED — Pipelining.
+- 2E: IN PROGRESS — Bounded pipeline and native event-loop scheduling validated; documentation, merge and closure pending.
 - 2F: NOT STARTED — Malformed input and resource limits.
 - 2G: NOT STARTED — Parser fuzz-test foundation.
 
@@ -250,11 +259,18 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Multi-client, churn, admission and half-close tests.
 - Accept-time reset handling with client isolation.
 - SIGINT/SIGTERM shutdown in smoke mode.
+- Owned RESP2 values, bounded serialization and single-frame parsing.
+- Fragmented-input adapter with reuse of Connection receive buffer.
+- Bounded synchronous FIFO RespPipeline with conservative reply admission.
+- Resumable ConnectionManager handler with three scheduling outcomes.
+- Deferred work queue, input progress guard, backpressure and EOF processing.
+- Native kqueue/epoll pipelining and scheduler regression tests.
+- Linux Debug/Release 18-test suite and pipeline repetition CI gates.
 
 ### Not Yet Implemented
 
 - Production TCP serving with RESP2 command execution.
-- RESP2 parser and serializer.
+- Production RESP2 parser/serializer invocation in the executable serving path.
 - Command execution.
 - In-memory key-value database.
 - Expiration.
@@ -887,9 +903,53 @@ The production executable remains transport-only.
 Redis commands, persistent keyspace, pipelined
 dispatch and response ordering are unimplemented.
 
-Phase 2D: COMPLETE.
-Phase 2E: NEXT, NOT STARTED.
-Phase 2F and 2G: NOT STARTED.
+At the Phase 2D closure checkpoint, Phase 2E was next.
+The following Phase 2E record is the current progression.
+Phase 2F and 2G remain NOT STARTED.
+
+### Phase 2E — 2026-10-20 to 2026-10-21 (IN PROGRESS)
+
+Baseline/main: e36d3a113b2b038208ff1c8fbd9fe50221690461.
+Feature branch: `phase2e/resp2-pipelining`.
+
+- 2E.0 COMPLETE — Verified clean Phase 2D closure baseline.
+- 2E.1 COMPLETE — `RespPipeline`, framing peek and FIFO admission
+  (861ebb464a79ffb1dd389aa37c34d9da85f4d3bb).
+- 2E.1b COMPLETE — Resumable native event-loop dispatch and tests
+  (169d915ee5507e3ef211321205ce14e2219a298b).
+- 2E.1c COMPLETE — Scheduler safety and fairness hardening
+  (84d4ebcd1cede43c5e389aa8b24e8e15efa0f4e5).
+- 2E.2A COMPLETE — Draft PR #8 opened; initial Linux CI passed.
+- 2E.2B COMPLETE — Linux pipeline repetition gates added
+  (3e4bc6f1364d51de5d042b1175831d1537e00654).
+- 2E.3 IN PROGRESS — Five-file documentation synchronization,
+  PR-head Linux acceptance and source review pending.
+- 2E.4 NOT STARTED — Merge, post-merge macOS/Linux validation.
+- 2E.5 NOT STARTED — Formal closure record and Linux CI on main.
+
+Draft PR #8:
+https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/8
+
+Local macOS Debug and Release: 18/18 CTest targets PASS each.
+Scheduler-hardening local repetition: 50/50 per configuration.
+Native TCP pipeline local repetition: 20/20 per configuration.
+Local formatting and patch checks: PASS.
+
+Initial Linux CI run #39420606587: SUCCESS, Debug/Release
+18/18 CTest targets each, native epoll and network regressions.
+
+Linux repeat gate #39422679453: SUCCESS, Debug/Release
+18/18 CTest targets each, 20 additional executions of each
+of three Phase 2E pipeline tests, and previously existing
+smoke, connection lifecycle and epoll repetition gates.
+
+PR #8 currently changes 12 files across four commits:
+11 implementation/build/test files plus one CI workflow.
+The five documentation files will be added in 2E.3.
+
+The `redisdb-server` executable remains a transport-only echo
+server. Neither Redis commands nor an in-memory database are
+implemented. Phase 2F and Phase 2G are NOT STARTED.
 
 ## 11. Benchmarks
 
@@ -991,38 +1051,36 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-Phase 2A RESP2 Value Model: COMPLETE.
-Phase 2B RESP2 Response Serializer: COMPLETE.
-Phase 2C Incremental RESP2 Parser: COMPLETE.
-Phase 2D Fragmented Request Handling: COMPLETE.
+Phase 2A through 2D: COMPLETE, merged and formally closed.
+Phase 2E implementation and CI acceptance: COMPLETE locally
+and on Linux, but Phase 2E overall remains IN PROGRESS.
 
-PR #7 merged successfully.
-Post-merge macOS and Linux acceptance passed.
+As of the Phase 2E.2B checkpoint:
 
-Merge commit:
-f1bc679ed707404cbc8d0a569c2eadb9af4d6687.
+- Draft PR #8 is OPEN and not merged.
+- Feature HEAD: 3e4bc6f1364d51de5d042b1175831d1537e00654.
+- `main` baseline: e36d3a113b2b038208ff1c8fbd9fe50221690461.
+- Linux PR CI #39422679453: SUCCESS in Debug and Release.
+- Feature branch had four commits before documentation.
 
-1. Commit and push the Phase 2D closure record.
-2. Verify synchronized, clean main and origin/main.
-3. Verify post-closure Linux Debug and Release CI.
-4. Establish the Phase 2E baseline from closure.
-5. Create a dedicated Phase 2E feature branch.
-6. Review RespFramedInput and ConnectionManager APIs.
-7. Design bounded multi-frame draining per client.
-8. Preserve request arrival order.
-9. Specify response ordering and output backpressure.
-10. Decide how buffered frames resume after pressure.
-11. Cover coalesced requests and mixed fragmentation.
-12. Cover malformed frames after valid frames.
-13. Add native macOS/Linux integration tests.
-14. Preserve --smoke-echo unchanged.
-15. Keep Phase 2F hardening and 2G fuzzing separate.
+Proceed in this exact order:
 
-Phase 2E: NEXT, NOT STARTED.
-Phase 2F and 2G: NOT STARTED.
+1. Phase 2E.3 — Apply five-document synchronization patch.
+2. Revalidate macOS Debug/Release 18/18, full formatting,
+   exact five-file scope and clean diff.
+3. Commit the documentation alone with a Conventional Commit,
+   push the feature branch and verify PR #8 head/changed files.
+4. Verify final PR-head Linux Debug/Release CTest and all
+   repeat-gate steps. Review final code/documentation scope.
+5. Phase 2E.4 — Mark PR ready only after final acceptance;
+   perform controlled merge into `main`, then post-merge
+   macOS and Linux verification, checking merge SHA.
+6. Phase 2E.5 — Formally close Phase 2E in documentation on
+   clean `main`, verify closure commit, push and final Linux CI.
+7. Begin Phase 2F only after 2E.5 is fully verified.
 
-The executable remains transport-only.
-No Redis commands or persistent keyspace exist.
+Phase 2F and 2G remain NOT STARTED.
+No production RESP2 command-serving endpoint or keyspace exists.
 
 ## 17. Continuation Instructions
 

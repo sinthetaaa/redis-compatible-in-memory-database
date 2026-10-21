@@ -72,6 +72,9 @@ class Connection {
 
     [[nodiscard]] std::string_view input() const noexcept { return input_; }
 
+    // Read-only access for bounded protocol output admission.
+    [[nodiscard]] std::size_t max_output_bytes() const noexcept { return limits_.max_output_bytes; }
+
     [[nodiscard]] std::size_t pending_output_bytes() const noexcept {
         return output_.size() - output_offset_;
     }

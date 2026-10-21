@@ -774,7 +774,99 @@ Post-merge CI: 39381045190 SUCCESS.
 Phase 2D is complete and validated in
 macOS/Linux Debug and Release.
 
-Phase 2E Pipelining is NEXT, NOT STARTED.
+At Phase 2D closure, pipelining was the next milestone.
+The Phase 2E implementation is documented below.
+
+## Phase 2E Bounded Pipelining — IN PROGRESS
+
+Implementation files:
+
+- `include/redisdb/protocol/RespPipeline.hpp`
+- `src/protocol/RespPipeline.cpp`
+- `include/redisdb/protocol/RespFramedInput.hpp`
+- `src/protocol/RespFramedInput.cpp`
+- `include/redisdb/net/ConnectionManager.hpp`
+- `src/net/ConnectionManager.cpp`
+- `include/redisdb/net/Connection.hpp`
+
+Three dedicated integration targets cover POSIX socketpairs,
+real native TCP dispatch and scheduler safety. The CI workflow
+`.github/workflows/phase1e-linux.yml` repeats these targets.
+
+### Protocol processing and output admission
+
+`RespPipeline::drain(Connection&, PipelineReplyFactory)` handles
+several complete frames from the existing connection input buffer
+in request order. `RespFramedInput::peek` inspects the next frame
+without consuming it. For each frame, the processor checks that
+up to `max_reply_bytes` can fit in the connection output buffer
+before invoking the reply factory. It then serializes and queues
+one reply before consuming the corresponding frame bytes.
+
+Processing stops with one of four outcomes:
+
+- `NeedMore`: preserve the incomplete buffered suffix.
+- `BudgetExhausted`: stop after a bounded number of frames.
+- `Backpressured`: retain the next request until output drains.
+- `Invalid`: preserve invalid input; caller applies close policy.
+
+Default pipeline limits are 16 frames per drain, 8192 maximum
+reply bytes and a 64 KiB parser frame budget. The connection
+has 64 KiB default input and output caps. These budgets must
+be coordinated when changing configuration. Output admission
+is conservative: insufficient reserved capacity prevents
+request execution, even if an eventual reply might be smaller.
+
+The synchronous protocol processor performs no socket reads,
+writes, native polling or independent input-buffer allocation.
+`PipelineReplyFactory` is a test integration seam rather than
+an implemented Redis command dispatcher. Exceptions in reply
+processing require caller-level client closure; the pipeline
+does not promise retry-safe side effects.
+
+### Resumable native event-loop scheduling
+
+`ConnectionManager` preserves the legacy `InputHandler` for
+smoke echo and exposes an exclusive `ResumableInputHandler`
+for protocol-aware test integrations. Its actions are:
+
+- `AwaitRead`: wait for more socket input.
+- `Continue`: enqueue deferred work for a later bounded turn.
+- `AwaitWrite`: resume when pending output makes progress.
+
+A FIFO token queue plus pending-token membership set prevents
+duplicate scheduling. The manager defaults to at most 32
+deferred clients per poll. Closed clients are removed from the
+queue and scheduling sets; stale registration tokens cannot
+be reused. The callback must consume input or enqueue output
+when it requests `Continue`, preventing a no-progress CPU spin.
+A full input buffer with no eligible continuation is closed
+rather than left indefinitely unable to receive additional data.
+
+Read interest and write interest remain governed by the native
+kqueue/epoll poller and the connection output watermarks.
+Deferred processing does not require a fresh client write,
+and write-progress callbacks re-arm blocked request processing.
+EOF handling preserves queued replies and remaining complete
+requests where applicable. Exceptions isolate the affected
+client rather than terminating the manager's event loop.
+
+### Validation and current serving boundary
+
+Phase 2E implementation commits: 861ebb4, 169d915, 84d4ebc.
+Linux regression CI commit: 3e4bc6f.
+PR #8: OPEN DRAFT; Phase 2E is not yet merged.
+
+Local macOS Debug and Release: 18/18 tests each.
+Linux Debug and Release: 18/18 tests each.
+CI #39420606587: SUCCESS (initial).
+CI #39422679453: SUCCESS (20 additional repetitions
+per pipeline integration test in each build).
+
+No production Redis request/command-serving endpoint is wired
+into `redisdb-server`. The `--smoke-echo` path still echoes raw
+TCP bytes. Phase 2F will address broader malformed-input and
+resource policies; Phase 2G will add the parser fuzz foundation.
 
 ## Parsing Model
 

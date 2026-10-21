@@ -34,6 +34,10 @@ class RespFramedInput final {
 
     explicit RespFramedInput(RespParser::Limits limits);
 
+    // Inspect the next frame without consuming input.
+    // Used for atomic pipeline output admission.
+    [[nodiscard]] ParseResult peek(const net::Connection& connection) const;
+
     [[nodiscard]] ParseResult poll(net::Connection& connection) const;
 
   private:
