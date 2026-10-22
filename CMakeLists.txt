@@ -35,6 +35,7 @@ add_library(
     src/commands/ArityValidator.cpp
     src/commands/ConnectivityCommands.cpp
     src/commands/CommandErrors.cpp
+    src/storage/Database.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -196,6 +197,15 @@ if(BUILD_TESTING)
         COMMAND redisdb-command-errors-tests
     )
     set_tests_properties(unit.command_errors PROPERTIES TIMEOUT 10)
+
+    add_executable(
+        redisdb-database-tests
+        tests/unit/database_test.cpp
+    )
+    target_link_libraries(redisdb-database-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-database-tests)
+    add_test(NAME unit.database COMMAND redisdb-database-tests)
+    set_tests_properties(unit.database PROPERTIES TIMEOUT 20)
 
     add_executable(
         redisdb-resp-value-tests

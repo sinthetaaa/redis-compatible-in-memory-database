@@ -8,11 +8,11 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2 and 3A–3C COMPLETE; Phase 3 IN PROGRESS (3D–3F not started). The executable remains transport-only TCP echo, not a Redis command server.**
+**Project status: Phases 0–3 COMPLETE; Phase 4 IN PROGRESS (4A keyspace foundation). The executable supports loopback RESP2 PING/ECHO/QUIT, but SET/GET and persistent data storage are not yet wired to TCP.**
 
-The executable now supports a continuously running,
-loopback-only TCP echo mode for transport testing.
-It does not parse RESP2 over TCP or execute Redis commands.
+The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
+The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
+Phase 4A adds isolated in-memory storage; wire-level SET/GET begins in Phase 4B.
 
 ## Project Goals
 
@@ -737,8 +737,25 @@ Post-merge validation:
 - Immutable corpus: 50 verified seeds.
 - libFuzzer: 10,000 completed executions.
 
-Next: Phase 3D PING/ECHO/QUIT. Future features use
-branch-push CI and direct Git merges, without new PRs.
+Historical 3C checkpoint: the following milestone was Phase 3D.
+Feature branches now use push-triggered CI and direct merges without PRs.
+
+## Phase 3D–3F — Command Server and Error Behavior (COMPLETE)
+
+- 3D: binary-safe PING/ECHO/QUIT handlers, merge `35a925a`.
+- 3E: loopback RESP2 TCP command server and redis-cli smoke, merge `a9da868`.
+- 3F: bounded, control-character-safe unknown-command replies,
+  merge `e7e8af1adea8a12213b2aa9c1637709133907071`.
+- Final Phase 3 main CI: Linux Debug/Release 24/24,
+  Clang sanitizer/fuzz 25/25, 50 immutable seeds and 10,000 fuzz executions.
+
+## Phase 4A — In-Memory Keyspace and Entry Model
+
+The storage foundation uses `std::unordered_map<std::string, Entry>`
+with owned, binary-safe values, an initial string alternative,
+non-allocating heterogeneous lookup and deterministic model tests.
+It is not yet wired into command serving. TTL, eviction, AOF and
+snapshot behavior remain future milestones.
 
 ## License
 

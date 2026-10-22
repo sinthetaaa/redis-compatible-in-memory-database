@@ -2,14 +2,14 @@
 
 ## 1. Snapshot
 
-- Updated: 2026-10-22
-- Current phase: Phase 3 — Command Framework (IN PROGRESS); Phases 0–2 COMPLETE
-- Current subphase: Phase 3C completed; consolidated documentation and branch-push CI transition
-- Status: Phases 0–2 and 3A–3C COMPLETE; Phase 3 IN PROGRESS; 3D–3F and 4–19 NOT STARTED
-- Last completed milestone: Phase 3C direct merge `d733daa13cb9c1d8741c4c8d1e1080fe593d32b7` and full macOS/Linux post-merge acceptance
-- Exact next task: Validate and directly merge the consolidated docs/CI branch; begin Phase 3D on a new feature branch; no new PRs
-- Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
-- Working TCP database: NOT IMPLEMENTED
+- Updated: 2026-10-23
+- Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
+- Current subphase: Phase 4A — isolated authoritative keyspace and Entry/Value model
+- Status: Phases 0–3 COMPLETE; 4A implemented on feature branch pending Linux CI; 4B–4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 3F two-parent merge `e7e8af1adea8a12213b2aa9c1637709133907071` and exact-head post-merge Linux acceptance
+- Exact next task: Validate Phase 4A macOS/Linux suites; merge `phase4a/keyspace-entry-model` directly into main once green; then begin 4B SET/GET
+- Implementation maturity: Working loopback RESP2 TCP command server with PING/ECHO/QUIT; Phase 4A keyspace foundation is isolated from command routing
+- Working TCP string database: NOT IMPLEMENTED (SET/GET in 4B)
 
 ## 2. Project Identity
 

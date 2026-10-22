@@ -1153,6 +1153,11 @@ after testing real clients.
 
 # 8. Storage Subsystem
 
+Phase 4A introduces `storage/Database`, `storage/Entry`, and
+`storage/Value` as an isolated C++20 keyspace with owned binary-safe
+keys and values. It is not yet used by the TCP command server.
+ExpirationManager, MemoryTracker and EvictionPolicy remain planned.
+
 Proposed modules:
 
 ```text
