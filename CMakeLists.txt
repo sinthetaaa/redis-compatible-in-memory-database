@@ -32,6 +32,7 @@ add_library(
     src/server/Version.cpp
     src/commands/Command.cpp
     src/commands/CommandDispatcher.cpp
+    src/commands/ArityValidator.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -141,6 +142,17 @@ if(BUILD_TESTING)
 
     add_test(NAME unit.command_dispatcher COMMAND redisdb-command-dispatcher-tests)
     set_tests_properties(unit.command_dispatcher PROPERTIES TIMEOUT 10)
+
+    add_executable(
+        redisdb-arity-validator-tests
+        tests/unit/arity_validator_test.cpp
+    )
+
+    target_link_libraries(redisdb-arity-validator-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-arity-validator-tests)
+
+    add_test(NAME unit.arity_validator COMMAND redisdb-arity-validator-tests)
+    set_tests_properties(unit.arity_validator PROPERTIES TIMEOUT 10)
 
     add_executable(
         redisdb-resp-value-tests
