@@ -4,12 +4,12 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4A — isolated authoritative keyspace and Entry/Value model
-- Status: Phases 0–3 COMPLETE; 4A implemented on feature branch pending Linux CI; 4B–4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 3F two-parent merge `e7e8af1adea8a12213b2aa9c1637709133907071` and exact-head post-merge Linux acceptance
-- Exact next task: Validate Phase 4A macOS/Linux suites; merge `phase4a/keyspace-entry-model` directly into main once green; then begin 4B SET/GET
-- Implementation maturity: Working loopback RESP2 TCP command server with PING/ECHO/QUIT; Phase 4A keyspace foundation is isolated from command routing
-- Working TCP string database: NOT IMPLEMENTED (SET/GET in 4B)
+- Current subphase: Phase 4B — RESP2 SET/GET backed by shared in-memory Database
+- Status: Phases 0–3 and 4A COMPLETE; 4B implemented on feature branch pending Linux CI; 4C–4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 4A two-parent merge `ed3056c35b3e799b42f84be583802ec7b5f9dd6f` with exact-head main CI #39843388400 and #39843388363 SUCCESS
+- Exact next task: Validate Phase 4B macOS/Linux suites and true redis-cli SET/GET; direct-merge `phase4b/set-get-command-serving` once green; proceed to 4C DEL/EXISTS/TYPE
+- Implementation maturity: RESP2 TCP PING/ECHO/QUIT and shared in-memory SET/GET; 8176-byte SET value ceiling due to bounded default reply pipeline; no TTL, options, eviction or persistence
+- Working TCP string database: IMPLEMENTED FOR SET/GET ON FEATURE BRANCH, pending Linux CI and direct merge
 
 ## 2. Project Identity
 

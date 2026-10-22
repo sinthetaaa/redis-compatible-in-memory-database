@@ -640,10 +640,10 @@ the supported connectivity commands.
 
 # Phase 4 — Core String Database
 
-**Status:** IN PROGRESS (4A foundation implemented on feature branch)
+**Status:** IN PROGRESS (4A merged; 4B implemented on feature branch, CI pending)
 
-- [x] 4A — Keyspace and entry model (isolated storage, pending branch CI)
-- [ ] 4B — SET, GET
+- [x] 4A — Keyspace and entry model (merged `ed3056c`, main CI accepted)
+- [x] 4B — SET, GET (implementation; branch Linux CI pending)
 - [ ] 4C — DEL, EXISTS, TYPE
 - [ ] 4D — MSET, MGET
 - [ ] 4E — APPEND, STRLEN
