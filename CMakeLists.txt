@@ -78,6 +78,7 @@ add_executable(
     redisdb-server
     src/main.cpp
     src/server/SmokeServer.cpp
+    src/server/RespCommandServer.cpp
 )
 
 target_link_libraries(
@@ -103,6 +104,14 @@ if(BUILD_TESTING)
             integration.server_smoke
             PROPERTIES TIMEOUT 60
         )
+
+        add_test(
+            NAME integration.resp_command_server
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_command_server_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_command_server PROPERTIES TIMEOUT 75)
     endif()
 
     add_executable(

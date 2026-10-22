@@ -30,6 +30,10 @@ PipelineResult RespPipeline::drain(net::Connection& connection,
     }
 
     PipelineResult result{};
+    if (connection.closing_after_flush()) {
+        result.stop = PipelineStop::Closing;
+        return result;
+    }
 
     for (std::size_t index = 0; index < limits_.max_frames_per_drain; ++index) {
         // Peek without consuming input. This permits
@@ -86,6 +90,13 @@ PipelineResult RespPipeline::drain(net::Connection& connection,
 
         ++result.frames_processed;
         result.bytes_consumed += parsed.consumed_bytes;
+
+        // A QUIT reply has been safely queued. Never execute subsequent
+        // pipelined requests on a connection scheduled for graceful close.
+        if (connection.closing_after_flush()) {
+            result.stop = PipelineStop::Closing;
+            return result;
+        }
     }
 
     // More input may remain. The caller must arrange

@@ -1,3 +1,4 @@
+#include "redisdb/server/RespCommandServer.hpp"
 #include "redisdb/server/SmokeServer.hpp"
 #include "redisdb/server/Version.hpp"
 
@@ -18,6 +19,8 @@ void print_usage() {
               << "  redisdb-server --version\n"
               << "  redisdb-server --help\n"
               << "  redisdb-server --smoke-echo [--port PORT]"
+                 " [--max-clients COUNT]\n"
+              << "  redisdb-server --resp2-server [--port PORT]"
                  " [--max-clients COUNT]\n"
               << "\n"
               << "Smoke mode is for transport validation only.\n"
@@ -65,7 +68,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (argc < 2 || std::string_view{argv[1]} != "--smoke-echo") {
+    if (argc < 2) {
+        return invalid_arguments();
+    }
+    const std::string_view mode{argv[1]};
+    if (mode != "--smoke-echo" && mode != "--resp2-server") {
         return invalid_arguments();
     }
 
@@ -112,10 +119,14 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        redisdb::server::run_smoke_echo(port, max_clients);
+        if (mode == "--resp2-server") {
+            redisdb::server::run_resp2_server(port, max_clients);
+        } else {
+            redisdb::server::run_smoke_echo(port, max_clients);
+        }
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "Smoke server error: " << error.what() << '\n';
+        std::cerr << "Server error: " << error.what() << '\n';
 
         return 1;
     }

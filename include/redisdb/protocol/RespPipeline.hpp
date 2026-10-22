@@ -27,7 +27,7 @@ namespace redisdb::protocol {
 // external side effect.
 using PipelineReplyFactory = std::function<RespValue(const RespValue&)>;
 
-enum class PipelineStop { NeedMore, BudgetExhausted, Backpressured, Invalid };
+enum class PipelineStop { NeedMore, BudgetExhausted, Backpressured, Invalid, Closing };
 
 struct PipelineResult {
     PipelineStop stop = PipelineStop::NeedMore;

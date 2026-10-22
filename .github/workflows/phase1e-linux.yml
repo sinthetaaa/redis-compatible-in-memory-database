@@ -38,6 +38,12 @@ jobs:
           ninja --version
           c++ --version
 
+      - name: Install redis-cli for compatibility regression
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends redis-tools
+          command -v redis-cli
+
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
 

@@ -70,6 +70,10 @@ class Connection {
 
     [[nodiscard]] bool received_eof() const noexcept { return received_eof_; }
 
+    // QUIT requests output-first close; ConnectionManager owns FD teardown.
+    void request_close_after_flush() noexcept { close_after_flush_ = true; }
+    [[nodiscard]] bool closing_after_flush() const noexcept { return close_after_flush_; }
+
     [[nodiscard]] std::string_view input() const noexcept { return input_; }
 
     // Read-only input cap for protocol framing compatibility.
@@ -123,6 +127,7 @@ class Connection {
     std::size_t output_offset_ = 0;
 
     bool received_eof_ = false;
+    bool close_after_flush_ = false;
 
     std::chrono::steady_clock::time_point last_activity_ = std::chrono::steady_clock::now();
 };

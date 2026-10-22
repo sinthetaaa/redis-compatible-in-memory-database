@@ -154,6 +154,9 @@ struct Fixture {
                 ++pressure_count;
                 return Action::AwaitWrite;
 
+            case PipelineStop::Closing:
+                throw std::logic_error("echo test pipeline must not request a graceful close");
+
             case PipelineStop::Invalid:
                 throw std::runtime_error("invalid RESP2 pipeline input");
             }
