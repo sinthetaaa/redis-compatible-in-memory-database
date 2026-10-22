@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0–2 and 3A COMPLETE; Phase 3B isolated dispatcher merged and cross-platform validated (formal documentation closure pending); Phases 3C–3F NOT STARTED; executable remains transport-smoke-only
+**Architecture state:** Phases 0–2 and 3A COMPLETE; Phase 3B isolated dispatcher COMPLETE status recorded (final status-commit CI pending); 3C Argument Validation NEXT/NOT STARTED, 3D–3F NOT STARTED; executable remains transport-smoke-only
 
 This document describes the intended system.
 
@@ -1041,7 +1041,7 @@ passed exact-head Linux Debug/Release CI #39789969583
 `bb9610e4422dac7fa383a3473abf2e67dbe1766b` passed Linux
 Debug/Release CI #39792311541 (19/19 each). Phase 3A COMPLETE.
 
-## Phase 3B Isolated Command Dispatcher — IMPLEMENTED, MERGED, VERIFIED
+## Phase 3B Isolated Command Dispatcher — COMPLETE STATUS RECORDED
 
 New `include/redisdb/commands/CommandDispatcher.hpp` and
 `src/commands/CommandDispatcher.cpp` define `CommandDispatcher`
@@ -1071,10 +1071,13 @@ the tested feature tree. Post-merge Linux #39806894796 passed both
 configurations. Local macOS main accepted 20/20 Debug and Release,
 repeated regressions, UBSan dispatcher unit and 50-seed replay.
 
-**Status boundary:** only 3B implementation and post-merge validation
-have completed. Documentation closure (3B.2B/2C and exact-head CI)
-remains pending. The production executable remains transport-only
-TCP echo: no production dispatcher integration, command arity,
+**Status boundary:** 3B implementation, merge and five-document
+acceptance are validated. Acceptance commit
+`cc88f88948acd96574479750eefc7ede6445c70a` passed Linux
+Debug/Release CI #39810737185 (20/20 each). The final 3B.2C
+COMPLETE-status commit still requires exact-head Linux CI acceptance.
+The production executable remains transport-only TCP echo: no
+production dispatcher integration, command arity,
 PING/ECHO/QUIT handlers, redis-cli compatibility, 3F wire-level
 unknown-command errors, database keyspace or persistence.
 

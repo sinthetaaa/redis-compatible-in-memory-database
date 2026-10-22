@@ -824,8 +824,9 @@ boundaries; it does not silently amend ADR-002, ADR-004 or ADR-015.
 
 # Phase 3B Dispatcher Implementation Record (2026-10-22)
 
-**Status:** Isolated dispatcher IMPLEMENTED, MERGED, post-merge
-cross-platform ACCEPTED. Formal documentation closure not yet complete.
+**Status:** Isolated dispatcher COMPLETE status recorded: implementation,
+merge, cross-platform validation and five-document acceptance accepted;
+final 3B.2C status-commit Linux CI verification pending.
 
 - Preserve ADR-002's planned single-threaded command-execution model:
   Phase 3B does not introduce a thread-safe execution guarantee.
@@ -854,8 +855,11 @@ and immutable 50-seed UBSan corpus replay.
 
 This is an implementation record within accepted architectural
 boundaries, not an amendment to ADR-002, ADR-004 or ADR-015.
-The remaining 3B.2B documentation commit and 3B.2C formal status
-CI gates must pass before Phase 3B is recorded as COMPLETE.
+3B.2B five-document acceptance commit
+`cc88f88948acd96574479750eefc7ede6445c70a` passed exact-head
+Linux Debug/Release CI #39810737185 (20/20 each and repeat gates).
+Phase 3B COMPLETE status is now recorded; its final 3B.2C status
+commit must pass Linux CI before Phase 3C design begins.
 
 # Decision Maintenance
 

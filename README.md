@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2 and Phase 3A COMPLETE. Phase 3B isolated Command Dispatcher IMPLEMENTED, MERGED and post-merge VERIFIED; formal 3B documentation closure is pending. Phase 3 Command Framework remains IN PROGRESS; Phases 3C–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
+**Project status: Phases 0–2, Phase 3A and Phase 3B COMPLETE status recorded; final Phase 3B status-commit Linux CI verification pending. Phase 3 Command Framework remains IN PROGRESS; Phase 3C Argument Validation NEXT/NOT STARTED, Phases 3D–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -690,7 +690,7 @@ network/protocol gates. Local synchronized macOS `main` also passed
 [Linux Debug/Release #39792311541](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39792311541)
 (19/19 each). Phase 3A COMPLETE.
 
-## Phase 3B — Isolated Command Dispatcher (MERGED; CLOSURE PENDING)
+## Phase 3B — Isolated Command Dispatcher (COMPLETE STATUS RECORDED; FINAL CI PENDING)
 
 Phase 3B adds a small constructor-built, test-injected C++20 command
 registry with deterministic name lookup, strict registration checks,
@@ -710,9 +710,12 @@ passed 21/21, 50 immutable seeds and 10,000 libFuzzer executions.
 passed 20/20 Debug and Release plus repeated networking checks.
 Local synchronized macOS main also passed 20/20 Debug and Release,
 repeated dispatcher/command/protocol/TCP tests and UBSan seed replay.
+Five-document acceptance commit `cc88f88948acd96574479750eefc7ede6445c70a`
+passed [Linux Debug/Release CI #39810737185](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39810737185)
+with 20/20 tests in both configurations and network/protocol repeats.
 
-**Implementation acceptance is complete; formal 3B documentation
-closure (3B.2B/2C plus exact-head CI) is pending.** Redis command
+**Phase 3B implementation and documentation acceptance are complete;
+its final 3B.2C status-commit Linux CI verification is pending.** Redis command
 arity, PING/ECHO/QUIT, redis-cli compatibility, wire-level errors,
 keyspace and persistence remain unimplemented.
 

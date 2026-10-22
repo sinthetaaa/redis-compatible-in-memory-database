@@ -543,10 +543,10 @@ with resource limits and comprehensive edge-case tests.
 
 # Phase 3 — Command Framework
 
-**Status:** IN PROGRESS (Phase 3A COMPLETE; Phase 3B IMPLEMENTED/MERGED/POST-MERGE ACCEPTED; FORMAL 3B CLOSURE PENDING)
+**Status:** IN PROGRESS (3A COMPLETE; 3B COMPLETE STATUS RECORDED, FINAL 3B STATUS-COMMIT CI PENDING; 3C NEXT/NOT STARTED)
 
 - [x] 3A — Command representation (COMPLETE; final status CI #39792311541 SUCCESS)
-- [ ] 3B — Dispatcher (implemented, merged and accepted; documentation/final status CI pending)
+- [x] 3B — Dispatcher (COMPLETE status recorded; final status-commit CI verification pending)
 - [ ] 3C — Argument validation
 - [ ] 3D — PING, ECHO, QUIT
 - [ ] 3E — Redis CLI compatibility smoke test
@@ -590,7 +590,7 @@ with resource limits and comprehensive edge-case tests.
 Phase 3A introduced no dispatcher, arity validation, built-in
 commands, keyspace or production RESP2 socket handler.
 
-### Phase 3B Detailed Progress — IMPLEMENTED AND ACCEPTED; FORMAL CLOSURE PENDING
+### Phase 3B Detailed Progress — COMPLETE STATUS RECORDED; FINAL CI PENDING
 
 - 3B.0A: COMPLETE — baseline `bb9610e`, final 3A CI verified;
   feature branch `phase3b/command-dispatcher` created.
@@ -610,12 +610,19 @@ commands, keyspace or production RESP2 socket handler.
 - 3B.1G: COMPLETE — clean synchronized local/remote `main`;
   macOS 20/20 Debug/Release, dispatcher/command/protocol/TCP repeats,
   UBSan dispatcher and 50-seed parser corpus replay PASS.
-- 3B.2A: IN PROGRESS — five-document acceptance draft, no commit/push.
-- 3B.2B: NOT STARTED — documentation-only commit and exact-head CI.
-- 3B.2C: NOT STARTED — final COMPLETE status commit and CI gate.
+- 3B.2A: COMPLETE — five acceptance documents drafted and locally
+  validated (20/20 macOS Debug and Release, UBSan and 50 seeds).
+- 3B.2B: COMPLETE — five-document-only commit
+  `cc88f88948acd96574479750eefc7ede6445c70a`; exact-head Linux
+  Debug/Release #39810737185 SUCCESS (20/20 each plus repeat gates).
+- 3B.2C: COMPLETE STATUS RECORDED — five-document final-status
+  checkpoint; final exact-status-commit Linux CI verification PENDING.
+  Phase 3C starts only after this last CI is independently accepted.
 
-The isolated 3B library has no server wiring or built-in command
-semantics. Phases 3C–3F remain NOT STARTED. The full Phase 3
+Phase 3B isolated dispatcher implementation and documentation are
+accepted, with final status-commit CI pending. It has no production
+server wiring or built-in command semantics. Phase 3C is NEXT/NOT
+STARTED; Phases 3D–3F remain NOT STARTED. The full Phase 3
 acceptance gate below is not satisfied yet.
 
 ### Acceptance Gate

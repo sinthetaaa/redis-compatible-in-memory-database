@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-22
 - Current phase: Phase 3 — Command Framework (IN PROGRESS); Phases 0–2 COMPLETE
-- Current subphase: Phase 3B.2A — documentation-only acceptance draft; no documentation commit yet
-- Status: PHASE 3A COMPLETE; PHASE 3B IMPLEMENTED, MERGED AND POST-MERGE VALIDATED; FORMAL 3B DOCUMENTATION CLOSURE PENDING; PHASES 3C–3F NOT STARTED
-- Last completed milestone: 3B.1G — PR #12 merge `84d95500545eb4c0a417cd95cc98c62e30384424` verified with exact-head Linux CI #39806894796 (20/20 Debug and Release); local macOS 20/20 per configuration and repeat/UBSan gates PASS
-- Exact next task: Phase 3B.2A prepare and validate five acceptance documents without a commit or push; then Phase 3B.2B commit documentation and verify exact-head Linux CI; only after final status checkpoint and CI verification consider Phase 3C design.
+- Current subphase: Phase 3B.2C — COMPLETE status recorded; final status-commit Linux CI verification pending
+- Status: PHASES 0–2 AND 3A COMPLETE; PHASE 3B COMPLETE STATUS RECORDED AFTER DOCUMENTATION CI ACCEPTANCE; FINAL 3B STATUS-COMMIT CI PENDING; PHASES 3C–3F NOT STARTED
+- Last completed milestone: 3B.2B — five-document acceptance commit `cc88f88948acd96574479750eefc7ede6445c70a` pushed and accepted by exact-head Linux Debug/Release CI #39810737185 (20/20 each plus repeats)
+- Exact next task: Publish guarded Phase 3B.2C five-document final COMPLETE-status commit; independently verify exact-head Linux Debug/Release CI (20/20 each) and clean synchronized main; only then begin Phase 3C Argument Validation design.
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (at Phase 3B merge `84d95500545eb4c0a417cd95cc98c62e30384424`; both Phase 3A and Phase 3B feature branches preserved).
+- Current development branch: main (3B.2B accepted docs baseline `cc88f88948acd96574479750eefc7ede6445c70a`; preserved Phase 3A and 3B feature branches).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -157,7 +157,7 @@
 | 0 | Repository and Environment Foundation | COMPLETE |
 | 1 | Networking Foundation | COMPLETE |
 | 2 | RESP2 Protocol Engine | COMPLETE |
-| 3 | Command Framework | IN PROGRESS (3A complete; 3B merged and accepted, closure pending) |
+| 3 | Command Framework | IN PROGRESS (3A complete; 3B COMPLETE status recorded, final CI pending; 3C next) |
 | 4 | Core String Database | NOT STARTED |
 | 5 | TTL and Expiration | NOT STARTED |
 | 6 | Collection Data Types | NOT STARTED |
@@ -1090,7 +1090,7 @@ The production `redisdb-server` executable remains transport-only
 TCP echo: no production RESP2 command-serving mode, executable
 command routing, Redis command execution, keyspace or persistence.
 
-### Phase 3B — 2026-10-22 (IMPLEMENTED AND MERGED; POST-MERGE ACCEPTED; CLOSURE PENDING)
+### Phase 3B — 2026-10-22 (COMPLETE STATUS RECORDED; FINAL STATUS CI PENDING)
 
 - Immutable Phase 3A baseline: `bb9610e4422dac7fa383a3473abf2e67dbe1766b`.
 - Retained feature branch: `phase3b/command-dispatcher` at `e92aaf54cd00e090620be64ede21f32cde7e0549`.
@@ -1103,7 +1103,14 @@ command routing, Redis command execution, keyspace or persistence.
 - 3B.1D and 3B.1E: PR #12 drafted and then marked ready. Exact feature-head networking Linux CI #39805019741: Debug/Release 20/20 each; Clang 18 ASan+UBSan fuzz CI #39805019351: 21/21, 50 verified seeds, 10,000 libFuzzer runs.
 - 3B.1F: PR #12 merged as true two-parent `84d95500545eb4c0a417cd95cc98c62e30384424`; merged tree matches feature head; branches preserved. Exact-merge-head Linux CI #39806894796: Debug/Release 20/20 each plus network/protocol repeat gates SUCCESS.
 - 3B.1G: local `main` fast-forwarded to exact merge, clean and synchronized; macOS Debug/Release 20/20 each, 20 dispatcher repeats, 10 command repeats, 5 protocol repeats, 3 TCP smoke repeats per configuration. UBSan dispatcher test and 50-seed manifest/replay PASS.
-- 3B.2A: five-document acceptance draft next; no documentation commit or push yet. 3B.2B documentation commit and CI; final 3B.2C status CI remain required for formal closure.
+- 3B.2A: five-document acceptance draft created and locally validated,
+  without a commit or push.
+- 3B.2B: five-document documentation-only commit
+  `cc88f88948acd96574479750eefc7ede6445c70a` accepted by exact-head
+  Linux CI #39810737185: 20/20 Debug and Release plus repeat gates.
+- 3B.2C: final COMPLETE status recorded in five documents. The new
+  status-commit SHA is determined at commit time; its own exact-head
+  Linux CI must pass before Phase 3B closure is fully accepted.
 
 **Strict scope boundary:** 3B provides an isolated command registry, not a Redis command-serving socket endpoint. Command-specific arity (3C), PING/ECHO/QUIT (3D), redis-cli smoke (3E), unknown-command wire semantics (3F), database storage and persistence remain NOT STARTED.
 
@@ -1219,19 +1226,15 @@ Phase 3A final-status CI #39792311541 is also successful.
 
 Next guarded checkpoints:
 
-1. **3B.2A:** Prepare exact five-document acceptance draft only;
-   validate hash/scope, Markdown whitespace, local tests, branch and
-   remote lease. Do not commit or push in this checkpoint.
-2. **3B.2B:** Independently review, commit and non-force push only the
-   accepted documentation files on `main`. Verify the new exact-head
-   Linux Debug and Release workflow (20/20 plus existing repeat gates).
-3. **3B.2C:** Record formal Phase 3B COMPLETE status only after the
-   documentation commit CI passes; commit, push and independently
-   verify final status-commit Linux CI. Preserve historical feature
-   branches and require a clean synchronized `main`.
-4. Begin **Phase 3C — Argument Validation design** only after 3B.2C
-   exact-head CI is accepted. No arity validators, built-in commands,
-   Redis CLI command support or production RESP2 server yet.
+1. **3B.2C:** Final COMPLETE-status documentation commit and
+   non-force push are required. Verify its exact SHA in new Linux
+   Debug and Release CI (20/20 tests each and all repeat gates).
+   Require clean synchronized local/remote `main`, preserved feature
+   branches and strictly documentation-only changes.
+2. **3C.0A:** Only after that CI passes, begin Phase 3C Argument
+   Validation with design-only review and a new clean feature branch.
+   No arity validators, built-in commands, redis-cli command support
+   or production RESP2 server may be introduced by 3B closure.
 
 No public deployment, Redis database compatibility, keyspace,
 expiration or persistence claims are authorized by Phase 3B.
