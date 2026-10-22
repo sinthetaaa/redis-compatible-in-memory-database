@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phase 1 COMPLETE; RESP2 library phases 2A-2F implemented and macOS/Linux post-merge validated; executable remains transport-smoke-only
+**Architecture state:** Phases 0-2 COMPLETE; Phase 3A Command representation merged and post-merge accepted, formal closure pending; executable remains transport-smoke-only
 
 This document describes the intended system.
 
@@ -1006,6 +1006,37 @@ Wrong-type errors must match documented semantics.
 Fatal persistence errors must not be disguised
 as successful durable writes.
 
+## Phase 3A Command Representation — POST-MERGE ACCEPTED
+
+`include/redisdb/commands/Command.hpp` defines an owned
+C++20 command name and binary-safe arguments. A structural
+RESP2 value-to-command decoder converts a nonempty array of
+bulk strings into that representation. Command name bytes are
+ASCII-normalized; argument bytes are preserved exactly,
+including embedded NUL and non-UTF-8 bytes. Invalid structural
+requests produce a typed failure rather than partial commands.
+
+`src/commands/Command.cpp` and `tests/unit/command_test.cpp`
+implement and test the narrow representation/decoder boundary.
+The command unit test is registered through CMake and increases
+normal CTest discovery from 18 to 19. The Phase 2G fuzz-build
+test discovery now permits added tests but requires both
+`unit.command` and `fuzz.resp_parser_corpus_smoke`.
+
+The implementation is independent of socket state, parser
+modifications, dispatcher semantics, command-specific arity,
+keyspace, server command routing, response scheduling and
+persistence. Existing RESP2 pipeline reply factories remain
+test seams, not a production Redis command executor.
+
+PR #11 was merged via `4b493ac7984b4c3bdf47a24d41b517930cd689b3`;
+feature head `9d64403925b62b108ee1172c06ad9b866592d509`.
+Linux PR-head Debug/Release #39784944527 passed 19/19 each;
+Clang 18 fuzz #39784944465 passed 20/20 and 10,000 runs.
+Post-merge main Linux CI #39786009239 passed 19/19 each;
+local macOS Debug/Release 19/19 each. Formal status closure
+remains pending; Phase 3B has not started.
+
 # 7. Supported Command Groups
 
 ## Connectivity
@@ -1561,6 +1592,6 @@ Post-merge macOS Debug/Release and UBSan seed smoke passed.
 Formal 2G.5B closure-documentation commit
 `09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b`
 passed Linux main CI #39772960967 (Debug/Release 18/18).
-Phase 2G and the Phase 2 RESP2 engine are recorded COMPLETE;
-verify exact 2G.5C final-status commit CI before Phase 3A.
+Phase 2G and the Phase 2 RESP2 engine are formally COMPLETE;
+2G.5C final-status commit `e7dfbbf5` passed Linux CI #39774474442.
 No production serving features were added.

@@ -3,11 +3,11 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-22
-- Current phase: Phase 3 — Command Framework (NEXT; NOT STARTED); Phase 2 COMPLETE
-- Current subphase: 3A — Command representation (NEXT; NOT STARTED)
-- Status: PHASES 0, 1 AND 2 COMPLETE; 2G.5B CLOSURE CI SUCCESS; FINAL 2G.5C STATUS-COMMIT CI PENDING
-- Last completed milestone: 2G.5B — closure-documentation commit 09f1fc77; Linux Debug/Release CI #39772960967 SUCCESS
-- Exact next task: Verify Linux Debug/Release CI at the new Phase 2G.5C final-status commit; only then audit clean main and begin Phase 3A on a new branch.
+- Current phase: Phase 3 — Command Framework (IN PROGRESS); Phases 0-2 COMPLETE
+- Current subphase: 3A.2A — formal post-merge closure documentation draft (IN PROGRESS)
+- Status: PHASES 0-2 COMPLETE; PHASE 3A IMPLEMENTATION MERGED / POST-MERGE ACCEPTED; 3A FORMAL DOCUMENTATION / CI PENDING
+- Last completed milestone: 3A.1G — PR #11 merged as 4b493ac7; post-merge Linux CI #39786009239 SUCCESS (Debug/Release 19/19); synchronized local macOS Debug/Release 19/19
+- Exact next task: Validate five-document 3A.2A closure draft; commit/push a guarded 3A.2B docs-only checkpoint; verify its exact-head Linux CI; then record and verify final Phase 3A COMPLETE status before Phase 3B.
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (Phase 2 complete; 2G.5C status-commit CI verification pending).
+- Current development branch: main (synchronized at 4b493ac7; Phase 3A formal closure pending; feature branch preserved).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -1054,6 +1054,37 @@ formally recorded as COMPLETE. The exact Phase 2G.5C final-status
 commit still requires its own successful main Linux CI before
 beginning Phase 3A. Phase 3A has NOT STARTED.
 
+### Phase 3A — 2026-10-22 (POST-MERGE ACCEPTED, FORMAL CLOSURE PENDING)
+
+Baseline `e7dfbbf5d64795e225c69e5813f75101d0c90067`;
+feature branch `phase3a/command-representation` (retained).
+Design: `docs/PHASE3A_COMMAND_DESIGN.md`.
+C++20 implementation: binary-safe owned `commands::Command` and
+structural RESP2 request-to-command decoder; ASCII-only command-name
+normalization; typed errors for invalid request structure;
+isolated unit tests and CMake registration.
+
+Feature implementation commit:
+`6c402b8a929b695f9abd51949c5d3967f1ce95c9`.
+CI-only discovery repair:
+`9d64403925b62b108ee1172c06ad9b866592d509`.
+PR #11: MERGED as true two-parent commit
+`4b493ac7984b4c3bdf47a24d41b517930cd689b3`;
+merged tree equals final reviewed feature tree.
+PR-head Linux CI #39784944527: Debug and Release SUCCESS
+(19/19 each, repeat gates). PR-head Clang 18 ASan+UBSan
+fuzz CI #39784944465: 20/20, 50 seeds, 10,000 runs SUCCESS.
+Post-merge Linux main CI #39786009239: Debug/Release
+19/19 each, network and protocol repeats SUCCESS.
+Local synchronized main: macOS Debug and Release 19/19 each;
+clean worktree, feature branch preserved.
+
+Phase 3A.2 formal documentation status commit and its
+exact-head Linux CI remain pending. Phase 3B NOT STARTED.
+The `redisdb-server` executable remains transport-only TCP echo:
+no production RESP2 command-serving mode, dispatcher,
+Redis command execution, keyspace or persistence is implemented.
+
 ## 11. Benchmarks
 
 NOT STARTED.
@@ -1154,35 +1185,35 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-Phases 0, 1 and 2: COMPLETE. Phase 2G parser fuzz-test
-foundation was merged through PR #10 as
-`36ec43d8ce247d50c81bf90d60641d4db9b802b8`.
-Post-merge Linux main CI #39770284668: SUCCESS.
-PR-head Clang 18 ASan+UBSan fuzz CI #39767524405: SUCCESS,
-19/19 CTests, 50 manifest-verified seeds, 10,000 libFuzzer runs.
-Local macOS Debug/Release: 18/18 tests per build;
-50-seed UBSan replay PASS. Apple Clang local ASan startup issue
-remains isolated; Linux ASan+UBSan was validated.
+Phases 0, 1 and 2: formally COMPLETE; Phase 2 final-status
+commit `e7dfbbf5d64795e225c69e5813f75101d0c90067` passed
+Linux Debug/Release #39774474442 (18/18 each).
+Phase 3A command representation implementation and PR #11
+merge: COMPLETE and independently post-merge accepted.
 
-Formal closure documentation commit:
-`09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` on main.
-Exact-head Linux Debug/Release CI #39772960967: SUCCESS,
-18/18 CTests each plus pipeline, TCP, lifecycle and epoll repeats.
-This Phase 2G.5C commit records final status as COMPLETE;
-CI on the NEW status-commit SHA is still a mandatory verification.
+Current synchronized local and remote `main`:
+`4b493ac7984b4c3bdf47a24d41b517930cd689b3`.
+Feature branch preserved at:
+`9d64403925b62b108ee1172c06ad9b866592d509`.
+Post-merge Linux Debug/Release #39786009239: SUCCESS,
+19/19 each plus protocol/network repetition gates.
+Final PR-head fuzz #39784944465: SUCCESS, 20/20 CTests,
+50 verified corpus seeds and 10,000 ASan+UBSan libFuzzer runs.
+Local macOS Debug/Release: 19/19 each; clean synced main.
 
 Next controlled checkpoints:
 
-1. Verify main Linux Debug/Release GitHub Actions CI at the
-   exact new Phase 2G.5C final-status commit; require both jobs,
-   all standard steps and 18/18 test discovery/execution each.
-2. Verify clean local main equals origin/main and the verified
-   final-status commit; retain the Phase 2G feature branch.
-3. Begin Phase 3A — Command representation — on a new branch,
-   after inspecting the Phase 3 command-framework architecture.
+1. Phase 3A.2A — prepare and locally validate only the five
+   authoritative closure documents, without source edits.
+2. Phase 3A.2B — separately commit/push the reviewed documentation
+   and verify Linux Debug/Release CI at that exact new SHA.
+3. Phase 3A.2C — record Phase 3A formally COMPLETE only after
+   that CI passes; commit final status and verify its new-head CI.
+4. Only after closure, audit a clean `main` and begin Phase 3B
+   Command Dispatcher on a separate dedicated feature branch.
 
-No production Redis-compatible command endpoint, keyspace,
-persistence or public deployment exists yet. Never claim otherwise.
+No production Redis command endpoint, keyspace, persistence,
+public deployment or compatibility claim is authorized yet.
 
 ## 17. Continuation Instructions
 

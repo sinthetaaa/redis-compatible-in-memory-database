@@ -526,9 +526,9 @@ Linux Debug and Release CI #39772960967 on exact main HEAD.
   `09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` on main;
   GitHub Actions #39772960967 SUCCESS (Debug/Release 18/18
   each and existing protocol/network repetition gates).
-- 2G.5C: FINAL STATUS RECORDED — mark Phase 2G and Phase 2
-  COMPLETE; verify Linux Debug/Release at this final-status
-  commit as the last closure acceptance gate.
+- 2G.5C: COMPLETE — final Phase 2 status commit
+  `e7dfbbf5d64795e225c69e5813f75101d0c90067`; exact-head
+  Linux Debug/Release CI #39774474442 SUCCESS (18/18 each).
 
 All 2G targets are opt-in; default Debug and Release builds
 remain unchanged at 18 CTests each. On this Mac, ASan hangs
@@ -543,14 +543,47 @@ with resource limits and comprehensive edge-case tests.
 
 # Phase 3 — Command Framework
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS (Phase 3A merged, post-merge accepted; formal closure pending)
 
-- [ ] 3A — Command representation
+- [ ] 3A — Command representation (formal closure pending)
 - [ ] 3B — Dispatcher
 - [ ] 3C — Argument validation
 - [ ] 3D — PING, ECHO, QUIT
 - [ ] 3E — Redis CLI compatibility smoke test
 - [ ] 3F — Unknown-command behavior
+
+### Phase 3A Detailed Progress — POST-MERGE ACCEPTED, FORMAL CLOSURE PENDING
+
+- 3A.0A: COMPLETE — final Phase 2 baseline `e7dfbbf5`,
+  feature branch created after accepted Linux CI #39774474442.
+- 3A.0B: COMPLETE — owned binary-safe Command representation
+  design in `docs/PHASE3A_COMMAND_DESIGN.md`.
+- 3A.1A-1B: COMPLETE — `Command.hpp`, `Command.cpp`, unit
+  tests and CMake registration; clang-format; macOS Debug/Release
+  19/19 each; 20 command and 10 selected protocol test repeats
+  per configuration; 50-seed UBSan smoke PASS.
+- 3A.1C-1D: COMPLETE — feature commit
+  `6c402b8a929b695f9abd51949c5d3967f1ce95c9`,
+  pushed; draft PR #11 created.
+- 3A.1E-R2: COMPLETE — repaired obsolete Linux fuzz workflow
+  discovery guard with CI-only commit
+  `9d64403925b62b108ee1172c06ad9b866592d509`.
+  PR-head Linux Debug/Release #39784944527 SUCCESS (19/19 each);
+  ASan+UBSan Clang 18 fuzz #39784944465 SUCCESS (20/20,
+  50 verified seeds and 10,000 libFuzzer executions).
+- 3A.1F: COMPLETE — PR #11 merged as true two-parent commit
+  `4b493ac7984b4c3bdf47a24d41b517930cd689b3`;
+  post-merge Linux Debug/Release CI #39786009239 SUCCESS
+  (19/19 each plus repeat suites).
+- 3A.1G: COMPLETE — local `main` safely fast-forwarded to
+  merge commit; macOS Debug/Release 19/19 each; clean synchronized tree.
+- 3A.2A-2C: PENDING — five-document formal closure draft,
+  guarded documentation commit, exact new-head Linux CI,
+  final COMPLETE status and final-status CI.
+
+This phase introduces no dispatcher, arity validation,
+PING/ECHO/QUIT behavior, keyspace or production RESP2 socket handler.
+Phase 3B–3F remain NOT STARTED.
 
 ### Acceptance Gate
 

@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2 COMPLETE, including the RESP2 protocol engine and bounded parser fuzz-test foundation (PR #10). Phase 3 Command Framework NEXT, NOT STARTED. The executable remains transport-only TCP echo; it is not yet a Redis database server.**
+**Project status: Phases 0–2 COMPLETE. Phase 3 Command Framework IN PROGRESS: Phase 3A owned binary-safe command representation merged via PR #11, Linux/macOS post-merge accepted; formal documentation closure pending. Phases 3B–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -653,9 +653,37 @@ Post-merge local macOS Debug and Release passed 18/18 each;
 `09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` passed
 [Linux Debug/Release CI #39772960967](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39772960967)
 on exact main HEAD (18/18 CTests each plus repeat gates).
-Phase 2G and Phase 2 are recorded COMPLETE. Final status-commit
-CI must be verified independently before starting Phase 3A.
+Phase 2G and Phase 2 were formally accepted: final-status
+commit `e7dfbbf5d64795e225c69e5813f75101d0c90067` passed
+Linux Debug/Release CI #39774474442 (18/18 each).
 The production executable is still transport-only TCP echo.
+
+## Phase 3A — Owned Command Representation (Post-Merge Accepted)
+
+C++20 `redisdb::commands::Command` owns ASCII-normalized command names
+and binary-safe argument strings decoded from RESP2 array requests.
+Structural decoding rejects empty/malformed commands without partial
+results. Dispatcher lookup, command arity validation, responses,
+keyspace operations and production command-serving integration
+are deferred to later milestones.
+
+PR [#11](https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/11)
+merged as true two-parent commit
+`4b493ac7984b4c3bdf47a24d41b517930cd689b3` (feature head
+`9d64403925b62b108ee1172c06ad9b866592d509`).
+The PR-head [Linux Debug/Release CI #39784944527](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39784944527)
+passed 19/19 tests per configuration. PR-head
+[Clang 18 ASan+UBSan fuzz CI #39784944465](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39784944465)
+passed 20/20 tests, 50 immutable corpus seeds, and 10,000
+bounded libFuzzer executions. The CI-only follow-up fixed the
+previous obsolete exact-19 discovery assertion without altering
+RESP2 parser or server semantics.
+
+Post-merge [Linux CI #39786009239](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39786009239)
+passed 19/19 Debug and 19/19 Release tests plus repeated
+network/protocol gates. Local synchronized macOS `main` also passed
+19/19 in both configurations. Phase 3A final documentation closure
+and exact post-closure CI are still pending; Phase 3B is NOT STARTED.
 
 ## License
 

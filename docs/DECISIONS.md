@@ -785,8 +785,38 @@ Closure-documentation commit
 `09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` passed
 main Linux Debug/Release CI #39772960967 (18/18 each,
 existing repetition gates). Phase 2G / Phase 2 COMPLETE status
-has now been recorded; exact final-status commit CI remains the
-last verification gate before beginning Phase 3A.
+has now been recorded; final status commit `e7dfbbf5`
+passed Linux Debug/Release #39774474442 before Phase 3A.
+
+# Phase 3A Command Representation Implementation Record (2026-10-22)
+
+**Status:** Implemented and merged, Linux/macOS post-merge accepted;
+formal Phase 3A closure documentation and CI still pending.
+
+- Preserve RESP2 `RespValue` as protocol syntax; introduce a
+  distinct owned Command type at the request-to-command boundary.
+- Require a nonempty array of bulk strings; normalize only ASCII
+  command-name bytes. Keep arguments byte-for-byte binary-safe.
+- Report structural decoding failure as a typed outcome without
+  producing partial commands. Defer registry lookup, arity,
+  execution and error responses to Phases 3B-3F.
+- Keep the CLI executable transport-only and do not change the
+  parser, pipeline, persistence or storage layers in Phase 3A.
+- Extend the fuzz workflow discovery guard to accommodate new
+  tests while requiring the command unit and fuzz smoke tests.
+
+Evidence: implementation commit `6c402b8a929b695f9abd51949c5d3967f1ce95c9`,
+CI repair `9d64403925b62b108ee1172c06ad9b866592d509`,
+merged PR #11 as `4b493ac7984b4c3bdf47a24d41b517930cd689b3`.
+PR-head Linux Debug/Release #39784944527: 19/19 each;
+Clang 18 ASan+UBSan #39784944465: 20/20, 50 seeds,
+10,000 runs. Post-merge Linux main #39786009239:
+Debug/Release 19/19 each plus repeat gates.
+Local macOS Debug/Release 19/19 each on synchronized main.
+
+This record documents implementation of existing architectural
+boundaries; it does not silently amend ADR-002, ADR-004 or ADR-015.
+Phase 3B Dispatcher is NOT STARTED.
 
 # Decision Maintenance
 
