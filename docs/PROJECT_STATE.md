@@ -4,12 +4,12 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4B — RESP2 SET/GET backed by shared in-memory Database
-- Status: Phases 0–3 and 4A COMPLETE; 4B implemented on feature branch pending Linux CI; 4C–4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 4A two-parent merge `ed3056c35b3e799b42f84be583802ec7b5f9dd6f` with exact-head main CI #39843388400 and #39843388363 SUCCESS
-- Exact next task: Validate Phase 4B macOS/Linux suites and true redis-cli SET/GET; direct-merge `phase4b/set-get-command-serving` once green; proceed to 4C DEL/EXISTS/TYPE
-- Implementation maturity: RESP2 TCP PING/ECHO/QUIT and shared in-memory SET/GET; 8176-byte SET value ceiling due to bounded default reply pipeline; no TTL, options, eviction or persistence
-- Working TCP string database: IMPLEMENTED FOR SET/GET ON FEATURE BRANCH, pending Linux CI and direct merge
+- Current subphase: Phase 4C — DEL/EXISTS/TYPE keyspace commands
+- Status: Phases 0–3 and 4A–4B COMPLETE; 4C implemented on feature branch pending Linux CI; 4D–4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 4B two-parent merge `e1dd5e897148723136a911278afd44fb89ed5486` with exact-head main CI #39845218043 and #39845217840 SUCCESS
+- Exact next task: Validate Phase 4C macOS/Linux suites and redis-cli DEL/EXISTS/TYPE; direct-merge `phase4c/del-exists-type` once green; proceed to 4D MSET/MGET
+- Implementation maturity: RESP2 TCP PING/ECHO/QUIT, SET/GET and DEL/EXISTS/TYPE (4C on feature branch); shared binary-safe keyspace; 8176-byte SET value ceiling; no TTL, eviction or persistence
+- Working TCP string database: SET/GET merged and post-merge CI green; DEL/EXISTS/TYPE implemented on feature branch pending Linux CI
 
 ## 2. Project Identity
 

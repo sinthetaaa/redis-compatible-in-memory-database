@@ -35,6 +35,7 @@ add_library(
     src/commands/ArityValidator.cpp
     src/commands/ConnectivityCommands.cpp
     src/commands/StringCommands.cpp
+    src/commands/KeyCommands.cpp
     src/commands/CommandErrors.cpp
     src/storage/Database.cpp
     src/protocol/RespValue.cpp
@@ -123,6 +124,14 @@ if(BUILD_TESTING)
                     "$<TARGET_FILE:redisdb-server>"
         )
         set_tests_properties(integration.resp_string_database PROPERTIES TIMEOUT 75)
+
+        add_test(
+            NAME integration.resp_key_commands
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_key_commands_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_key_commands PROPERTIES TIMEOUT 75)
     endif()
 
     add_executable(
@@ -224,6 +233,15 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-string-command-tests)
     add_test(NAME unit.string_commands COMMAND redisdb-string-command-tests)
     set_tests_properties(unit.string_commands PROPERTIES TIMEOUT 15)
+
+    add_executable(
+        redisdb-key-command-tests
+        tests/unit/key_commands_test.cpp
+    )
+    target_link_libraries(redisdb-key-command-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-key-command-tests)
+    add_test(NAME unit.key_commands COMMAND redisdb-key-command-tests)
+    set_tests_properties(unit.key_commands PROPERTIES TIMEOUT 15)
 
     add_executable(
         redisdb-resp-value-tests
