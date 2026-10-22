@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - phase1e/linux-epoll
+      - 'phase*/**'
   pull_request:
     branches:
       - main

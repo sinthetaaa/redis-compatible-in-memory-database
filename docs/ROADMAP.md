@@ -543,11 +543,11 @@ with resource limits and comprehensive edge-case tests.
 
 # Phase 3 — Command Framework
 
-**Status:** IN PROGRESS (3A COMPLETE; 3B COMPLETE STATUS RECORDED, FINAL 3B STATUS-COMMIT CI PENDING; 3C NEXT/NOT STARTED)
+**Status:** IN PROGRESS (3A–3C COMPLETE; 3D–3F NOT STARTED)
 
 - [x] 3A — Command representation (COMPLETE; final status CI #39792311541 SUCCESS)
-- [x] 3B — Dispatcher (COMPLETE status recorded; final status-commit CI verification pending)
-- [ ] 3C — Argument validation
+- [x] 3B — Dispatcher (COMPLETE; CI #39811900890)
+- [x] 3C — Argument validation (COMPLETE)
 - [ ] 3D — PING, ECHO, QUIT
 - [ ] 3E — Redis CLI compatibility smoke test
 - [ ] 3F — Unknown-command behavior
@@ -590,7 +590,7 @@ with resource limits and comprehensive edge-case tests.
 Phase 3A introduced no dispatcher, arity validation, built-in
 commands, keyspace or production RESP2 socket handler.
 
-### Phase 3B Detailed Progress — COMPLETE STATUS RECORDED; FINAL CI PENDING
+### Phase 3B Detailed Progress — COMPLETE
 
 - 3B.0A: COMPLETE — baseline `bb9610e`, final 3A CI verified;
   feature branch `phase3b/command-dispatcher` created.
@@ -619,11 +619,18 @@ commands, keyspace or production RESP2 socket handler.
   checkpoint; final exact-status-commit Linux CI verification PENDING.
   Phase 3C starts only after this last CI is independently accepted.
 
-Phase 3B isolated dispatcher implementation and documentation are
-accepted, with final status-commit CI pending. It has no production
-server wiring or built-in command semantics. Phase 3C is NEXT/NOT
-STARTED; Phases 3D–3F remain NOT STARTED. The full Phase 3
-acceptance gate below is not satisfied yet.
+Phase 3B closure CI #39811900890 passed. Phase 3C is COMPLETE.
+Phases 3D–3F remain NOT STARTED. The complete Phase 3
+redis-cli acceptance gate remains unmet.
+
+### Phase 3C Acceptance — COMPLETE
+
+- Isolated argument validator and 20,000 policy checks.
+- Feature SHA `38c5354`; direct merge `d733daa`.
+- macOS Debug/Release 21/21; UBSan-enabled 22/22.
+- Linux #39828953490: Debug/Release 21/21 each.
+- Clang 18 #39829737702: 22/22, 50 seeds, 10,000 fuzz runs.
+- Production server remains transport-only TCP echo.
 
 ### Acceptance Gate
 

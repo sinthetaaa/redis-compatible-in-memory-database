@@ -3,7 +3,9 @@ name: RESP2 parser fuzz validation
 on:
   push:
     branches:
+      - main
       - phase2g/resp2-parser-fuzz-foundation
+      - 'phase*/**'
   pull_request:
     branches:
       - main
