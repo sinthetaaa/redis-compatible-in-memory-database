@@ -450,7 +450,7 @@ Final PR-head Linux CI #39625859355: SUCCESS.
 Post-merge Linux CI #39627679647: SUCCESS.
 
 Phase 2E is formally COMPLETE with 2E.5 accepted.
-Phase 2F implementation and post-merge acceptance are COMPLETE;
+Phase 2F is formally COMPLETE, including documentation closure;
 the detailed Phase 2F record follows. Phase 2G is NEXT, NOT STARTED.
 The production executable still runs only transport echo;
 no Redis command-serving endpoint or data keyspace exists.
@@ -474,9 +474,10 @@ Feature branch: `phase2f/resp2-malformed-limits`.
   two-parent merge commit `ce65649db98faea9ee4f9d9d8c24c4cbf5e6d6e4`.
 - 2F.5B: COMPLETE — Post-merge Linux CI #39737223938 SUCCESS;
   clean local main synchronized, macOS Debug/Release validated.
-- 2F.5C: CURRENT — Formal five-document closure synchronization;
-  a documentation-only commit, push and post-closure Linux CI
-  are required before starting 2G.
+- 2F.5C: COMPLETE — Formal five-document closure commit
+  `b54ab7d56997c71fee20eb0281175a9725e9dae7` pushed to main;
+  post-closure Linux Debug/Release CI #39739519389 SUCCESS.
+  Phase 2G is the next controlled milestone.
 
 Total PR scope: seven files, 280 additions and one deletion.
 macOS Debug and Release post-merge: 18/18 CTests each;

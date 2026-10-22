@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2F implementation, merge and post-merge acceptance are COMPLETE on macOS/Linux. Phase 2F documentation closure is the current checkpoint; Phase 2G parser fuzzing is NEXT, NOT STARTED.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2F are formally COMPLETE with macOS/Linux validation and post-closure Linux CI. Phase 2G parser fuzz testing is NEXT, NOT STARTED.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -603,10 +603,12 @@ protocol repetitions and 10/10 kqueue repetitions per build.
 PR-head Linux CI #39735651885: SUCCESS (Debug/Release).
 Post-merge main Linux CI #39737223938: SUCCESS (Debug/Release).
 
-Phase 2F.5C documentation synchronization is the current closure
-checkpoint. Phase 2G parser fuzz testing is NEXT, NOT STARTED;
-do not begin until documentation changes are committed, pushed,
-and validated by post-closure Linux CI.
+Phase 2F.5C closure documentation commit
+`b54ab7d56997c71fee20eb0281175a9725e9dae7` was pushed to main.
+Post-closure Linux Debug/Release CI #39739519389: SUCCESS
+on that exact commit, including full and repeated network test gates.
+Phase 2F is formally COMPLETE; Phase 2G parser fuzz testing
+is NEXT, NOT STARTED.
 
 The executable still serves only raw TCP transport echo data;
 it does not parse RESP2 on its serving path or execute Redis commands.

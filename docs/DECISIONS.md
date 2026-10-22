@@ -677,7 +677,8 @@ Phase 2E pipelining is COMPLETE through PR #8; macOS/Linux
 post-closure acceptance passed in CI #39629733366.
 Phase 2F hardening is IMPLEMENTED and MERGED through PR #9;
 post-merge Linux CI #39737223938 and macOS Debug/Release passed.
-Formal Phase 2F docs closure is current; Phase 2G NOT STARTED.
+Docs closure commit `b54ab7d` passed post-closure Linux Debug/Release
+CI #39739519389. Phase 2F formally COMPLETE; Phase 2G NOT STARTED.
 
 ## Phase 2
 

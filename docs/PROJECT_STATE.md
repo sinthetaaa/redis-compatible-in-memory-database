@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-22
 - Current phase: Phase 2 — RESP2 Protocol Engine (IN PROGRESS)
-- Current subphase: 2F.5C — Formal documentation closure (CURRENT); Phase 2G NEXT, NOT STARTED
-- Status: PHASE 1 COMPLETE; PHASE 2A-2E COMPLETE; PHASE 2F implementation/merge/post-merge COMPLETE; closure docs CURRENT; PHASE 2G NOT STARTED
-- Last completed milestone: 2F.5B — PR #9 merged as ce65649, main synchronized, Linux CI #39737223938 SUCCESS, macOS Debug/Release 18/18
-- Exact next task: Review five-document Phase 2F closure diff; commit/push docs-only main checkpoint, verify Linux Debug/Release post-closure CI and clean local/remote equality; only then begin 2G.
+- Current subphase: 2G — Parser fuzz-test foundation (NEXT; NOT STARTED)
+- Status: PHASE 1 COMPLETE; PHASE 2A-2F COMPLETE; PHASE 2G NOT STARTED
+- Last completed milestone: 2F.5C — formal documentation commit b54ab7d; post-closure Linux Debug/Release CI #39739519389 SUCCESS
+- Exact next task: Complete the final Phase 2F closure-status update and its Linux CI gate; then establish a clean Phase 2G baseline, dedicated branch and fuzzing-toolchain audit.
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -29,7 +29,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: main (2F merge ce65649; docs closure in progress; Phase 2G next)
+- Branch: main (Phase 2F formally closed; Phase 2G next)
 - Phase 2D starting baseline: 2515f7f1d10067113865f1d4e0ced9ce5d92c180
 - Phase 2C starting baseline: 1e7c726969cc437fdecfc0532785de84c24bd4be
 - Phase 2B starting baseline: b16dd382e213ae541a91d4f298f288fa80b68aa7
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (Phase 2F merged and post-merge validated; 2F.5C docs current).
+- Current development branch: main (Phase 2F formally closed; Phase 2G next).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -103,6 +103,8 @@
 - Phase 2F merge commit: ce65649db98faea9ee4f9d9d8c24c4cbf5e6d6e4.
 - Phase 2F PR-head Linux Debug/Release CI: 39735651885 (SUCCESS).
 - Phase 2F post-merge main Linux Debug/Release CI: 39737223938 (SUCCESS).
+- Phase 2F docs closure commit: b54ab7d56997c71fee20eb0281175a9725e9dae7.
+- Phase 2F post-closure Linux Debug/Release CI: 39739519389 (SUCCESS).
 - Phase 2C implementation: 82b7dc98dbb99c83146d95c90fb3feb1408e4a8a.
 - Phase 2C documentation: 9e873ddcb1130a5ba20155f9f61e805e1aa519b2.
 - Phase 2C PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/6 (MERGED).
@@ -1005,9 +1007,10 @@ C++ formatting, Git history, merge parents and clean worktree: PASS.
 No production RESP2 command endpoint or keyspace exists;
 `redisdb-server --smoke-echo` remains a raw TCP echo mode.
 
-Phase 2F.5C docs-only closure is CURRENT; final documentation
-commit/push and post-closure Linux CI are not yet recorded.
-Phase 2G fuzz-test foundation is NEXT, NOT STARTED.
+Phase 2F.5C formal documentation closure commit `b54ab7d`
+was pushed, and exact-head Linux Debug/Release CI
+#39739519389 completed successfully. Phase 2F is formally
+COMPLETE. Phase 2G fuzz-test foundation is NEXT, NOT STARTED.
 
 ## 11. Benchmarks
 
@@ -1109,31 +1112,29 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-Phases 0-1 and 2A-2E: COMPLETE and formally closed.
-Phase 2F implementation and post-merge acceptance: COMPLETE.
+Phases 0-1 and 2A-2F: COMPLETE and formally closed.
 PR #9 MERGED on 2026-10-22 as
 ce65649db98faea9ee4f9d9d8c24c4cbf5e6d6e4.
 Post-merge Linux Debug/Release CI #39737223938: SUCCESS;
 macOS Debug/Release 18/18 CTests each, 140 protocol
 repetitions and 10 kqueue repetitions per configuration.
-Local main/origin/main: synchronized at ce65649 before
-this documentation-only closure checkpoint.
+Phase 2F docs closure commit:
+b54ab7d56997c71fee20eb0281175a9725e9dae7.
+Post-closure Linux Debug/Release CI #39739519389: SUCCESS.
 
-Phase 2F.5C — Formal documentation closure: CURRENT.
+Phase 2F.5C — Formal documentation closure: COMPLETE.
 Phase 2G — Parser fuzz-test foundation: NEXT, NOT STARTED.
 
 Next controlled checkpoint:
 
-1. Review the exact README, ROADMAP, PROJECT_STATE,
-   ARCHITECTURE and DECISIONS documentation-only diff.
-2. Commit the five files on clean main using a dedicated
-   Conventional Commit; do not alter production/test code.
-3. Push main only if its remote commit still equals the
-   verified post-merge SHA; no force push.
-4. Verify final main/origin/main equality and post-closure
-   Linux Debug/Release CI at the documentation commit.
-5. After all documentation and CI gates pass, establish
-   Phase 2G's clean baseline and dedicated feature branch.
+1. Validate, commit and push this final status-only documentation
+   update on clean main; verify its own Linux CI gate.
+2. Establish the exact clean Phase 2G baseline from synchronized
+   main after final status CI has passed.
+3. Create a dedicated Phase 2G branch without rewriting history.
+4. Audit available fuzzing toolchains on macOS and Linux; choose
+   a reproducible, bounded corpus and sanitizer strategy.
+5. Implement and validate Phase 2G parser fuzz-test foundation.
 6. Preserve the production boundary: the executable only
    serves raw transport echo and cannot run Redis commands.
 

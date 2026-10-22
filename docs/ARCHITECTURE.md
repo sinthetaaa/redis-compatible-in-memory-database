@@ -906,6 +906,9 @@ PR-head Linux CI #39735651885: SUCCESS.
 Post-merge Linux CI #39737223938: SUCCESS.
 Post-merge macOS Debug and Release: 18/18 tests each,
 140 protocol repetitions and 10 native kqueue repetitions each.
+Formal Phase 2F closure record committed as `b54ab7d`;
+post-closure Linux Debug/Release CI #39739519389: SUCCESS.
+Phase 2F is formally COMPLETE; Phase 2G remains NOT STARTED.
 
 The production executable remains transport-smoke-only.
 Phase 2G will provide parser fuzz-test foundations separately.
