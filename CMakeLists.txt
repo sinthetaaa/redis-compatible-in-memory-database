@@ -30,6 +30,7 @@ endfunction()
 add_library(
     redisdb-core STATIC
     src/server/Version.cpp
+    src/commands/Command.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -117,6 +118,17 @@ if(BUILD_TESTING)
         NAME unit.version
         COMMAND redisdb-tests
     )
+
+    add_executable(
+        redisdb-command-tests
+        tests/unit/command_test.cpp
+    )
+
+    target_link_libraries(redisdb-command-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-command-tests)
+
+    add_test(NAME unit.command COMMAND redisdb-command-tests)
+    set_tests_properties(unit.command PROPERTIES TIMEOUT 10)
 
     add_executable(
         redisdb-resp-value-tests
