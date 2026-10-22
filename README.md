@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2F are formally COMPLETE with macOS/Linux validation and post-closure Linux CI. Phase 2G parser fuzz testing is NEXT, NOT STARTED.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2F are formally COMPLETE. Phase 2G parser fuzzing passed feature-branch Linux ASan+UBSan/libFuzzer CI; PR merge and post-merge closure are pending.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -607,14 +607,40 @@ Phase 2F.5C closure documentation commit
 `b54ab7d56997c71fee20eb0281175a9725e9dae7` was pushed to main.
 Post-closure Linux Debug/Release CI #39739519389: SUCCESS
 on that exact commit, including full and repeated network test gates.
-Phase 2F is formally COMPLETE; Phase 2G parser fuzz testing
-is NEXT, NOT STARTED.
+Phase 2F is formally COMPLETE. Phase 2G parser fuzz testing
+has passed Linux feature-branch CI; merge/closure remain pending.
 
 The executable still serves only raw TCP transport echo data;
 it does not parse RESP2 on its serving path or execute Redis commands.
 
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
+
+## Phase 2G — RESP2 Parser Fuzz Testing (In Progress)
+
+The actual RESP2 parser is exercised by a shared, bounded
+invariant harness. An opt-in CMake build provides a deterministic
+50-seed corpus runner with SHA-256 manifest checks; Linux Clang 18
+also builds a real coverage-guided libFuzzer entry point.
+
+The local Apple Clang 17 AddressSanitizer runtime hangs at startup
+on this development Mac, so the local corpus runner uses UBSan.
+Ubuntu 24.04 GitHub Actions run
+[#39754741830](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39754741830)
+passed on feature commit `b7edd754` using ASan+UBSan:
+19/19 Linux CTests and 10,000 bounded libFuzzer executions.
+All 50 immutable seeds were verified and replayed successfully.
+This is bounded fuzzing evidence, not proof that all bugs are absent.
+
+To reproduce the local macOS corpus smoke, configure the
+`REDISDB_ENABLE_FUZZ_TARGETS=ON` CMake option in an isolated
+build directory with Apple Clang and run:
+`ctest --test-dir build/fuzz-sanitize -R fuzz.resp_parser_corpus_smoke`.
+See [fuzz architecture](docs/PHASE2G_FUZZ_DESIGN.md) for the
+exact limit profile and design decisions.
+
+The Phase 2G PR has not yet been merged into main.
+The production executable is still transport-only TCP echo.
 
 ## License
 
