@@ -790,8 +790,9 @@ passed Linux Debug/Release #39774474442 before Phase 3A.
 
 # Phase 3A Command Representation Implementation Record (2026-10-22)
 
-**Status:** Phase 3A command representation COMPLETE status
-recorded; final status-commit Linux CI verification pending.
+**Status:** Phase 3A command representation COMPLETE;
+final status-commit `bb9610e4422dac7fa383a3473abf2e67dbe1766b`
+passed Linux Debug/Release CI #39792311541 (19/19 each).
 
 - Preserve RESP2 `RespValue` as protocol syntax; introduce a
   distinct owned Command type at the request-to-command boundary.
@@ -816,11 +817,45 @@ Local macOS Debug/Release 19/19 each on synchronized main.
 Five-document closure checkpoint
 `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7` passed
 Linux Debug/Release CI #39789969583 (19/19 each);
-Phase 3A COMPLETE status recorded, pending final status-commit CI.
+Phase 3A COMPLETE with final status-commit CI accepted.
 
 This record documents implementation of existing architectural
 boundaries; it does not silently amend ADR-002, ADR-004 or ADR-015.
-Phase 3B Dispatcher is NOT STARTED.
+
+# Phase 3B Dispatcher Implementation Record (2026-10-22)
+
+**Status:** Isolated dispatcher IMPLEMENTED, MERGED, post-merge
+cross-platform ACCEPTED. Formal documentation closure not yet complete.
+
+- Preserve ADR-002's planned single-threaded command-execution model:
+  Phase 3B does not introduce a thread-safe execution guarantee.
+- Retain explicit registry construction (not a giant switch or global
+  registry), normalized printable-ASCII registration names and strict
+  rejection of empty, duplicated or uncallable handler registrations.
+- Route existing owned `Command` objects without mutating arguments,
+  parsing RESP2 again, or accessing socket/connection/keyspace state.
+- Return an owned typed `HandlerResult` with RESP2 value and future
+  `ConnectionDisposition`, or a typed `UnknownCommand` outcome;
+  do not invent Redis wire error semantics in this phase.
+- Invoke a matching handler exactly once; propagate handler exceptions
+  without converting to unknown-command or retrying.
+- Defer real handler arity (3C), connectivity commands (3D), CLI
+  compatibility (3E), wire error formatting (3F) and production
+  connection integration. The executable remains transport-only.
+
+Evidence: retained feature SHA
+`e92aaf54cd00e090620be64ede21f32cde7e0549`, merged PR #12
+`84d95500545eb4c0a417cd95cc98c62e30384424`; feature-head
+Linux CI #39805019741 (20/20 Debug and Release), Clang 18 fuzz
+#39805019351 (21/21, 50 seeds, 10,000 runs), post-merge main Linux
+#39806894796 (20/20 Debug and Release plus repeat gates). Clean
+synchronized local macOS Debug and Release 20/20 plus repeat gates
+and immutable 50-seed UBSan corpus replay.
+
+This is an implementation record within accepted architectural
+boundaries, not an amendment to ADR-002, ADR-004 or ADR-015.
+The remaining 3B.2B documentation commit and 3B.2C formal status
+CI gates must pass before Phase 3B is recorded as COMPLETE.
 
 # Decision Maintenance
 

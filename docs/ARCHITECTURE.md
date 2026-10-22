@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0-2 and Phase 3A COMPLETE status recorded (final status-commit CI verification pending); Phase 3B Dispatcher NEXT/NOT STARTED; executable remains transport-smoke-only
+**Architecture state:** Phases 0–2 and 3A COMPLETE; Phase 3B isolated dispatcher merged and cross-platform validated (formal documentation closure pending); Phases 3C–3F NOT STARTED; executable remains transport-smoke-only
 
 This document describes the intended system.
 
@@ -1037,8 +1037,46 @@ Post-merge main Linux CI #39786009239 passed 19/19 each;
 local macOS Debug/Release 19/19 each. Five-document
 acceptance commit `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7`
 passed exact-head Linux Debug/Release CI #39789969583
-(19/19 each). Phase 3A COMPLETE status recorded; final
-status-commit CI verification pending. Phase 3B NOT STARTED.
+(19/19 each). Final 3A status commit
+`bb9610e4422dac7fa383a3473abf2e67dbe1766b` passed Linux
+Debug/Release CI #39792311541 (19/19 each). Phase 3A COMPLETE.
+
+## Phase 3B Isolated Command Dispatcher — IMPLEMENTED, MERGED, VERIFIED
+
+New `include/redisdb/commands/CommandDispatcher.hpp` and
+`src/commands/CommandDispatcher.cpp` define `CommandDispatcher`
+with an explicit constructor-built, read-only-after-construction
+routing table. Names provided at registration are checked for
+printable ASCII, case-normalized without locale rules, and rejected
+if empty, duplicated after normalization, or paired with an empty
+handler. The decoder's owned `Command` is not modified.
+
+Each registered `CommandHandler` accepts `const Command&` and returns
+`HandlerResult` containing an owned `protocol::RespValue` and
+`ConnectionDisposition` metadata (`KeepOpen` or `CloseAfterReply`).
+Unknown command names produce `DispatchError::UnknownCommand` with
+no synthesized wire response; a successful lookup invokes exactly
+one handler. Handler exceptions propagate without hidden retries.
+This module is independent of socket state and parser ownership.
+
+`tests/unit/command_dispatcher_test.cpp` plus additive CMake wiring
+register `unit.command_dispatcher`. Both macOS and Linux Debug and
+Release discovered 20 tests and passed 20/20, with targeted repeats.
+The fuzz-enabled Clang 18 PR-head workflow passed 21/21 CTests,
+validated 50 immutable corpus seeds and completed 10,000 bounded
+ASan+UBSan libFuzzer executions. PR #12 merged with feature head
+`e92aaf54cd00e090620be64ede21f32cde7e0549` as two-parent
+`84d95500545eb4c0a417cd95cc98c62e30384424`; merged tree equals
+the tested feature tree. Post-merge Linux #39806894796 passed both
+configurations. Local macOS main accepted 20/20 Debug and Release,
+repeated regressions, UBSan dispatcher unit and 50-seed replay.
+
+**Status boundary:** only 3B implementation and post-merge validation
+have completed. Documentation closure (3B.2B/2C and exact-head CI)
+remains pending. The production executable remains transport-only
+TCP echo: no production dispatcher integration, command arity,
+PING/ECHO/QUIT handlers, redis-cli compatibility, 3F wire-level
+unknown-command errors, database keyspace or persistence.
 
 # 7. Supported Command Groups
 

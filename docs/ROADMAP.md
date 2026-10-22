@@ -543,16 +543,16 @@ with resource limits and comprehensive edge-case tests.
 
 # Phase 3 — Command Framework
 
-**Status:** IN PROGRESS (Phase 3A COMPLETE; Phase 3B Dispatcher NEXT/NOT STARTED)
+**Status:** IN PROGRESS (Phase 3A COMPLETE; Phase 3B IMPLEMENTED/MERGED/POST-MERGE ACCEPTED; FORMAL 3B CLOSURE PENDING)
 
-- [x] 3A — Command representation (COMPLETE; final status-commit CI verification pending)
-- [ ] 3B — Dispatcher
+- [x] 3A — Command representation (COMPLETE; final status CI #39792311541 SUCCESS)
+- [ ] 3B — Dispatcher (implemented, merged and accepted; documentation/final status CI pending)
 - [ ] 3C — Argument validation
 - [ ] 3D — PING, ECHO, QUIT
 - [ ] 3E — Redis CLI compatibility smoke test
 - [ ] 3F — Unknown-command behavior
 
-### Phase 3A Detailed Progress — COMPLETE (final status-commit CI pending)
+### Phase 3A Detailed Progress — COMPLETE (final status-commit CI passed)
 
 - 3A.0A: COMPLETE — final Phase 2 baseline `e7dfbbf5`,
   feature branch created after accepted Linux CI #39774474442.
@@ -583,15 +583,40 @@ with resource limits and comprehensive edge-case tests.
   `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7`;
   Linux main Debug/Release CI #39789969583 SUCCESS (19/19 each
   and repeated protocol/network validation).
-- 3A.2C: FINAL STATUS RECORDED — Phase 3A COMPLETE; final
-  status-commit Linux CI verification remains mandatory
-  before beginning Phase 3B.
+- 3A.2C: COMPLETE — final status commit
+  `bb9610e4422dac7fa383a3473abf2e67dbe1766b` passed exact-head
+  Linux CI #39792311541 (19/19 Debug and Release). Phase 3A closed.
 
-This phase introduces no dispatcher, arity validation,
-PING/ECHO/QUIT behavior, keyspace or production RESP2 socket handler.
-Phase 3B Dispatcher is NEXT/NOT STARTED; Phases 3C–3F remain
-NOT STARTED. Verify the final Phase 3A status-commit Linux CI
-before any Phase 3B implementation.
+Phase 3A introduced no dispatcher, arity validation, built-in
+commands, keyspace or production RESP2 socket handler.
+
+### Phase 3B Detailed Progress — IMPLEMENTED AND ACCEPTED; FORMAL CLOSURE PENDING
+
+- 3B.0A: COMPLETE — baseline `bb9610e`, final 3A CI verified;
+  feature branch `phase3b/command-dispatcher` created.
+- 3B.0B: COMPLETE — documented dispatcher registry, owned responses,
+  typed unknown outcome and negative-case matrix.
+- 3B.1A-1B: COMPLETE — isolated dispatcher and CMake tests;
+  formatting/repeat regression and 50-seed UBSan smoke PASS.
+- 3B.1C: COMPLETE — one five-file feature commit
+  `e92aaf54cd00e090620be64ede21f32cde7e0549`, non-force pushed.
+- 3B.1D-1E: COMPLETE — PR #12 draft and ready; exact feature-head
+  Linux #39805019741 20/20 Debug/Release; Clang 18 ASan/UBSan
+  #39805019351 21/21, 50 seeds, 10,000 fuzz runs SUCCESS.
+- 3B.1F: COMPLETE — true two-parent merge
+  `84d95500545eb4c0a417cd95cc98c62e30384424` with identical
+  feature tree and preserved branch. Main Linux CI #39806894796
+  SUCCESS (20/20 each plus protocol/network repeats).
+- 3B.1G: COMPLETE — clean synchronized local/remote `main`;
+  macOS 20/20 Debug/Release, dispatcher/command/protocol/TCP repeats,
+  UBSan dispatcher and 50-seed parser corpus replay PASS.
+- 3B.2A: IN PROGRESS — five-document acceptance draft, no commit/push.
+- 3B.2B: NOT STARTED — documentation-only commit and exact-head CI.
+- 3B.2C: NOT STARTED — final COMPLETE status commit and CI gate.
+
+The isolated 3B library has no server wiring or built-in command
+semantics. Phases 3C–3F remain NOT STARTED. The full Phase 3
+acceptance gate below is not satisfied yet.
 
 ### Acceptance Gate
 

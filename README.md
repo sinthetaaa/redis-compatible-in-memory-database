@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2 and Phase 3A COMPLETE (final Phase 3A status-commit CI verification pending). Phase 3 Command Framework IN PROGRESS; Phase 3B Dispatcher NEXT/NOT STARTED; Phases 3C–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
+**Project status: Phases 0–2 and Phase 3A COMPLETE. Phase 3B isolated Command Dispatcher IMPLEMENTED, MERGED and post-merge VERIFIED; formal 3B documentation closure is pending. Phase 3 Command Framework remains IN PROGRESS; Phases 3C–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -685,9 +685,36 @@ network/protocol gates. Local synchronized macOS `main` also passed
 19/19 in both configurations. Formal documentation commit
 `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7` passed
 [Linux Debug/Release CI #39789969583](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39789969583)
-(19/19 each and repeat gates). Phase 3A COMPLETE status is
-recorded; verification of final status-commit CI is still required
-before Phase 3B starts. The server remains transport-only TCP echo.
+(19/19 each and repeat gates). Phase 3A final-status commit
+`bb9610e4422dac7fa383a3473abf2e67dbe1766b` passed
+[Linux Debug/Release #39792311541](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39792311541)
+(19/19 each). Phase 3A COMPLETE.
+
+## Phase 3B — Isolated Command Dispatcher (MERGED; CLOSURE PENDING)
+
+Phase 3B adds a small constructor-built, test-injected C++20 command
+registry with deterministic name lookup, strict registration checks,
+explicit typed unknown-command outcomes and owned handler replies.
+`ConnectionDisposition` is response metadata only; it does not close
+sockets. Handler exceptions propagate. The production TCP server,
+RESP2 pipeline, parser and persistence implementations were not changed.
+
+[PR #12](https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/12)
+merged as true two-parent commit
+`84d95500545eb4c0a417cd95cc98c62e30384424` from retained
+feature head `e92aaf54cd00e090620be64ede21f32cde7e0549`.
+PR-head [Linux Debug/Release #39805019741](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39805019741)
+passed 20/20 each, and [Clang 18 sanitizer/fuzz #39805019351](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39805019351)
+passed 21/21, 50 immutable seeds and 10,000 libFuzzer executions.
+[Post-merge Linux #39806894796](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39806894796)
+passed 20/20 Debug and Release plus repeated networking checks.
+Local synchronized macOS main also passed 20/20 Debug and Release,
+repeated dispatcher/command/protocol/TCP tests and UBSan seed replay.
+
+**Implementation acceptance is complete; formal 3B documentation
+closure (3B.2B/2C plus exact-head CI) is pending.** Redis command
+arity, PING/ECHO/QUIT, redis-cli compatibility, wire-level errors,
+keyspace and persistence remain unimplemented.
 
 ## License
 
