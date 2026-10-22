@@ -790,8 +790,8 @@ passed Linux Debug/Release #39774474442 before Phase 3A.
 
 # Phase 3A Command Representation Implementation Record (2026-10-22)
 
-**Status:** Implemented and merged, Linux/macOS post-merge accepted;
-formal Phase 3A closure documentation and CI still pending.
+**Status:** Phase 3A command representation COMPLETE status
+recorded; final status-commit Linux CI verification pending.
 
 - Preserve RESP2 `RespValue` as protocol syntax; introduce a
   distinct owned Command type at the request-to-command boundary.
@@ -813,6 +813,10 @@ Clang 18 ASan+UBSan #39784944465: 20/20, 50 seeds,
 10,000 runs. Post-merge Linux main #39786009239:
 Debug/Release 19/19 each plus repeat gates.
 Local macOS Debug/Release 19/19 each on synchronized main.
+Five-document closure checkpoint
+`c369fdf3c223361bfd7a7966dc3228d16b8ec2b7` passed
+Linux Debug/Release CI #39789969583 (19/19 each);
+Phase 3A COMPLETE status recorded, pending final status-commit CI.
 
 This record documents implementation of existing architectural
 boundaries; it does not silently amend ADR-002, ADR-004 or ADR-015.

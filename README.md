@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2 COMPLETE. Phase 3 Command Framework IN PROGRESS: Phase 3A owned binary-safe command representation merged via PR #11, Linux/macOS post-merge accepted; formal documentation closure pending. Phases 3B–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
+**Project status: Phases 0–2 and Phase 3A COMPLETE (final Phase 3A status-commit CI verification pending). Phase 3 Command Framework IN PROGRESS; Phase 3B Dispatcher NEXT/NOT STARTED; Phases 3C–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -658,7 +658,7 @@ commit `e7dfbbf5d64795e225c69e5813f75101d0c90067` passed
 Linux Debug/Release CI #39774474442 (18/18 each).
 The production executable is still transport-only TCP echo.
 
-## Phase 3A — Owned Command Representation (Post-Merge Accepted)
+## Phase 3A — Owned Command Representation (COMPLETE)
 
 C++20 `redisdb::commands::Command` owns ASCII-normalized command names
 and binary-safe argument strings decoded from RESP2 array requests.
@@ -682,8 +682,12 @@ RESP2 parser or server semantics.
 Post-merge [Linux CI #39786009239](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39786009239)
 passed 19/19 Debug and 19/19 Release tests plus repeated
 network/protocol gates. Local synchronized macOS `main` also passed
-19/19 in both configurations. Phase 3A final documentation closure
-and exact post-closure CI are still pending; Phase 3B is NOT STARTED.
+19/19 in both configurations. Formal documentation commit
+`c369fdf3c223361bfd7a7966dc3228d16b8ec2b7` passed
+[Linux Debug/Release CI #39789969583](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39789969583)
+(19/19 each and repeat gates). Phase 3A COMPLETE status is
+recorded; verification of final status-commit CI is still required
+before Phase 3B starts. The server remains transport-only TCP echo.
 
 ## License
 

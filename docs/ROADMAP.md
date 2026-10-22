@@ -543,16 +543,16 @@ with resource limits and comprehensive edge-case tests.
 
 # Phase 3 — Command Framework
 
-**Status:** IN PROGRESS (Phase 3A merged, post-merge accepted; formal closure pending)
+**Status:** IN PROGRESS (Phase 3A COMPLETE; Phase 3B Dispatcher NEXT/NOT STARTED)
 
-- [ ] 3A — Command representation (formal closure pending)
+- [x] 3A — Command representation (COMPLETE; final status-commit CI verification pending)
 - [ ] 3B — Dispatcher
 - [ ] 3C — Argument validation
 - [ ] 3D — PING, ECHO, QUIT
 - [ ] 3E — Redis CLI compatibility smoke test
 - [ ] 3F — Unknown-command behavior
 
-### Phase 3A Detailed Progress — POST-MERGE ACCEPTED, FORMAL CLOSURE PENDING
+### Phase 3A Detailed Progress — COMPLETE (final status-commit CI pending)
 
 - 3A.0A: COMPLETE — final Phase 2 baseline `e7dfbbf5`,
   feature branch created after accepted Linux CI #39774474442.
@@ -577,13 +577,21 @@ with resource limits and comprehensive edge-case tests.
   (19/19 each plus repeat suites).
 - 3A.1G: COMPLETE — local `main` safely fast-forwarded to
   merge commit; macOS Debug/Release 19/19 each; clean synchronized tree.
-- 3A.2A-2C: PENDING — five-document formal closure draft,
-  guarded documentation commit, exact new-head Linux CI,
-  final COMPLETE status and final-status CI.
+- 3A.2A: COMPLETE — five-document status draft verified on
+  merged main; macOS Debug/Release 19/19 and UBSan seed replay PASS.
+- 3A.2B: COMPLETE — documentation-only commit
+  `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7`;
+  Linux main Debug/Release CI #39789969583 SUCCESS (19/19 each
+  and repeated protocol/network validation).
+- 3A.2C: FINAL STATUS RECORDED — Phase 3A COMPLETE; final
+  status-commit Linux CI verification remains mandatory
+  before beginning Phase 3B.
 
 This phase introduces no dispatcher, arity validation,
 PING/ECHO/QUIT behavior, keyspace or production RESP2 socket handler.
-Phase 3B–3F remain NOT STARTED.
+Phase 3B Dispatcher is NEXT/NOT STARTED; Phases 3C–3F remain
+NOT STARTED. Verify the final Phase 3A status-commit Linux CI
+before any Phase 3B implementation.
 
 ### Acceptance Gate
 

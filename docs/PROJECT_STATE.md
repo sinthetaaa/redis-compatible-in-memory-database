@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-22
 - Current phase: Phase 3 — Command Framework (IN PROGRESS); Phases 0-2 COMPLETE
-- Current subphase: 3A.2A — formal post-merge closure documentation draft (IN PROGRESS)
-- Status: PHASES 0-2 COMPLETE; PHASE 3A IMPLEMENTATION MERGED / POST-MERGE ACCEPTED; 3A FORMAL DOCUMENTATION / CI PENDING
-- Last completed milestone: 3A.1G — PR #11 merged as 4b493ac7; post-merge Linux CI #39786009239 SUCCESS (Debug/Release 19/19); synchronized local macOS Debug/Release 19/19
-- Exact next task: Validate five-document 3A.2A closure draft; commit/push a guarded 3A.2B docs-only checkpoint; verify its exact-head Linux CI; then record and verify final Phase 3A COMPLETE status before Phase 3B.
+- Current subphase: Phase 3A.2C — final COMPLETE status recorded; exact status-commit CI verification NEXT
+- Status: PHASES 0-2 AND PHASE 3A COMPLETE STATUS RECORDED; FINAL PHASE 3A STATUS-COMMIT CI VERIFICATION PENDING; PHASE 3B NOT STARTED
+- Last completed milestone: 3A.2B — five-document acceptance commit c369fdf3c223361bfd7a7966dc3228d16b8ec2b7; Linux Debug/Release CI #39789969583 SUCCESS (19/19 each)
+- Exact next task: Commit/push Phase 3A.2C final-status-only documents; verify Linux Debug/Release CI at that new exact status-commit SHA, clean synchronized main, and preserved feature branch; only then initiate Phase 3B Dispatcher design on a new branch.
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (synchronized at 4b493ac7; Phase 3A formal closure pending; feature branch preserved).
+- Current development branch: main (closure status prepared from documentation CI-accepted c369fdf3; Phase 3A feature branch preserved).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -1051,10 +1051,10 @@ on main; its Linux Debug/Release CI #39772960967 passed
 18/18 CTests in each configuration and all existing repeat gates.
 Phase 2G and the entire Phase 2 RESP2 Protocol Engine are
 formally recorded as COMPLETE. The exact Phase 2G.5C final-status
-commit still requires its own successful main Linux CI before
-beginning Phase 3A. Phase 3A has NOT STARTED.
+commit `e7dfbbf5d64795e225c69e5813f75101d0c90067` passed
+main Linux Debug/Release CI #39774474442 before Phase 3A began.
 
-### Phase 3A — 2026-10-22 (POST-MERGE ACCEPTED, FORMAL CLOSURE PENDING)
+### Phase 3A — 2026-10-22 (COMPLETE STATUS RECORDED; FINAL CI VERIFICATION PENDING)
 
 Baseline `e7dfbbf5d64795e225c69e5813f75101d0c90067`;
 feature branch `phase3a/command-representation` (retained).
@@ -1079,8 +1079,12 @@ Post-merge Linux main CI #39786009239: Debug/Release
 Local synchronized main: macOS Debug and Release 19/19 each;
 clean worktree, feature branch preserved.
 
-Phase 3A.2 formal documentation status commit and its
-exact-head Linux CI remain pending. Phase 3B NOT STARTED.
+Phase 3A.2A five-document draft and 3A.2B documentation-only
+commit `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7` are
+COMPLETE; exact-head Linux CI #39789969583 SUCCESS (Debug and
+Release 19/19 each, repeated validation). Phase 3A.2C formally
+records COMPLETE status; verify its new exact-head Linux CI before
+starting Phase 3B Dispatcher, which is NOT STARTED.
 The `redisdb-server` executable remains transport-only TCP echo:
 no production RESP2 command-serving mode, dispatcher,
 Redis command execution, keyspace or persistence is implemented.
@@ -1191,8 +1195,9 @@ Linux Debug/Release #39774474442 (18/18 each).
 Phase 3A command representation implementation and PR #11
 merge: COMPLETE and independently post-merge accepted.
 
-Current synchronized local and remote `main`:
-`4b493ac7984b4c3bdf47a24d41b517930cd689b3`.
+Last fully Linux CI-accepted local/remote `main` before the
+final status checkpoint: `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7`.
+Final status-commit SHA will be verified after its push.
 Feature branch preserved at:
 `9d64403925b62b108ee1172c06ad9b866592d509`.
 Post-merge Linux Debug/Release #39786009239: SUCCESS,
@@ -1203,14 +1208,16 @@ Local macOS Debug/Release: 19/19 each; clean synced main.
 
 Next controlled checkpoints:
 
-1. Phase 3A.2A — prepare and locally validate only the five
-   authoritative closure documents, without source edits.
-2. Phase 3A.2B — separately commit/push the reviewed documentation
-   and verify Linux Debug/Release CI at that exact new SHA.
-3. Phase 3A.2C — record Phase 3A formally COMPLETE only after
-   that CI passes; commit final status and verify its new-head CI.
-4. Only after closure, audit a clean `main` and begin Phase 3B
-   Command Dispatcher on a separate dedicated feature branch.
+1. Phase 3A.2C: record Phase 3A COMPLETE in the five project
+   status documents, then make a guarded documentation-only commit
+   and non-force push to main.
+2. Independently verify new exact-head Linux Debug/Release CI
+   (19/19 each and network/protocol gates); check clean local main
+   equals origin/main. The new status-commit SHA is determined
+   at commit time and must not be fabricated in this document.
+3. After this verification, start Phase 3B — Command Dispatcher
+   with a clean new feature branch and explicit design review.
+   Do not silently add serving or Redis command execution here.
 
 No production Redis command endpoint, keyspace, persistence,
 public deployment or compatibility claim is authorized yet.

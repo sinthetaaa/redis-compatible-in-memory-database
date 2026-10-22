@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0-2 COMPLETE; Phase 3A Command representation merged and post-merge accepted, formal closure pending; executable remains transport-smoke-only
+**Architecture state:** Phases 0-2 and Phase 3A COMPLETE status recorded (final status-commit CI verification pending); Phase 3B Dispatcher NEXT/NOT STARTED; executable remains transport-smoke-only
 
 This document describes the intended system.
 
@@ -1006,7 +1006,7 @@ Wrong-type errors must match documented semantics.
 Fatal persistence errors must not be disguised
 as successful durable writes.
 
-## Phase 3A Command Representation — POST-MERGE ACCEPTED
+## Phase 3A Command Representation — COMPLETE
 
 `include/redisdb/commands/Command.hpp` defines an owned
 C++20 command name and binary-safe arguments. A structural
@@ -1034,8 +1034,11 @@ feature head `9d64403925b62b108ee1172c06ad9b866592d509`.
 Linux PR-head Debug/Release #39784944527 passed 19/19 each;
 Clang 18 fuzz #39784944465 passed 20/20 and 10,000 runs.
 Post-merge main Linux CI #39786009239 passed 19/19 each;
-local macOS Debug/Release 19/19 each. Formal status closure
-remains pending; Phase 3B has not started.
+local macOS Debug/Release 19/19 each. Five-document
+acceptance commit `c369fdf3c223361bfd7a7966dc3228d16b8ec2b7`
+passed exact-head Linux Debug/Release CI #39789969583
+(19/19 each). Phase 3A COMPLETE status recorded; final
+status-commit CI verification pending. Phase 3B NOT STARTED.
 
 # 7. Supported Command Groups
 
