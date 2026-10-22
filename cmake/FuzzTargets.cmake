@@ -77,3 +77,39 @@ add_test(
             --runner "$<TARGET_FILE:redisdb-resp-parser-seed-smoke>"
 )
 set_tests_properties(fuzz.resp_parser_corpus_smoke PROPERTIES TIMEOUT 30)
+
+# Phase 2G.2A: Linux-only, coverage-guided LLVM libFuzzer executable.
+# Apple Clang's audited runtime lacks libFuzzer; retain the macOS
+# standalone UBSan corpus runner without a new mandatory dependency.
+# This target compiles real parser sources separately with coverage and
+# sanitizers. Normal Debug/Release presets never include this file.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        message(FATAL_ERROR "Linux RESP2 libFuzzer target requires LLVM Clang")
+    endif()
+
+    add_executable(
+        redisdb-resp-parser-libfuzzer
+        "${PROJECT_SOURCE_DIR}/tests/fuzz/resp_parser_fuzz_entry.cpp"
+        "${PROJECT_SOURCE_DIR}/tests/fuzz/resp_parser_fuzz_checks.cpp"
+        "${PROJECT_SOURCE_DIR}/src/protocol/RespParser.cpp"
+        "${PROJECT_SOURCE_DIR}/src/protocol/RespValue.cpp"
+    )
+    target_include_directories(redisdb-resp-parser-libfuzzer PRIVATE
+        "${PROJECT_SOURCE_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/tests/fuzz"
+    )
+    target_compile_features(redisdb-resp-parser-libfuzzer PRIVATE cxx_std_20)
+    set_target_properties(redisdb-resp-parser-libfuzzer PROPERTIES CXX_EXTENSIONS OFF)
+    redisdb_enable_warnings(redisdb-resp-parser-libfuzzer)
+    target_compile_options(redisdb-resp-parser-libfuzzer PRIVATE
+        -fsanitize=fuzzer-no-link,address,undefined
+        -fno-omit-frame-pointer
+        -fno-sanitize-recover=all
+    )
+    target_link_options(redisdb-resp-parser-libfuzzer PRIVATE
+        -fsanitize=fuzzer,address,undefined
+        -fno-sanitize-recover=all
+    )
+    add_dependencies(redisdb-resp-parser-libfuzzer redisdb-resp-parser-fuzz-seeds)
+endif()

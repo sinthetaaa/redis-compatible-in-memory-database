@@ -1,0 +1,141 @@
+name: RESP2 parser fuzz validation
+
+on:
+  push:
+    branches:
+      - phase2g/resp2-parser-fuzz-foundation
+  pull_request:
+    branches:
+      - main
+    paths:
+      - CMakeLists.txt
+      - cmake/FuzzTargets.cmake
+      - tests/fuzz/**
+      - .github/workflows/phase2g-fuzz-linux.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-fuzz:
+    name: Linux Clang 18 libFuzzer ASan UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1:abort_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - name: Checkout exact workflow commit
+        uses: actions/checkout@v4
+
+      - name: Install Ubuntu LLVM 18 fuzzing toolchain
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends clang-18 libfuzzer-18-dev
+          clang++-18 --version
+          cmake --version
+          ninja --version
+
+      - name: Configure isolated Clang sanitizer and libFuzzer build
+        run: |
+          set -euo pipefail
+          cmake -S . -B build/fuzz-linux -G Ninja \
+            -DCMAKE_CXX_COMPILER="$(command -v clang++-18)" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DREDISDB_ENABLE_FUZZ_TARGETS=ON \
+            -DBUILD_TESTING=ON
+
+      - name: Build all Linux tests and instrumented fuzz targets
+        run: |
+          set -euo pipefail
+          cmake --build build/fuzz-linux --parallel 2
+          test -x build/fuzz-linux/redisdb-resp-parser-seed-smoke
+          test -x build/fuzz-linux/redisdb-resp-parser-libfuzzer
+
+      - name: Verify compiler instrumentation and immutable 50-seed corpus
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          commands = json.loads(Path('build/fuzz-linux/compile_commands.json').read_text())
+          fuzzer = [e for e in commands if '/redisdb-resp-parser-libfuzzer.dir/' in e.get('command','')]
+          seed = [e for e in commands if '/redisdb-resp-parser-seed-smoke.dir/' in e.get('command','')]
+          assert len(fuzzer) == 4, f'Expected 4 instrumented fuzzer TUs, got {len(fuzzer)}'
+          assert len(seed) == 4, f'Expected 4 instrumented seed TUs, got {len(seed)}'
+          assert all('-fsanitize=fuzzer-no-link,address,undefined' in e['command'] for e in fuzzer)
+          assert all('-fsanitize=address,undefined' in e['command'] for e in seed)
+          ninja = Path('build/fuzz-linux/build.ninja').read_text()
+          assert '-fsanitize=fuzzer,address,undefined' in ninja, 'Fuzzer link flags missing'
+          manifest = Path('build/fuzz-linux/fuzz-corpus.sha256')
+          assert hashlib.sha256(manifest.read_bytes()).hexdigest() == (
+              'e5ff669b8cd8ac01f3d81dcbddcadceba63426a503a7d55a5fb1ddc7faa62327'
+          ), 'Corpus manifest identity mismatch'
+          corpus = Path('build/fuzz-linux/fuzz-corpus')
+          files = sorted(corpus.glob('*.resp'))
+          assert len(files) == 50, f'Expected 50 immutable seeds, got {len(files)}'
+          assert all(p.is_file() and not p.is_symlink() and p.stat().st_size <= 4096 for p in files)
+          print('PASS: 4+4 instrumented compilation units and pinned 50-seed corpus')
+          PY
+          python3 tests/fuzz/generate_resp2_corpus.py \
+            --output build/fuzz-linux/fuzz-corpus --verify
+
+      - name: Run real Linux ASan UBSan seed and complete CTest suites
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/phase2g-artifacts"
+          ctest --test-dir build/fuzz-linux -N | tee "$RUNNER_TEMP/phase2g-artifacts/discovery.txt"
+          grep -Eq '^[[:space:]]*Total Tests: 19[[:space:]]*$' \
+            "$RUNNER_TEMP/phase2g-artifacts/discovery.txt"
+          # The named fuzz smoke test must be registered exactly once.
+          ctest --test-dir build/fuzz-linux -N \
+            -R '^fuzz[.]resp_parser_corpus_smoke$' \
+            | tee "$RUNNER_TEMP/phase2g-artifacts/fuzz-smoke-discovery.txt"
+          grep -Eq '^[[:space:]]*Total Tests: 1[[:space:]]*$' \
+            "$RUNNER_TEMP/phase2g-artifacts/fuzz-smoke-discovery.txt"
+          ctest --test-dir build/fuzz-linux --output-on-failure \
+            | tee "$RUNNER_TEMP/phase2g-artifacts/ctest.txt"
+
+      - name: Run bounded coverage-guided libFuzzer with ASan UBSan
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/phase2g-artifacts" "$RUNNER_TEMP/phase2g-mutable-corpus"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import shutil
+
+          source = Path('build/fuzz-linux/fuzz-corpus')
+          target = Path(os.environ['RUNNER_TEMP']) / 'phase2g-mutable-corpus'
+          seeds = sorted(source.glob('*.resp'))
+          assert len(seeds) == 50, f'Expected exactly 50 source corpus seeds, got {len(seeds)}'
+          assert not list(target.iterdir()), 'Mutable corpus must start empty'
+          for seed in seeds:
+              assert seed.is_file() and not seed.is_symlink()
+              shutil.copyfile(seed, target / seed.name)
+          print('PASS: immutable source corpus copied to a separate writable libFuzzer directory')
+          PY
+          timeout --kill-after=10s 180s \
+            build/fuzz-linux/redisdb-resp-parser-libfuzzer \
+            -seed=20261022 -runs=10000 -max_len=4096 \
+            -timeout=5 -rss_limit_mb=1024 \
+            -artifact_prefix="$RUNNER_TEMP/phase2g-artifacts/" \
+            "$RUNNER_TEMP/phase2g-mutable-corpus" \
+            2>&1 | tee "$RUNNER_TEMP/phase2g-artifacts/libfuzzer.txt"
+          python3 tests/fuzz/generate_resp2_corpus.py \
+            --output build/fuzz-linux/fuzz-corpus --verify
+          echo 'PASS: 10,000 bounded Linux libFuzzer executions with ASan+UBSan'
+
+      - name: Upload failure diagnostics and crash reproducers
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2g-linux-fuzz-failure
+          path: ${{ runner.temp }}/phase2g-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
