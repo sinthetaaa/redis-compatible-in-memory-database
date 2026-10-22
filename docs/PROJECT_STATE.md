@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-22
 - Current phase: Phase 3 — Command Framework (IN PROGRESS); Phases 0–2 COMPLETE
-- Current subphase: Phase 3B.2C — COMPLETE status recorded; final status-commit Linux CI verification pending
-- Status: PHASES 0–2 AND 3A COMPLETE; PHASE 3B COMPLETE STATUS RECORDED AFTER DOCUMENTATION CI ACCEPTANCE; FINAL 3B STATUS-COMMIT CI PENDING; PHASES 3C–3F NOT STARTED
-- Last completed milestone: 3B.2B — five-document acceptance commit `cc88f88948acd96574479750eefc7ede6445c70a` pushed and accepted by exact-head Linux Debug/Release CI #39810737185 (20/20 each plus repeats)
-- Exact next task: Publish guarded Phase 3B.2C five-document final COMPLETE-status commit; independently verify exact-head Linux Debug/Release CI (20/20 each) and clean synchronized main; only then begin Phase 3C Argument Validation design.
+- Current subphase: Phase 3C completed; consolidated documentation and branch-push CI transition
+- Status: Phases 0–2 and 3A–3C COMPLETE; Phase 3 IN PROGRESS; 3D–3F and 4–19 NOT STARTED
+- Last completed milestone: Phase 3C direct merge `d733daa13cb9c1d8741c4c8d1e1080fe593d32b7` and full macOS/Linux post-merge acceptance
+- Exact next task: Validate and directly merge the consolidated docs/CI branch; begin Phase 3D on a new feature branch; no new PRs
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -157,7 +157,7 @@
 | 0 | Repository and Environment Foundation | COMPLETE |
 | 1 | Networking Foundation | COMPLETE |
 | 2 | RESP2 Protocol Engine | COMPLETE |
-| 3 | Command Framework | IN PROGRESS (3A complete; 3B COMPLETE status recorded, final CI pending; 3C next) |
+| 3 | Command Framework | IN PROGRESS (3A–3C complete; 3D–3F not started) |
 | 4 | Core String Database | NOT STARTED |
 | 5 | TTL and Expiration | NOT STARTED |
 | 6 | Collection Data Types | NOT STARTED |
@@ -1214,30 +1214,25 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-The accepted merged baseline for Phase 3B is
-`84d95500545eb4c0a417cd95cc98c62e30384424`.
-PR #12 implementation head is `e92aaf54cd00e090620be64ede21f32cde7e0549`.
-GitHub PR-head CI #39805019741 (20/20 Linux Debug and Release),
-PR-head sanitizer/fuzz CI #39805019351 (21/21, 50 seeds, 10,000 runs),
-and post-merge Linux CI #39806894796 (20/20 Debug and Release)
-are successful. Local macOS 20/20 Debug and Release, repetition
-regressions, and 50-seed UBSan smoke passed at synchronized main.
-Phase 3A final-status CI #39792311541 is also successful.
+Phase 3B formal closure CI #39811900890 passed.
 
-Next guarded checkpoints:
+Phase 3C feature `38c5354` merged directly as
+`d733daa13cb9c1d8741c4c8d1e1080fe593d32b7`.
 
-1. **3B.2C:** Final COMPLETE-status documentation commit and
-   non-force push are required. Verify its exact SHA in new Linux
-   Debug and Release CI (20/20 tests each and all repeat gates).
-   Require clean synchronized local/remote `main`, preserved feature
-   branches and strictly documentation-only changes.
-2. **3C.0A:** Only after that CI passes, begin Phase 3C Argument
-   Validation with design-only review and a new clean feature branch.
-   No arity validators, built-in commands, redis-cli command support
-   or production RESP2 server may be introduced by 3B closure.
+Post-merge acceptance:
+- macOS Debug and Release: 21/21 each.
+- macOS fuzz-enabled UBSan: 22/22.
+- Linux CI #39828953490: Debug/Release 21/21 each.
+- Clang 18 #39829737702: 22/22, 50 seeds,
+  10,000 bounded libFuzzer executions.
 
-No public deployment, Redis database compatibility, keyspace,
-expiration or persistence claims are authorized by Phase 3B.
+1. Validate the consolidated documentation/CI branch
+   with Linux CI and merge directly.
+2. Start Phase 3D — PING/ECHO/QUIT.
+3. Use feature branches, direct merges and no new PRs.
+4. Preserve tests, historical branches and external logs.
+
+The production server remains transport-only TCP echo.
 
 ## 17. Continuation Instructions
 

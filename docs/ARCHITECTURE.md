@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0–2 and 3A COMPLETE; Phase 3B isolated dispatcher COMPLETE status recorded (final status-commit CI pending); 3C Argument Validation NEXT/NOT STARTED, 3D–3F NOT STARTED; executable remains transport-smoke-only
+**Architecture state:** Phases 0–2 and 3A–3C COMPLETE; 3D–3F NOT STARTED; executable remains transport-only TCP echo
 
 This document describes the intended system.
 
@@ -1074,12 +1074,27 @@ repeated regressions, UBSan dispatcher unit and 50-seed replay.
 **Status boundary:** 3B implementation, merge and five-document
 acceptance are validated. Acceptance commit
 `cc88f88948acd96574479750eefc7ede6445c70a` passed Linux
-Debug/Release CI #39810737185 (20/20 each). The final 3B.2C
-COMPLETE-status commit still requires exact-head Linux CI acceptance.
+Debug/Release CI #39810737185 (20/20 each). The final Phase 3B status commit passed Linux CI #39811900890.
 The production executable remains transport-only TCP echo: no
 production dispatcher integration, command arity,
 PING/ECHO/QUIT handlers, redis-cli compatibility, 3F wire-level
 unknown-command errors, database keyspace or persistence.
+
+## Phase 3C — Count-Only Arity Validation (COMPLETE)
+
+The ArityValidator applies a caller-selected minimum,
+optional maximum and group size to the decoded Command's
+argument count. Configuration errors throw exceptions;
+client count mismatches produce deterministic typed results.
+
+Validation is O(1), does not inspect argument bytes,
+and does not modify dispatcher, parser or socket state.
+
+Post-merge Linux CI #39828953490 passed 21/21 in
+Debug and Release. Clang 18 fuzz CI #39829737702
+passed 22/22, 50 seeds and 10,000 executions.
+
+No production command execution exists yet.
 
 # 7. Supported Command Groups
 

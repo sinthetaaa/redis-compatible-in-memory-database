@@ -858,8 +858,26 @@ boundaries, not an amendment to ADR-002, ADR-004 or ADR-015.
 3B.2B five-document acceptance commit
 `cc88f88948acd96574479750eefc7ede6445c70a` passed exact-head
 Linux Debug/Release CI #39810737185 (20/20 each and repeat gates).
-Phase 3B COMPLETE status is now recorded; its final 3B.2C status
-commit must pass Linux CI before Phase 3C design begins.
+Phase 3B closure CI #39811900890 passed. Phase 3C was subsequently implemented and accepted.
+
+# Phase 3C Implementation Record (2026-10-22)
+
+No new ADR is required.
+
+The isolated count-only validator implements the
+previously approved Phase 3C design:
+
+- Caller-selected policies, no new command registry.
+- Typed count errors and configuration exceptions.
+- Precedence: invalid policy, too few, too many,
+  invalid argument group.
+- No argument-byte inspection or mutation.
+- No dispatcher, RESP2 or server integration changes.
+
+Feature `38c5354` merged directly as `d733daa`.
+Post-merge Linux #39828953490 and fuzz
+#39829737702 both passed. macOS Debug/Release
+and UBSan-enabled regressions also passed.
 
 # Decision Maintenance
 

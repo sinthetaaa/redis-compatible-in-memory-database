@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2, Phase 3A and Phase 3B COMPLETE status recorded; final Phase 3B status-commit Linux CI verification pending. Phase 3 Command Framework remains IN PROGRESS; Phase 3C Argument Validation NEXT/NOT STARTED, Phases 3D–3F NOT STARTED. The executable remains transport-only TCP echo, not a command-serving Redis database.**
+**Project status: Phases 0–2 and 3A–3C COMPLETE; Phase 3 IN PROGRESS (3D–3F not started). The executable remains transport-only TCP echo, not a Redis command server.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -690,7 +690,7 @@ network/protocol gates. Local synchronized macOS `main` also passed
 [Linux Debug/Release #39792311541](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39792311541)
 (19/19 each). Phase 3A COMPLETE.
 
-## Phase 3B — Isolated Command Dispatcher (COMPLETE STATUS RECORDED; FINAL CI PENDING)
+## Phase 3B — Isolated Command Dispatcher (COMPLETE)
 
 Phase 3B adds a small constructor-built, test-injected C++20 command
 registry with deterministic name lookup, strict registration checks,
@@ -714,10 +714,31 @@ Five-document acceptance commit `cc88f88948acd96574479750eefc7ede6445c70a`
 passed [Linux Debug/Release CI #39810737185](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39810737185)
 with 20/20 tests in both configurations and network/protocol repeats.
 
-**Phase 3B implementation and documentation acceptance are complete;
-its final 3B.2C status-commit Linux CI verification is pending.** Redis command
-arity, PING/ECHO/QUIT, redis-cli compatibility, wire-level errors,
-keyspace and persistence remain unimplemented.
+**Phase 3B COMPLETE:** Final Linux CI #39811900890 passed.
+PING/ECHO/QUIT, redis-cli command execution, wire-level errors, keyspace and persistence remain unimplemented.
+
+## Phase 3C — Argument Validation (COMPLETE)
+
+The isolated ArityValidator applies caller-supplied minimum,
+optional maximum and argument-grouping rules. It returns typed
+count errors and throws on invalid rule configuration.
+
+The validator does not modify binary-safe arguments, the
+Command decoder, Dispatcher, networking or server execution.
+
+Feature `38c5354` was directly merged into main as
+`d733daa13cb9c1d8741c4c8d1e1080fe593d32b7`.
+
+Post-merge validation:
+- macOS Debug and Release: 21/21 each.
+- macOS fuzz-enabled UBSan suite: 22/22.
+- Linux CI #39828953490: Debug/Release 21/21 each.
+- Clang 18 CI #39829737702: ASan+UBSan 22/22.
+- Immutable corpus: 50 verified seeds.
+- libFuzzer: 10,000 completed executions.
+
+Next: Phase 3D PING/ECHO/QUIT. Future features use
+branch-push CI and direct Git merges, without new PRs.
 
 ## License
 
