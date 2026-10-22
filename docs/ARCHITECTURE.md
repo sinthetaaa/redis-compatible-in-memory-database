@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phase 1 Networking Foundation COMPLETE; transport-only smoke server merged and post-merge Linux CI validated
+**Architecture state:** Phase 1 COMPLETE; RESP2 library phases 2A-2F implemented and macOS/Linux post-merge validated; executable remains transport-smoke-only
 
 This document describes the intended system.
 
@@ -19,8 +19,9 @@ readiness dispatch, admission control, idle eviction,
 backpressure and per-client failure isolation.
 
 The executable has a continuous transport-only TCP
-smoke loop. RESP2 protocol processing and database
-execution remain unimplemented.
+smoke loop. RESP2 processing exists in library/test
+integrations, not the production executable; database
+command execution remains unimplemented.
 
 Do not confuse architecture plans with implemented
 or validated functionality.
@@ -874,8 +875,40 @@ in both Debug and Release.
 
 No production Redis request/command-serving endpoint is wired
 into `redisdb-server`. The `--smoke-echo` path still echoes raw
-TCP bytes. Phase 2F will address broader malformed-input and
-resource policies; Phase 2G will add the parser fuzz foundation.
+TCP bytes. Phase 2F malformed-input and resource-limit
+hardening is merged and validated as documented below.
+Phase 2G parser fuzz-test foundation is NEXT, NOT STARTED.
+
+## Phase 2F Malformed-Input and Framing-Limit Hardening
+
+Phase 2F parser changes recognize invalid bulk terminator bytes
+as soon as the declared payload and first terminator byte are
+available. Incomplete valid prefixes still return NeedMore.
+Bulk/array length headers permit canonical nonnegative decimal
+spelling or exactly `-1` for null. RESP signed integer values
+retain their preexisting grammar. Binary payloads remain opaque.
+
+`RespParser::max_frame_bytes()` and
+`Connection::max_input_bytes()` expose read-only capacities.
+`RespFramedInput::peek` rejects a parser frame budget larger
+than the owning connection input cap before parsing or consuming
+buffered input; `poll` uses the same check through `peek`.
+
+Native kqueue/epoll TCP dispatch tests check malformed-client
+isolation, healthy fragmented binary frames, canonical length
+failures, and valid-prefix/malformed-suffix processing exactly
+once. A reply queued before the offending peer is closed is not
+guaranteed to reach that peer; the tests do not claim delivery.
+
+Feature commits: `9781a7a`, `4dcab5f`, `d555b47`, `b86ee47`.
+PR #9 merged 2026-10-22 as `ce65649` (two parents).
+PR-head Linux CI #39735651885: SUCCESS.
+Post-merge Linux CI #39737223938: SUCCESS.
+Post-merge macOS Debug and Release: 18/18 tests each,
+140 protocol repetitions and 10 native kqueue repetitions each.
+
+The production executable remains transport-smoke-only.
+Phase 2G will provide parser fuzz-test foundations separately.
 
 ## Parsing Model
 

@@ -126,11 +126,12 @@ also passed in both configurations.
 ## ADR-004 — RESP2 Protocol Compatibility
 
 **Status:** Accepted
-**Implementation:** Partial — Phases 2A through
-2D completed and merged; Phase 2E bounded pipeline and
-resumable event-loop integration implemented and validated
-and merged through PR #8. Production RESP2 command serving and
-Redis command execution remain pending.
+**Implementation:** Partial — Phases 2A-2E protocol library,
+framing, and bounded pipeline are merged and validated through
+PR #8. Phase 2F parser/framing safety and native peer-isolation
+regressions are merged through PR #9, with post-merge macOS/Linux
+Debug and Release validation. Production RESP2 command serving
+and Redis command execution remain pending.
 
 ### Decision
 
@@ -600,11 +601,38 @@ reply and connection buffer limits must be coordinated.
 Exceptions after side effects require a caller close policy;
 automatic retry is not guaranteed safe.
 
-The three new pipeline test targets are validated on both
-macOS and Linux in Debug and Release. PR #8 is a draft until
-final documentation review, Linux CI and merge acceptance.
-Phase 2F malformed/resource hardening and Phase 2G fuzzing
-remain separate future milestones.
+The three Phase 2E pipeline test targets are validated on
+macOS and Linux in Debug and Release. PR #8 was merged and
+formally closed. Phase 2F hardens malformed input and parser
+frame-budget compatibility (PR #9 merged, post-merge CI PASS).
+Phase 2G parser fuzzing remains a separate future milestone.
+
+---
+
+## Phase 2F Protocol-Hardening Implementation Record
+
+Phase 2F implements existing RESP2 compatibility and bounded
+input principles; it does not change an accepted ADR or invent
+new command semantics. Bulk and array lengths must use canonical
+decimal spelling; signed RESP integer grammar remains distinct.
+Malformed bulk terminators are rejected at the earliest known
+invalid byte; valid incomplete input remains buffered.
+
+A configured parser max_frame_bytes exceeding a connection's
+max_input_bytes is rejected before any input consumption.
+Bad-client failures isolate that peer within native event-loop
+dispatch. Reply delivery before a fail-fast close is not promised.
+
+Four commits `9781a7a`, `4dcab5f`, `d555b47`, `b86ee47`
+were merged via PR #9 as `ce65649` on 2026-10-22.
+Linux PR-head CI #39735651885 and main post-merge CI
+#39737223938 succeeded in both Debug and Release.
+Local post-merge macOS suites: 18/18 each; repeated protocol
+and native kqueue regression gates passed.
+
+No Redis command executor, production RESP2 endpoint, database,
+persistence or fuzz-test harness is implemented by this phase.
+Phase 2G parser fuzz-test foundation remains NOT STARTED.
 
 ---
 
@@ -647,7 +675,9 @@ Post-merge Linux workflow 39381045190 succeeded.
 
 Phase 2E pipelining is COMPLETE through PR #8; macOS/Linux
 post-closure acceptance passed in CI #39629733366.
-Phase 2F and 2G remain NOT STARTED.
+Phase 2F hardening is IMPLEMENTED and MERGED through PR #9;
+post-merge Linux CI #39737223938 and macOS Debug/Release passed.
+Formal Phase 2F docs closure is current; Phase 2G NOT STARTED.
 
 ## Phase 2
 

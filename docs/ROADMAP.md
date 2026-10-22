@@ -144,7 +144,7 @@ The executable has a loopback-only transport echo mode.
 It does not implement RESP2 or Redis database commands.
 
 Phase 1 networking acceptance: COMPLETE.
-Phases 2A-2E COMPLETE; Phase 2F NEXT, NOT STARTED; Phase 2G NOT STARTED.
+Phases 2A-2F implemented and post-merge validated; Phase 2G NEXT, NOT STARTED.
 
 ### Acceptance Gate
 
@@ -160,7 +160,7 @@ simultaneous connections without resource leaks.
 - [x] 2C — Incremental parser
 - [x] 2D — Fragmented request handling
 - [x] 2E — Pipelining
-- [ ] 2F — Malformed-input and resource-limit handling
+- [x] 2F — Malformed-input and resource-limit handling
 - [ ] 2G — Parser fuzz-test foundation
 
 ### Phase 2A Detailed Progress
@@ -450,10 +450,45 @@ Final PR-head Linux CI #39625859355: SUCCESS.
 Post-merge Linux CI #39627679647: SUCCESS.
 
 Phase 2E is formally COMPLETE with 2E.5 accepted.
-Phase 2F is NEXT, NOT STARTED.
+Phase 2F implementation and post-merge acceptance are COMPLETE;
+the detailed Phase 2F record follows. Phase 2G is NEXT, NOT STARTED.
 The production executable still runs only transport echo;
 no Redis command-serving endpoint or data keyspace exists.
-Phase 2F and 2G remain NOT STARTED.
+
+### Phase 2F Detailed Progress — IMPLEMENTATION AND POST-MERGE COMPLETE
+
+Baseline/main: `55055ea8175898088452249a4ed0c7e9cefc999d`.
+Feature branch: `phase2f/resp2-malformed-limits`.
+
+- 2F.1: COMPLETE — Early-invalid bulk terminator rejection and
+  canonical bulk/array length spellings (commits `9781a7a`,
+  `4dcab5f`); existing RESP integer grammar preserved.
+- 2F.2: COMPLETE — Parser frame-budget/input-buffer compatibility
+  checks, guarded before input consumption (`d555b47`).
+- 2F.3: COMPLETE — Native TCP malformed-peer/client-isolation
+  integration tests (`b86ee47`), including fragmented binary
+  healthy traffic and valid-then-invalid batches.
+- 2F.4: COMPLETE — Local audit and PR #9 validation;
+  PR-head Linux CI #39735651885 SUCCESS in Debug and Release.
+- 2F.5A: COMPLETE — PR #9 merged on 2026-10-22 with a true
+  two-parent merge commit `ce65649db98faea9ee4f9d9d8c24c4cbf5e6d6e4`.
+- 2F.5B: COMPLETE — Post-merge Linux CI #39737223938 SUCCESS;
+  clean local main synchronized, macOS Debug/Release validated.
+- 2F.5C: CURRENT — Formal five-document closure synchronization;
+  a documentation-only commit, push and post-closure Linux CI
+  are required before starting 2G.
+
+Total PR scope: seven files, 280 additions and one deletion.
+macOS Debug and Release post-merge: 18/18 CTests each;
+seven protocol CTest targets x20 each (140 executions)
+and native kqueue x10 per configuration.
+Linux CI passed full Debug/Release, repeated pipeline,
+TCP smoke, connection lifecycle and native epoll gates.
+
+Only the RESP2 library/test pipeline is hardened. The executable
+remains transport-smoke-only; Redis commands, storage,
+persistence and a production RESP2 endpoint are not implemented.
+Phase 2G — parser fuzz-test foundation: NEXT, NOT STARTED.
 
 ### Acceptance Gate
 

@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2E are COMPLETE and validated on macOS/Linux. Phase 2F malformed-input/resource-limit hardening is NEXT, NOT STARTED; Phase 2G parser fuzzing is NOT STARTED.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2F implementation, merge and post-merge acceptance are COMPLETE on macOS/Linux. Phase 2F documentation closure is the current checkpoint; Phase 2G parser fuzzing is NEXT, NOT STARTED.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -75,6 +75,9 @@ Implemented and validated:
 - Deferred scheduling, output-pressure recovery and EOF handling.
 - Scheduler hardening for progress, input saturation and stale tokens.
 - Native macOS kqueue and Linux epoll RESP2 pipeline integration tests.
+- Early rejection of malformed RESP2 bulk terminators and noncanonical length spellings.
+- Parser frame-budget compatibility checks against Connection input capacity.
+- Native TCP malformed-peer isolation and binary-fragmentation regressions.
 - Linux Debug/Release pipeline repetition gates in GitHub Actions.
 - Formatting and compiler-warning configuration.
 
@@ -575,8 +578,35 @@ Phase 2E.4 controlled merge and post-merge acceptance: COMPLETE.
 Post-merge Linux CI #39627679647: SUCCESS in Debug and Release.
 Phase 2E.5 closure checkpoint 3315a3b was committed on main.
 Post-closure Linux Debug/Release CI #39629733366: SUCCESS.
-Phase 2E is formally complete; Phase 2F is NEXT, NOT STARTED.
-Phase 2F hardening and Phase 2G fuzzing remain NOT STARTED.
+Phase 2E is formally complete.
+
+Phase 2F — RESP2 malformed-input/resource-limit hardening:
+implementation and post-merge validation COMPLETE (2026-10-22).
+
+The parser rejects a visible incorrect bulk terminator without
+waiting for another byte. Bulk/array lengths require canonical
+decimal spelling; signed RESP integer values retain their own
+numeric grammar. Framing rejects a parser frame budget larger
+than a connection's input capacity before consuming data.
+
+Native TCP integration tests exercise early malformed terminators,
+noncanonical lengths, valid-then-invalid batches, and isolation
+of healthy peers with fragmented binary payloads.
+
+Feature branch: `phase2f/resp2-malformed-limits`.
+Implementation/test commits: `9781a7a`, `4dcab5f`, `d555b47`,
+`b86ee47`. PR #9 MERGED on 2026-10-22 using a true merge commit:
+`ce65649db98faea9ee4f9d9d8c24c4cbf5e6d6e4`.
+
+macOS Debug/Release after merge: 18/18 tests each, 140/140
+protocol repetitions and 10/10 kqueue repetitions per build.
+PR-head Linux CI #39735651885: SUCCESS (Debug/Release).
+Post-merge main Linux CI #39737223938: SUCCESS (Debug/Release).
+
+Phase 2F.5C documentation synchronization is the current closure
+checkpoint. Phase 2G parser fuzz testing is NEXT, NOT STARTED;
+do not begin until documentation changes are committed, pushed,
+and validated by post-closure Linux CI.
 
 The executable still serves only raw TCP transport echo data;
 it does not parse RESP2 on its serving path or execute Redis commands.
