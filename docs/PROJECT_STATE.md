@@ -3,11 +3,11 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-22
-- Current phase: Phase 2 — RESP2 Protocol Engine (IN PROGRESS)
-- Current subphase: 2G.5A — formal closure documentation draft (IN PROGRESS)
-- Status: PHASE 1 COMPLETE; PHASE 2A-2F COMPLETE; PHASE 2G MERGED AND POST-MERGE ACCEPTED; FINAL DOCUMENTATION / CI PENDING
-- Last completed milestone: 2G.4B — PR #10 merged as 36ec43d, post-merge Linux CI #39770284668 SUCCESS, local macOS Debug/Release 18/18 and UBSan 50-seed PASS
-- Exact next task: Prepare and validate 2G.5A closure documents; commit/push 2G.5B, verify closure CI, and formally record Phase 2 COMPLETE before Phase 3A.
+- Current phase: Phase 3 — Command Framework (NEXT; NOT STARTED); Phase 2 COMPLETE
+- Current subphase: 3A — Command representation (NEXT; NOT STARTED)
+- Status: PHASES 0, 1 AND 2 COMPLETE; 2G.5B CLOSURE CI SUCCESS; FINAL 2G.5C STATUS-COMMIT CI PENDING
+- Last completed milestone: 2G.5B — closure-documentation commit 09f1fc77; Linux Debug/Release CI #39772960967 SUCCESS
+- Exact next task: Verify Linux Debug/Release CI at the new Phase 2G.5C final-status commit; only then audit clean main and begin Phase 3A on a new branch.
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (2G.4B post-merge accepted; formal closure pending).
+- Current development branch: main (Phase 2 complete; 2G.5C status-commit CI verification pending).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -1012,7 +1012,7 @@ was pushed, and exact-head Linux Debug/Release CI
 #39739519389 completed successfully. Phase 2F is formally
 COMPLETE. Phase 2G fuzz-test foundation is NEXT, NOT STARTED.
 
-### Phase 2G — 2026-10-22 (MERGED / POST-MERGE ACCEPTED)
+### Phase 2G — 2026-10-22 (COMPLETE — FINAL STATUS RECORDED)
 
 Initial baseline: `3406b14babd60406b226d109be82d10e36a8e8b0`.
 Feature branch: `phase2g/resp2-parser-fuzz-foundation`.
@@ -1044,8 +1044,15 @@ Production `redisdb-server` remains transport-only TCP echo;
 Redis commands, database storage, persistence and a production
 RESP2 serving path are NOT IMPLEMENTED.
 
-Phase 2G.5 formal documentation commit and its exact-head
-Linux CI are still pending. Phase 3A has NOT STARTED.
+Phase 2G.5A closure documentation was locally validated.
+Phase 2G.5B documentation commit
+`09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` was pushed
+on main; its Linux Debug/Release CI #39772960967 passed
+18/18 CTests in each configuration and all existing repeat gates.
+Phase 2G and the entire Phase 2 RESP2 Protocol Engine are
+formally recorded as COMPLETE. The exact Phase 2G.5C final-status
+commit still requires its own successful main Linux CI before
+beginning Phase 3A. Phase 3A has NOT STARTED.
 
 ## 11. Benchmarks
 
@@ -1147,32 +1154,35 @@ recovery testing has been completed.
 
 ## 16. Exact Next Steps
 
-Phases 0-1 and 2A-2F: COMPLETE and formally closed.
-Phase 2G implementation, PR #10 merge and post-merge
-macOS/Linux acceptance: COMPLETE and verified.
-Formal Phase 2G/Phase 2 documentation closure remains in progress.
-
-GitHub main and local main both at exact PR #10 merge
+Phases 0, 1 and 2: COMPLETE. Phase 2G parser fuzz-test
+foundation was merged through PR #10 as
 `36ec43d8ce247d50c81bf90d60641d4db9b802b8`.
-Post-merge Linux main CI #39770284668: SUCCESS in Debug/Release.
-PR-head Linux fuzz CI #39767524405: SUCCESS with ASan+UBSan,
-19/19 CTests, 50 verified seeds and 10,000 fuzz executions.
-Post-merge local macOS Debug/Release: 18/18 CTests each;
-50-seed UBSan replay PASS; clean worktree.
+Post-merge Linux main CI #39770284668: SUCCESS.
+PR-head Clang 18 ASan+UBSan fuzz CI #39767524405: SUCCESS,
+19/19 CTests, 50 manifest-verified seeds, 10,000 libFuzzer runs.
+Local macOS Debug/Release: 18/18 tests per build;
+50-seed UBSan replay PASS. Apple Clang local ASan startup issue
+remains isolated; Linux ASan+UBSan was validated.
+
+Formal closure documentation commit:
+`09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` on main.
+Exact-head Linux Debug/Release CI #39772960967: SUCCESS,
+18/18 CTests each plus pipeline, TCP, lifecycle and epoll repeats.
+This Phase 2G.5C commit records final status as COMPLETE;
+CI on the NEW status-commit SHA is still a mandatory verification.
 
 Next controlled checkpoints:
 
-1. Validate the five Phase 2G.5A closure-documentation changes
-   without editing any production or test implementation.
-2. Commit/push the documentation as a separate 2G.5B checkpoint;
-   require exact new-head Linux CI before accepting closure.
-3. Record final formal Phase 2G and Phase 2 COMPLETE status only
-   after documentation CI has passed; verify its status commit CI.
-4. Begin Phase 3A — command representation — in a new feature
-   branch after a clean, synchronized main and closure acceptance.
+1. Verify main Linux Debug/Release GitHub Actions CI at the
+   exact new Phase 2G.5C final-status commit; require both jobs,
+   all standard steps and 18/18 test discovery/execution each.
+2. Verify clean local main equals origin/main and the verified
+   final-status commit; retain the Phase 2G feature branch.
+3. Begin Phase 3A — Command representation — on a new branch,
+   after inspecting the Phase 3 command-framework architecture.
 
-No Redis command-serving endpoint, database storage or
-persistence has been implemented yet.
+No production Redis-compatible command endpoint, keyspace,
+persistence or public deployment exists yet. Never claim otherwise.
 
 ## 17. Continuation Instructions
 

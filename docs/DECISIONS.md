@@ -743,8 +743,7 @@ before the corresponding acceptance gate passes.
 
 # Phase 2G Fuzzing Implementation Decisions (2026-10-22)
 
-**Status: implementation merged and post-merge accepted;
-formal documentation closure and exact-head CI pending.**
+**Status: Phase 2G implemented, merged, post-merge validated and formally recorded COMPLETE.**
 
 - Fuzz the actual bounded production RESP2 parser and value model,
   not a mock, through a shared deterministic invariant checker.
@@ -782,7 +781,12 @@ matches the previously fuzz-tested final PR head.
 Post-merge macOS Debug/Release and 50-seed UBSan PASS.
 No production semantic, Redis command, storage or networking
 changes are authorized by this test-only decision.
-Formal Phase 2G closure-status CI is still pending.
+Closure-documentation commit
+`09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` passed
+main Linux Debug/Release CI #39772960967 (18/18 each,
+existing repetition gates). Phase 2G / Phase 2 COMPLETE status
+has now been recorded; exact final-status commit CI remains the
+last verification gate before beginning Phase 3A.
 
 # Decision Maintenance
 

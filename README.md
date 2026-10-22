@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine post-merge accepted, formal documentation closure pending. Phases 2A-2F formally COMPLETE; Phase 2G fuzz foundation merged via PR #10, Linux/macOS acceptance PASS. No Redis command-serving endpoint yet.**
+**Project status: Phases 0–2 COMPLETE, including the RESP2 protocol engine and bounded parser fuzz-test foundation (PR #10). Phase 3 Command Framework NEXT, NOT STARTED. The executable remains transport-only TCP echo; it is not yet a Redis database server.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -607,9 +607,9 @@ Phase 2F.5C closure documentation commit
 `b54ab7d56997c71fee20eb0281175a9725e9dae7` was pushed to main.
 Post-closure Linux Debug/Release CI #39739519389: SUCCESS
 on that exact commit, including full and repeated network test gates.
-Phase 2F is formally COMPLETE. Phase 2G parser fuzz testing
-was merged through PR #10; post-merge tests passed.
-Formal closure documentation and its CI are pending.
+Phase 2F and Phase 2G are formally COMPLETE. Phase 2G
+closure documentation CI #39772960967 passed on main.
+Final Phase 2G.5C status-commit CI requires verification.
 
 The executable still serves only raw TCP transport echo data;
 it does not parse RESP2 on its serving path or execute Redis commands.
@@ -617,7 +617,7 @@ it does not parse RESP2 on its serving path or execute Redis commands.
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
 
-## Phase 2G — RESP2 Parser Fuzz Testing (Post-Merge Accepted)
+## Phase 2G — RESP2 Parser Fuzz Testing (Complete)
 
 The actual RESP2 parser is exercised by a shared, bounded
 invariant harness. An opt-in CMake build provides a deterministic
@@ -649,7 +649,12 @@ Post-merge main Linux Debug/Release CI
 [#39770284668](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39770284668)
 passed 18/18 CTests per configuration and all repeat gates.
 Post-merge local macOS Debug and Release passed 18/18 each;
-50-seed UBSan replay also passed. Formal closure CI is pending.
+50-seed UBSan replay also passed. Documentation closure commit
+`09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` passed
+[Linux Debug/Release CI #39772960967](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39772960967)
+on exact main HEAD (18/18 CTests each plus repeat gates).
+Phase 2G and Phase 2 are recorded COMPLETE. Final status-commit
+CI must be verified independently before starting Phase 3A.
 The production executable is still transport-only TCP echo.
 
 ## License

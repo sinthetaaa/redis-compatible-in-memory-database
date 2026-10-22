@@ -153,7 +153,7 @@ simultaneous connections without resource leaks.
 
 # Phase 2 — RESP2 Protocol Engine
 
-**Status:** IN PROGRESS (formal Phase 2G closure CI pending)
+**Status:** COMPLETE
 
 - [x] 2A — RESP value model
 - [x] 2B — Response serializer
@@ -161,7 +161,7 @@ simultaneous connections without resource leaks.
 - [x] 2D — Fragmented request handling
 - [x] 2E — Pipelining
 - [x] 2F — Malformed-input and resource-limit handling
-- [ ] 2G — Parser fuzz-test foundation (implementation and post-merge PASS; formal closure pending)
+- [x] 2G — Parser fuzz-test foundation
 
 ### Phase 2A Detailed Progress
 
@@ -489,10 +489,12 @@ TCP smoke, connection lifecycle and native epoll gates.
 Only the RESP2 library/test pipeline is hardened. The executable
 remains transport-smoke-only; Redis commands, storage,
 persistence and a production RESP2 endpoint are not implemented.
-Phase 2G — parser fuzz-test foundation: MERGED and POST-MERGE ACCEPTED.
-The final closure documentation commit and its Linux CI remain pending.
+Phase 2G — parser fuzz-test foundation: COMPLETE.
+PR #10 merged and post-merge validated. Closure-documentation
+commit `09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` passed
+Linux Debug and Release CI #39772960967 on exact main HEAD.
 
-### Phase 2G Detailed Progress — POST-MERGE ACCEPTED, FORMAL CLOSURE PENDING
+### Phase 2G Detailed Progress — COMPLETE
 
 - 2G.0A-0C: COMPLETE — toolchain audit, dedicated feature branch,
   and parser fuzzing architecture/design.
@@ -518,10 +520,15 @@ The final closure documentation commit and its Linux CI remain pending.
   SUCCESS (Debug/Release 18/18 each, all repeat gates).
   Local main fast-forwarded; macOS Debug/Release each 18/18,
   50-seed UBSan corpus smoke PASS; clean, synchronized main.
-- 2G.5A: IN PROGRESS — guarded formal closure documentation draft.
-- 2G.5B-5C: PENDING — commit/push closure documentation,
-  verify exact post-closure Linux CI, then record final
-  Phase 2G and Phase 2 COMPLETE status.
+- 2G.5A: COMPLETE — five-document closure draft, verified on
+  merged main; macOS Debug/Release 18/18 and 50-seed UBSan PASS.
+- 2G.5B: COMPLETE — closure-documentation commit
+  `09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b` on main;
+  GitHub Actions #39772960967 SUCCESS (Debug/Release 18/18
+  each and existing protocol/network repetition gates).
+- 2G.5C: FINAL STATUS RECORDED — mark Phase 2G and Phase 2
+  COMPLETE; verify Linux Debug/Release at this final-status
+  commit as the last closure acceptance gate.
 
 All 2G targets are opt-in; default Debug and Release builds
 remain unchanged at 18 CTests each. On this Mac, ASan hangs

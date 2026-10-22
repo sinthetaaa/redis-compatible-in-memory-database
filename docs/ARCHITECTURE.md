@@ -1521,7 +1521,7 @@ only when working code and verification support it.
 
 # 21. Phase 2G Parser Fuzzing Validation Architecture
 
-**Implementation status: merged via PR #10; post-merge accepted; formal closure CI pending.**
+**Implementation status: Phase 2G COMPLETE; PR #10 merged and closure-documentation CI passed.**
 Feature commits: `ee87032d1ea590f32f8feb3567553ebb9170cd16`
 and `b7edd7540ec3d46008ee7878fb55063c26334e9f`.
 
@@ -1558,5 +1558,9 @@ Final PR-head Linux fuzz workflow #39767524405 succeeded:
 Linux main post-merge Debug/Release CI #39770284668 succeeded
 with 18/18 tests per build and repeated regression gates.
 Post-merge macOS Debug/Release and UBSan seed smoke passed.
-Formal Phase 2G closure documentation and exact-head
-CI remain pending; no production serving features were added.
+Formal 2G.5B closure-documentation commit
+`09f1fc77f14dfd3b4f12dfb17148b60bbfe0a94b`
+passed Linux main CI #39772960967 (Debug/Release 18/18).
+Phase 2G and the Phase 2 RESP2 engine are recorded COMPLETE;
+verify exact 2G.5C final-status commit CI before Phase 3A.
+No production serving features were added.
