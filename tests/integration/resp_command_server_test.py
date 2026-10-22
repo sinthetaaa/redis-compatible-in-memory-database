@@ -126,9 +126,29 @@ def test_quit(port):
 def test_errors_isolation(port):
     with connect(port) as conn:
         conn.sendall(command(b"NO_SUCH_COMMAND"))
-        expected = b"-ERR unknown command\r\n"
+        expected = b"-ERR unknown command 'NO_SUCH_COMMAND'\r\n"
         check(recv_exact(conn, len(expected)) == expected,
               "unknown-command placeholder lost")
+        # Send an actual LF byte, not the two characters '\' and 'n'.
+        conn.sendall(command(b"BAD" + bytes([10]) + b"VERB"))
+
+        # The server must escape LF as the four printable bytes \x0A.
+        expected = (
+            b"-ERR unknown command 'BAD"
+            + bytes([92, 120, 48, 65])
+            + b"VERB'\r\n"
+        )
+        check(
+            recv_exact(conn, len(expected)) == expected,
+            "unknown-command error frame injection",
+        )
+
+        conn.sendall(command(b"PING"))
+        check(
+            recv_exact(conn, 7) == b"+PONG\r\n",
+            "unknown command affected subsequent request",
+        )
+
         conn.sendall(b"*1\r\n:7\r\n")
         expected = b"-ERR expected RESP2 array of bulk strings\r\n"
         check(recv_exact(conn, len(expected)) == expected,
