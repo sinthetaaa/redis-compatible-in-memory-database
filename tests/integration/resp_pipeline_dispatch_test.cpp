@@ -311,6 +311,101 @@ void test_malformed_client_isolation() {
           "healthy peer failed after malformed client");
 }
 
+// Phase 2F.3B: exercise hardened RESP2 parsing through native TCP dispatch,
+// not only through the isolated parser unit tests.
+void test_early_bulk_terminator_peer_isolation_2f() {
+    // A binary bulk echo is nine wire bytes; reserve more than the default eight.
+    Fixture fixture({}, pipeline_limits(2, 16));
+
+    auto bad = connect_loopback(fixture.manager.listener_port());
+    auto healthy = connect_loopback(fixture.manager.listener_port());
+    fixture.accept_clients(2);
+
+    // A healthy peer has a legitimate incomplete binary bulk frame.
+    send_all(healthy.get(), "$3\r\nA");
+    for (int attempt = 0; attempt < 30 && fixture.need_more_count == 0; ++attempt) {
+        (void)fixture.manager.poll_once(10ms);
+    }
+    check(fixture.need_more_count > 0 && fixture.processed == 0,
+          "healthy fragmented binary frame was processed prematurely");
+
+    // This frame must be invalid as soon as X appears, without waiting for LF.
+    send_all(bad.get(), "$3\r\nabcX");
+    for (int attempt = 0; attempt < 30 && fixture.manager.connection_count() != 1; ++attempt) {
+        (void)fixture.manager.poll_once(10ms);
+    }
+    check(fixture.manager.connection_count() == 1, "early-invalid bulk client was not isolated");
+    check(fixture.processed == 0, "malformed bulk executed a reply callback");
+
+    const std::string tail("\0B\r\n", 4);
+    send_all(healthy.get(), tail);
+    const std::string expected = std::string("$3\r\nA") + tail;
+    check(fixture.collect(healthy.get(), expected.size()) == expected,
+          "healthy binary frame was corrupted by malformed peer");
+    check(fixture.processed == 1 && fixture.manager.connection_count() == 1,
+          "healthy binary frame not processed exactly once");
+
+    send_all(healthy.get(), ":9\r\n");
+    check(fixture.collect(healthy.get(), 4) == ":9\r\n" && fixture.processed == 2,
+          "healthy peer could not process subsequent request");
+}
+
+void test_noncanonical_lengths_peer_isolation_2f() {
+    constexpr std::string_view invalid_frames[] = {"$-01\r\n", "*-01\r\n",     "$-0\r\n",
+                                                   "*00\r\n",  "$01\r\nx\r\n", "*01\r\n:1\r\n"};
+
+    for (std::string_view invalid : invalid_frames) {
+        Fixture fixture;
+        auto bad = connect_loopback(fixture.manager.listener_port());
+        auto healthy = connect_loopback(fixture.manager.listener_port());
+        fixture.accept_clients(2);
+
+        send_all(bad.get(), invalid);
+        for (int attempt = 0; attempt < 30 && fixture.manager.connection_count() != 1; ++attempt) {
+            (void)fixture.manager.poll_once(10ms);
+        }
+        check(fixture.manager.connection_count() == 1,
+              "noncanonical length client was not isolated");
+        check(fixture.processed == 0, "noncanonical length executed a callback");
+
+        send_all(healthy.get(), ":7\r\n");
+        check(fixture.collect(healthy.get(), 4) == ":7\r\n",
+              "healthy peer affected by a noncanonical length");
+        check(fixture.processed == 1 && fixture.manager.connection_count() == 1,
+              "healthy peer not processed once after invalid length");
+    }
+}
+
+void test_valid_prefix_then_invalid_client_isolation_2f() {
+    Fixture fixture;
+    auto bad = connect_loopback(fixture.manager.listener_port());
+    auto healthy = connect_loopback(fixture.manager.listener_port());
+    fixture.accept_clients(2);
+
+    // One valid command-like frame precedes an invalid frame in the same batch.
+    // The fail-fast close policy does NOT guarantee delivery of the first reply:
+    // it may still be queued when the bad connection is closed. Do not assert it.
+    send_all(bad.get(), ":1\r\n$3\r\nabcX");
+    for (int attempt = 0; attempt < 30 && fixture.manager.connection_count() != 1; ++attempt) {
+        (void)fixture.manager.poll_once(10ms);
+    }
+    check(fixture.manager.connection_count() == 1,
+          "valid-prefix/malformed-suffix client was not closed");
+    check(fixture.processed == 1, "valid prefix must run once; malformed suffix must never run");
+
+    // Poll again to ensure a stale/deferred bad-client token cannot replay work.
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        (void)fixture.manager.poll_once(0ms);
+    }
+    check(fixture.processed == 1, "closed malformed client replayed a prefix request");
+
+    send_all(healthy.get(), ":8\r\n");
+    check(fixture.collect(healthy.get(), 4) == ":8\r\n",
+          "healthy peer could not reply after malformed pipeline");
+    check(fixture.processed == 2 && fixture.manager.connection_count() == 1,
+          "malformed batch contaminated another client");
+}
+
 } // namespace
 
 int main() {
@@ -320,6 +415,9 @@ int main() {
         test_fragmented_pipeline();
         test_half_close_with_deferred_frames();
         test_malformed_client_isolation();
+        test_early_bulk_terminator_peer_isolation_2f();
+        test_noncanonical_lengths_peer_isolation_2f();
+        test_valid_prefix_then_invalid_client_isolation_2f();
 
         std::cout << "Native TCP pipeline dispatch tests passed.\n";
 

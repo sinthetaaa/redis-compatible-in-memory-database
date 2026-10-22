@@ -100,6 +100,27 @@ bool parse_signed(std::string_view text, bool permit_plus, std::int64_t& output)
     return (result.ec == std::errc{} && result.ptr == last);
 }
 
+// RESP2 bulk/array lengths must use canonical decimal spelling:
+// exactly -1 for null, 0 for zero, or an unsigned nonzero decimal.
+// RESP integer values have separate signed-number semantics.
+bool canonical_length_spelling(std::string_view text) {
+    if (text == "-1" || text == "0") {
+        return true;
+    }
+
+    if (text.empty() || text.front() < '1' || text.front() > '9') {
+        return false;
+    }
+
+    for (char digit : text) {
+        if (digit < '0' || digit > '9') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 } // namespace
 
 RespParser::RespParser() : RespParser(Limits{}) {}
@@ -150,6 +171,10 @@ ParseResult RespParser::parse_value(std::string_view input, std::size_t cursor,
         return complete(RespValue::error(std::string(line.text)), cursor);
     }
 
+    if (kind != ':' && !canonical_length_spelling(line.text)) {
+        return invalid("Noncanonical RESP2 bulk or array length");
+    }
+
     std::int64_t number = 0;
 
     if (!parse_signed(line.text, kind == ':', number)) {
@@ -187,11 +212,17 @@ ParseResult RespParser::parse_value(std::string_view input, std::size_t cursor,
 
         const std::size_t available = input.size() - cursor;
 
+        // A visible first terminator byte must already be CR,
+        // even when the following LF has not arrived yet.
+        if (available > length && input[cursor + length] != '\r') {
+            return invalid("Invalid RESP2 bulk terminator");
+        }
+
         if (available < length + 2) {
             return need_more();
         }
 
-        if (input[cursor + length] != '\r' || input[cursor + length + 1] != '\n') {
+        if (input[cursor + length + 1] != '\n') {
             return invalid("Invalid RESP2 bulk terminator");
         }
 

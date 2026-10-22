@@ -17,6 +17,10 @@ RespFramedInput::RespFramedInput()
 RespFramedInput::RespFramedInput(RespParser::Limits limits) : parser_(limits) {}
 
 ParseResult RespFramedInput::peek(const net::Connection& connection) const {
+    if (parser_.max_frame_bytes() > connection.max_input_bytes()) {
+        throw std::invalid_argument("RESP2 frame budget exceeds connection input capacity");
+    }
+
     return parser_.parse(connection.input());
 }
 

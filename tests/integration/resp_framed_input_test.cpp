@@ -319,6 +319,46 @@ void test_independent_client_buffers() {
     check(first.connection.input().empty(), "first client final frame remained");
 }
 
+void test_reject_incompatible_input_frame_budget_2f() {
+    // A parser that permits a larger frame than a Connection can
+    // buffer must fail fast, rather than allowing a request which
+    // cannot fit and would eventually exhaust the input buffer.
+    Fixture incompatible(Connection::Limits{8, 64});
+    const RespFramedInput too_large(RespParser::Limits{9, 9, 8, 4, 8});
+
+    incompatible.send_bytes(":7\r\n");
+    incompatible.receive_bytes(4);
+
+    bool peek_rejected = false;
+    try {
+        (void)too_large.peek(incompatible.connection);
+    } catch (const std::invalid_argument&) {
+        peek_rejected = true;
+    }
+    check(peek_rejected, "Phase 2F: incompatible parser frame cap must throw");
+
+    bool poll_rejected = false;
+    try {
+        (void)too_large.poll(incompatible.connection);
+    } catch (const std::invalid_argument&) {
+        poll_rejected = true;
+    }
+    check(poll_rejected, "Phase 2F: incompatible parser frame cap must throw");
+
+    check(incompatible.connection.input() == ":7\r\n",
+          "incompatible configuration consumed incoming bytes");
+    check(incompatible.connection.is_open(), "framing adapter closed an incompatible connection");
+
+    // Exact equality and a smaller parser budget remain legal.
+    Fixture exact(Connection::Limits{8, 64});
+    const RespFramedInput exact_reader(RespParser::Limits{8, 8, 8, 4, 8});
+    expect_complete(exact.deliver(exact_reader, ":7\r\n"), RespValue::integer(7), 4);
+
+    Fixture smaller(Connection::Limits{16, 64});
+    const RespFramedInput smaller_reader(RespParser::Limits{8, 8, 8, 4, 8});
+    expect_complete(smaller.deliver(smaller_reader, ":8\r\n"), RespValue::integer(8), 4);
+}
+
 } // namespace
 
 int main() {
@@ -333,6 +373,7 @@ int main() {
         test_exact_buffer_limit();
         test_declared_length_above_limit();
         test_independent_client_buffers();
+        test_reject_incompatible_input_frame_budget_2f();
 
         std::cout << "RESP2 framed input tests passed.\n";
 

@@ -49,6 +49,8 @@ class RespParser {
 
     [[nodiscard]] ParseResult parse(std::string_view input) const;
 
+    [[nodiscard]] std::size_t max_frame_bytes() const noexcept { return limits_.max_frame_bytes; }
+
   private:
     [[nodiscard]] ParseResult parse_value(std::string_view input, std::size_t cursor,
                                           std::size_t depth) const;
