@@ -2,6 +2,7 @@
 
 #include "redisdb/commands/Command.hpp"
 #include "redisdb/commands/CommandDispatcher.hpp"
+#include "redisdb/commands/CommandErrors.hpp"
 #include "redisdb/commands/ConnectivityCommands.hpp"
 #include "redisdb/net/Connection.hpp"
 #include "redisdb/net/ConnectionManager.hpp"
@@ -69,8 +70,10 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
 
             auto dispatched = dispatcher.dispatch(*decoded.command);
             if (!dispatched.handled) {
-                // Detailed unknown-command diagnostics are deferred to Phase 3F.
-                return protocol::RespValue::error("ERR unknown command");
+                if (dispatched.error != commands::DispatchError::UnknownCommand) {
+                    throw std::logic_error("unexpected dispatcher outcome");
+                }
+                return commands::unknown_command_reply(*decoded.command);
             }
 
             if (dispatched.handled->disposition ==
