@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A COMPLETE; Phase 4B SET/GET implementation pending feature Linux CI. Supports loopback RESP2 PING/ECHO/QUIT and in-memory SET/GET; persistence and TTL are not implemented.**
+**Project status: Phases 0–3 and 4A–4B COMPLETE; Phase 4C DEL/EXISTS/TYPE implemented on feature branch pending Linux CI. RESP2 TCP serves a shared in-memory string database; TTL and persistence are not implemented.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -757,7 +757,7 @@ non-allocating heterogeneous lookup and deterministic model tests.
 It is not yet wired into command serving. TTL, eviction, AOF and
 snapshot behavior remain future milestones.
 
-## Phase 4B — SET/GET RESP2 Integration (feature implementation)
+## Phase 4B — SET/GET RESP2 Integration (COMPLETE)
 
 SET key value returns +OK and overwrites the process-local keyspace;
 GET key returns a binary-safe bulk string or RESP2 nil bulk. Commands
@@ -772,6 +772,22 @@ mutating data. This is an intentional Redis compatibility limitation
 pending a later, separately validated reply-budget redesign. SET options
 such as NX/XX/EX/PX are not supported by Phase 4B. No persistence,
 TTL, eviction or collection types are included.
+
+## Phase 4C — DEL / EXISTS / TYPE (feature implementation)
+
+- `DEL key [key ...]` returns an integer count of removed keys;
+  repeated key names count at most once because subsequent removals
+  find no entry.
+- `EXISTS key [key ...]` returns an integer count of present key
+  arguments; repeated existing names count repeatedly, matching Redis.
+- `TYPE key` returns `+string` or `+none` in this string-only phase.
+  Collection types will require a typed lookup in Phase 6.
+
+All three accept binary-safe and empty keys and operate on the same
+process-local keyspace as SET/GET. Command verbs are case-insensitive,
+keys are case-sensitive, and invalid argument counts produce RESP2 ERR
+without mutating storage. This phase adds no TTL, eviction, AOF,
+snapshots or new Redis SET options.
 
 ## License
 
