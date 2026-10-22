@@ -504,3 +504,9 @@ if(BUILD_TESTING)
         )
     endif()
 endif()
+
+# Phase 2G: opt-in isolated fuzz/sanitizer targets. Normal builds are unchanged.
+option(REDISDB_ENABLE_FUZZ_TARGETS "Build standalone fuzz targets" OFF)
+if(REDISDB_ENABLE_FUZZ_TARGETS)
+    include(cmake/FuzzTargets.cmake)
+endif()

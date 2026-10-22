@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-22
 - Current phase: Phase 2 — RESP2 Protocol Engine (IN PROGRESS)
-- Current subphase: 2G — Parser fuzz-test foundation (NEXT; NOT STARTED)
-- Status: PHASE 1 COMPLETE; PHASE 2A-2F COMPLETE; PHASE 2G NOT STARTED
-- Last completed milestone: 2F.5C — formal documentation commit b54ab7d; post-closure Linux Debug/Release CI #39739519389 SUCCESS
-- Exact next task: Complete the final Phase 2F closure-status update and its Linux CI gate; then establish a clean Phase 2G baseline, dedicated branch and fuzzing-toolchain audit.
+- Current subphase: 2G.3A — feature-branch documentation synchronization (IN PROGRESS)
+- Status: PHASE 1 COMPLETE; PHASE 2A-2F COMPLETE; PHASE 2G LINUX FUZZ CI PASSED; PR MERGE / POST-MERGE CLOSURE PENDING
+- Last completed milestone: 2G.2D — Linux Clang 18 ASan+UBSan + libFuzzer CI #39754741830 SUCCESS on b7edd754
+- Exact next task: Review and commit Phase 2G.3A documentation, verify feature branch PR-head CI, open and review Phase 2G PR; merge only after passing gates.
 - Implementation maturity: Networking and transport-only smoke server; RESP2 model/parser/serializer, framing and bounded ordered pipeline plus resumable event-loop scheduling validated in tests; no production RESP2 command endpoint
 - Working TCP database: NOT IMPLEMENTED
 
@@ -29,7 +29,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: main (Phase 2F formally closed; Phase 2G next)
+- Branch: phase2g/resp2-parser-fuzz-foundation (Phase 2G.2D CI accepted; merge pending)
 - Phase 2D starting baseline: 2515f7f1d10067113865f1d4e0ced9ce5d92c180
 - Phase 2C starting baseline: 1e7c726969cc437fdecfc0532785de84c24bd4be
 - Phase 2B starting baseline: b16dd382e213ae541a91d4f298f288fa80b68aa7
@@ -71,7 +71,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (Phase 2F formally closed; Phase 2G next).
+- Current development branch: phase2g/resp2-parser-fuzz-foundation (Linux CI accepted; PR pending).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -1113,30 +1113,42 @@ recovery testing has been completed.
 ## 16. Exact Next Steps
 
 Phases 0-1 and 2A-2F: COMPLETE and formally closed.
-PR #9 MERGED on 2026-10-22 as
-ce65649db98faea9ee4f9d9d8c24c4cbf5e6d6e4.
-Post-merge Linux Debug/Release CI #39737223938: SUCCESS;
-macOS Debug/Release 18/18 CTests each, 140 protocol
-repetitions and 10 kqueue repetitions per configuration.
-Phase 2F docs closure commit:
-b54ab7d56997c71fee20eb0281175a9725e9dae7.
-Post-closure Linux Debug/Release CI #39739519389: SUCCESS.
+Phase 2G is IN PROGRESS on feature branch
+`phase2g/resp2-parser-fuzz-foundation`, not yet merged.
 
-Phase 2F.5C — Formal documentation closure: COMPLETE.
-Phase 2G — Parser fuzz-test foundation: NEXT, NOT STARTED.
+Foundation commit:
+`ee87032d1ea590f32f8feb3567553ebb9170cd16`.
+Linux target and CI commit:
+`b7edd7540ec3d46008ee7878fb55063c26334e9f`.
 
-Next controlled checkpoint:
+Real Linux Ubuntu 24.04 Clang 18 validation:
+GitHub Actions run #39754741830 SUCCESS at commit `b7edd754`.
+- Opt-in build instruments real parser/model and fuzz harness.
+- Linux ASan + UBSan test discovery: 19 CTests.
+- Linux full CTest suite: 19/19 PASS.
+- Manifest-first deterministic corpus replay: 50 seeds, PASS.
+- Coverage-guided libFuzzer: 10,000 completed invocations,
+  maximum input 4096 bytes; no sanitizer failures reported.
+- macOS UBSan corpus replay: PASS; Debug/Release 18/18 each.
+- Original pinned 50-seed corpus remained immutable.
+- Original macOS ASan startup issue is documented; the
+  verified Linux ASan+UBSan job is the authoritative sanitizer gate.
 
-1. Validate, commit and push this final status-only documentation
-   update on clean main; verify its own Linux CI gate.
-2. Establish the exact clean Phase 2G baseline from synchronized
-   main after final status CI has passed.
-3. Create a dedicated Phase 2G branch without rewriting history.
-4. Audit available fuzzing toolchains on macOS and Linux; choose
-   a reproducible, bounded corpus and sanitizer strategy.
-5. Implement and validate Phase 2G parser fuzz-test foundation.
-6. Preserve the production boundary: the executable only
-   serves raw transport echo and cannot run Redis commands.
+Next controlled checkpoints:
+
+1. Review this five-document Phase 2G.3A update,
+   perform documentation/test checks, commit, and push feature branch.
+2. Verify PR-head Linux regression jobs and fuzz CI at the
+   final documentation commit; do not assume previous SHA gates
+   apply to a new commit.
+3. Open and review a Phase 2G pull request against main.
+4. Merge only after PR-head acceptance and appropriate review.
+5. Verify macOS and Linux post-merge acceptance on exact main SHA.
+6. Record formal Phase 2G / Phase 2 closure status; then start
+   Phase 3A command representation on a separate branch.
+
+The production executable remains transport-only TCP echo.
+No Redis command endpoint, key/value storage or persistence exists.
 
 ## 17. Continuation Instructions
 

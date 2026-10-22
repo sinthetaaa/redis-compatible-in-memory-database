@@ -1518,3 +1518,37 @@ When a design changes:
 
 An architectural idea becomes an implemented feature
 only when working code and verification support it.
+
+# 21. Phase 2G Parser Fuzzing Validation Architecture
+
+**Implementation status: feature-branch CI validated; merge pending.**
+Feature commits: `ee87032d1ea590f32f8feb3567553ebb9170cd16`
+and `b7edd7540ec3d46008ee7878fb55063c26334e9f`.
+
+Opt-in CMake flag `REDISDB_ENABLE_FUZZ_TARGETS=ON` builds
+standalone instrumentation of the real `RespParser` and
+`RespValue` sources together with a shared invariant checker.
+
+On macOS with Apple Clang 17, the deterministic seed runner
+uses UBSan alone because the observed ASan runtime hangs during
+initialization before `main()`. The 50 binary-safe, bounded
+RESP2 corpus files are verified against an external SHA-256
+manifest before any replay.
+
+On Ubuntu 24.04 with Clang 18, a separate
+`LLVMFuzzerTestOneInput` target enables libFuzzer coverage,
+ASan and UBSan on the production parser source. Inputs are
+bounded to 4096 bytes. The seed corpus is copied into a
+separate writable temporary directory for mutations; the
+original SHA-256 corpus remains unchanged.
+
+GitHub Actions run #39754741830 passed all 19 Linux CTests
+and 10,000 libFuzzer executions on feature commit `b7edd754`.
+No sanitizer failures were reported. Existing default Debug
+and Release builds continue to use their normal test suites.
+
+This is a test-only architecture addition. No production
+RESP2 server execution, database commands, storage, wire
+syntax changes or persistence behavior has been introduced.
+Formal Phase 2G completion requires the PR merge and
+post-merge verification on main.

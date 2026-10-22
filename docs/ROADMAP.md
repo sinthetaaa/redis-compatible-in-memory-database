@@ -161,7 +161,7 @@ simultaneous connections without resource leaks.
 - [x] 2D — Fragmented request handling
 - [x] 2E — Pipelining
 - [x] 2F — Malformed-input and resource-limit handling
-- [ ] 2G — Parser fuzz-test foundation
+- [ ] 2G — Parser fuzz-test foundation (IN PROGRESS; CI passed, merge pending)
 
 ### Phase 2A Detailed Progress
 
@@ -489,7 +489,34 @@ TCP smoke, connection lifecycle and native epoll gates.
 Only the RESP2 library/test pipeline is hardened. The executable
 remains transport-smoke-only; Redis commands, storage,
 persistence and a production RESP2 endpoint are not implemented.
-Phase 2G — parser fuzz-test foundation: NEXT, NOT STARTED.
+Phase 2G — parser fuzz-test foundation: IN PROGRESS.
+Linux ASan+UBSan/libFuzzer validation passed; PR merge,
+post-merge CI and formal phase closure remain outstanding.
+
+### Phase 2G Detailed Progress — FEATURE-BRANCH LINUX CI ACCEPTED
+
+- 2G.0A-0C: COMPLETE — toolchain audit, dedicated feature branch,
+  and parser fuzzing architecture/design.
+- 2G.1A-1C: COMPLETE — shared parser invariants, isolated macOS
+  UBSan seed runner, deterministic 50-seed SHA-256 corpus and
+  local foundation commit `ee87032d1ea590f32f8feb3567553ebb9170cd16`.
+- 2G.2A-2C: COMPLETE — real Linux `LLVMFuzzerTestOneInput` target,
+  isolated Ubuntu 24.04 workflow and pushed feature commit
+  `b7edd7540ec3d46008ee7878fb55063c26334e9f`.
+- 2G.2D: COMPLETE — GitHub Actions run #39754741830 SUCCESS
+  on the exact pushed commit; Linux Clang 18 ASan+UBSan
+  instrumentation verified; all 19 CTests passed;
+  deterministic 50-seed replay passed; 10,000 coverage-guided
+  libFuzzer executions passed, maximum input 4096 bytes.
+- 2G.3A: IN PROGRESS — documentation synchronization for PR review.
+- 2G.3B onward: PENDING — PR-head review, merge, post-merge
+  regression and formal closure of Phase 2.
+
+All 2G targets are opt-in; default Debug and Release builds
+remain unchanged at 18 CTests each. On this Mac, ASan hangs
+during runtime initialization; the seed runner uses UBSan.
+Linux CI executes both sanitizers and the real fuzzer.
+The network executable is still transport-echo-only.
 
 ### Acceptance Gate
 

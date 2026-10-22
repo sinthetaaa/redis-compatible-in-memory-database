@@ -741,6 +741,37 @@ before the corresponding acceptance gate passes.
 - Kubernetes.
 - Multi-region deployment.
 
+# Phase 2G Fuzzing Implementation Decisions (2026-10-22)
+
+**Status: feature-branch implementation and Linux CI accepted;
+PR merge and formal closure pending.**
+
+- Fuzz the actual bounded production RESP2 parser and value model,
+  not a mock, through a shared deterministic invariant checker.
+- Use isolated opt-in CMake targets instead of changing normal
+  production library or server instrumentation.
+- Keep a reproducible, 50-input binary-safe seed corpus with a
+  strict SHA-256 manifest; reject corrupt, missing or extra seeds.
+- Limit individual fuzz inputs to 4096 bytes and parser resources
+  to a smaller fixed validation profile, without changing
+  production default limits or accepted RESP2 syntax.
+- Use local macOS UBSan for deterministic replay because Apple
+  Clang ASan hangs before `main()` on this host; do not claim
+  local ASan acceptance.
+- Run real Clang 18 libFuzzer with ASan+UBSan on Ubuntu 24.04,
+  with 10,000 iterations, a time bound, a memory budget,
+  and failure-artifact capture.
+- Allow fuzzer-generated mutations only in a temporary corpus copy.
+  Preserve the original manifest-verified seed set unchanged.
+- Keep merge, post-merge regression and final project-state
+  closure as distinct acceptance gates.
+
+Evidence: GitHub Actions run #39754741830 at feature commit
+`b7edd7540ec3d46008ee7878fb55063c26334e9f` passed
+19/19 Linux CTests and 10,000 ASan+UBSan libFuzzer runs.
+No production parser, TCP serving mode or database behavior
+was changed by this milestone.
+
 # Decision Maintenance
 
 Record changes with:
