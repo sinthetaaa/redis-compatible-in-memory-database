@@ -8,11 +8,11 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 COMPLETE; Phase 4 IN PROGRESS (4A keyspace foundation). The executable supports loopback RESP2 PING/ECHO/QUIT, but SET/GET and persistent data storage are not yet wired to TCP.**
+**Project status: Phases 0–3 and 4A COMPLETE; Phase 4B SET/GET implementation pending feature Linux CI. Supports loopback RESP2 PING/ECHO/QUIT and in-memory SET/GET; persistence and TTL are not implemented.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
-Phase 4A adds isolated in-memory storage; wire-level SET/GET begins in Phase 4B.
+Phase 4A adds binary-safe storage. Phase 4B wires process-shared in-memory SET/GET over RESP2.
 
 ## Project Goals
 
@@ -756,6 +756,22 @@ with owned, binary-safe values, an initial string alternative,
 non-allocating heterogeneous lookup and deterministic model tests.
 It is not yet wired into command serving. TTL, eviction, AOF and
 snapshot behavior remain future milestones.
+
+## Phase 4B — SET/GET RESP2 Integration (feature implementation)
+
+SET key value returns +OK and overwrites the process-local keyspace;
+GET key returns a binary-safe bulk string or RESP2 nil bulk. Commands
+are case-insensitive, keys remain case-sensitive, and all TCP clients
+share the same database for the life of the server process.
+
+The current default RESP2 pipeline limits a serialized response to
+8192 bytes. Phase 4B therefore imposes an **8176-byte value limit on
+SET** (16 bytes reserved for response framing) so every accepted value
+can be safely returned by GET. Larger SET values return an ERR without
+mutating data. This is an intentional Redis compatibility limitation
+pending a later, separately validated reply-budget redesign. SET options
+such as NX/XX/EX/PX are not supported by Phase 4B. No persistence,
+TTL, eviction or collection types are included.
 
 ## License
 

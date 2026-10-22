@@ -4,10 +4,12 @@
 #include "redisdb/commands/CommandDispatcher.hpp"
 #include "redisdb/commands/CommandErrors.hpp"
 #include "redisdb/commands/ConnectivityCommands.hpp"
+#include "redisdb/commands/StringCommands.hpp"
 #include "redisdb/net/Connection.hpp"
 #include "redisdb/net/ConnectionManager.hpp"
 #include "redisdb/net/TcpListener.hpp"
 #include "redisdb/protocol/RespPipeline.hpp"
+#include "redisdb/storage/Database.hpp"
 
 #if defined(__APPLE__)
 #include "redisdb/net/KqueuePoller.hpp"
@@ -56,7 +58,14 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
     limits.max_connections = max_clients;
 
     net::ConnectionManager manager(net::TcpListener::bind_loopback(port), poller, limits);
-    const commands::CommandDispatcher dispatcher(commands::connectivity_routes());
+    // One database for all TCP connections; the single event-loop thread
+    // serializes each command. It must outlive dispatcher route closures.
+    storage::Database database;
+    auto routes = commands::connectivity_routes();
+    for (auto& route : commands::string_routes(database)) {
+        routes.push_back(std::move(route));
+    }
+    const commands::CommandDispatcher dispatcher(std::move(routes));
     const protocol::RespPipeline pipeline;
 
     manager.set_resumable_input_handler([&](net::Connection& connection) {
