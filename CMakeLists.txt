@@ -31,6 +31,7 @@ add_library(
     redisdb-core STATIC
     src/server/Version.cpp
     src/commands/Command.cpp
+    src/commands/CommandDispatcher.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -129,6 +130,17 @@ if(BUILD_TESTING)
 
     add_test(NAME unit.command COMMAND redisdb-command-tests)
     set_tests_properties(unit.command PROPERTIES TIMEOUT 10)
+
+    add_executable(
+        redisdb-command-dispatcher-tests
+        tests/unit/command_dispatcher_test.cpp
+    )
+
+    target_link_libraries(redisdb-command-dispatcher-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-command-dispatcher-tests)
+
+    add_test(NAME unit.command_dispatcher COMMAND redisdb-command-dispatcher-tests)
+    set_tests_properties(unit.command_dispatcher PROPERTIES TIMEOUT 10)
 
     add_executable(
         redisdb-resp-value-tests
