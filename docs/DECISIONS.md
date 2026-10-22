@@ -164,7 +164,7 @@ against real clients rather than assumed.
 ## ADR-005 — In-Memory Primary Keyspace
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** Phase 4A foundation implemented (feature branch; validation pending)
 
 ### Decision
 

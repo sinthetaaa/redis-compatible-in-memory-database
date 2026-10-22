@@ -543,14 +543,14 @@ with resource limits and comprehensive edge-case tests.
 
 # Phase 3 — Command Framework
 
-**Status:** IN PROGRESS (3A–3C COMPLETE; 3D–3F NOT STARTED)
+**Status:** COMPLETE (3A–3F; merged final Phase 3 CI SUCCESS)
 
 - [x] 3A — Command representation (COMPLETE; final status CI #39792311541 SUCCESS)
 - [x] 3B — Dispatcher (COMPLETE; CI #39811900890)
 - [x] 3C — Argument validation (COMPLETE)
-- [ ] 3D — PING, ECHO, QUIT
-- [ ] 3E — Redis CLI compatibility smoke test
-- [ ] 3F — Unknown-command behavior
+- [x] 3D — PING, ECHO, QUIT (merge `35a925a`)
+- [x] 3E — Redis CLI compatibility smoke test (merge `a9da868`)
+- [x] 3F — Unknown-command behavior (merge `e7e8af1`)
 
 ### Phase 3A Detailed Progress — COMPLETE (final status-commit CI passed)
 
@@ -620,8 +620,9 @@ commands, keyspace or production RESP2 socket handler.
   Phase 3C starts only after this last CI is independently accepted.
 
 Phase 3B closure CI #39811900890 passed. Phase 3C is COMPLETE.
-Phases 3D–3F remain NOT STARTED. The complete Phase 3
-redis-cli acceptance gate remains unmet.
+Phases 3D–3F subsequently completed, including redis-cli
+compatibility, bounded error responses and final Phase 3 CI
+#39841314816 / #39841314983 SUCCESS.
 
 ### Phase 3C Acceptance — COMPLETE
 
@@ -639,9 +640,9 @@ the supported connectivity commands.
 
 # Phase 4 — Core String Database
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS (4A foundation implemented on feature branch)
 
-- [ ] 4A — Keyspace and entry model
+- [x] 4A — Keyspace and entry model (isolated storage, pending branch CI)
 - [ ] 4B — SET, GET
 - [ ] 4C — DEL, EXISTS, TYPE
 - [ ] 4D — MSET, MGET
