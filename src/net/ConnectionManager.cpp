@@ -336,7 +336,8 @@ ConnectionManager::DispatchResult ConnectionManager::run_deferred() {
         // socket read. If no continuation is scheduled,
         // the callback cannot release any space.
         if (connection->input().size() >= limits_.connection.max_input_bytes &&
-            !deferred_pending_.contains(token) && !waiting_for_write_.contains(token)) {
+            !deferred_pending_.contains(token) && !waiting_for_write_.contains(token) &&
+            !connection->closing_after_flush()) {
             if (close_connection(token)) {
                 ++stats.closed;
             }
@@ -344,7 +345,8 @@ ConnectionManager::DispatchResult ConnectionManager::run_deferred() {
             continue;
         }
 
-        if (connection->received_eof() && !connection->wants_write()) {
+        if ((connection->received_eof() || connection->closing_after_flush()) &&
+            !connection->wants_write()) {
             if (close_connection(token)) {
                 ++stats.closed;
             }
@@ -371,8 +373,8 @@ void ConnectionManager::refresh_interest(RegistrationToken token) {
 
     const std::size_t pending = connection->pending_output_bytes();
 
-    if (connection->received_eof() && pending == 0) {
-        throw std::logic_error("EOF connection has no pending output");
+    if ((connection->received_eof() || connection->closing_after_flush()) && pending == 0) {
+        throw std::logic_error("closing connection has no pending output");
     }
 
     const std::size_t maximum = limits_.connection.max_output_bytes;
@@ -393,7 +395,8 @@ void ConnectionManager::refresh_interest(RegistrationToken token) {
         connection->input().size() >= limits_.connection.max_input_bytes &&
         deferred_pending_.contains(token);
 
-    const bool should_pause = connection->received_eof() || waiting_output || full_with_deferred ||
+    const bool should_pause = connection->received_eof() || connection->closing_after_flush() ||
+                              waiting_output || full_with_deferred ||
                               (previously_paused ? pending > low_water : pending >= high_water);
 
     EventMask interest = EventMask::None;
@@ -556,7 +559,7 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
                 resumable_input_handler_ && (deferred_pending_.contains(event.token) ||
                                              waiting_for_write_.contains(event.token));
 
-            if (full && !can_resume) {
+            if (full && !can_resume && !connection->closing_after_flush()) {
                 if (close_connection(event.token)) {
                     ++stats.closed;
                 }
@@ -594,7 +597,8 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
             }
         }
 
-        if (connection->received_eof() && !connection->wants_write()) {
+        if ((connection->received_eof() || connection->closing_after_flush()) &&
+            !connection->wants_write()) {
             // An EOF client may have complete requests
             // deferred by the fairness budget or output
             // backpressure. Process before final close.
