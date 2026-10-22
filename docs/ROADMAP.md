@@ -153,7 +153,7 @@ simultaneous connections without resource leaks.
 
 # Phase 2 — RESP2 Protocol Engine
 
-**Status:** IN PROGRESS
+**Status:** IN PROGRESS (formal Phase 2G closure CI pending)
 
 - [x] 2A — RESP value model
 - [x] 2B — Response serializer
@@ -161,7 +161,7 @@ simultaneous connections without resource leaks.
 - [x] 2D — Fragmented request handling
 - [x] 2E — Pipelining
 - [x] 2F — Malformed-input and resource-limit handling
-- [ ] 2G — Parser fuzz-test foundation (IN PROGRESS; CI passed, merge pending)
+- [ ] 2G — Parser fuzz-test foundation (implementation and post-merge PASS; formal closure pending)
 
 ### Phase 2A Detailed Progress
 
@@ -489,11 +489,10 @@ TCP smoke, connection lifecycle and native epoll gates.
 Only the RESP2 library/test pipeline is hardened. The executable
 remains transport-smoke-only; Redis commands, storage,
 persistence and a production RESP2 endpoint are not implemented.
-Phase 2G — parser fuzz-test foundation: IN PROGRESS.
-Linux ASan+UBSan/libFuzzer validation passed; PR merge,
-post-merge CI and formal phase closure remain outstanding.
+Phase 2G — parser fuzz-test foundation: MERGED and POST-MERGE ACCEPTED.
+The final closure documentation commit and its Linux CI remain pending.
 
-### Phase 2G Detailed Progress — FEATURE-BRANCH LINUX CI ACCEPTED
+### Phase 2G Detailed Progress — POST-MERGE ACCEPTED, FORMAL CLOSURE PENDING
 
 - 2G.0A-0C: COMPLETE — toolchain audit, dedicated feature branch,
   and parser fuzzing architecture/design.
@@ -508,9 +507,21 @@ post-merge CI and formal phase closure remain outstanding.
   instrumentation verified; all 19 CTests passed;
   deterministic 50-seed replay passed; 10,000 coverage-guided
   libFuzzer executions passed, maximum input 4096 bytes.
-- 2G.3A: IN PROGRESS — documentation synchronization for PR review.
-- 2G.3B onward: PENDING — PR-head review, merge, post-merge
-  regression and formal closure of Phase 2.
+- 2G.3A-3E: COMPLETE — five-document feature-branch records,
+  commit `c089890d1dda45bc7eef0591bfb21cab21ca0cf4`,
+  PR #10 review and acceptance. PR-head Linux Debug/Release
+  CI #39767524677 SUCCESS; PR-head Clang 18 fuzz CI
+  #39767524405 SUCCESS (19/19 tests, 10,000 fuzz runs).
+- 2G.4A: COMPLETE — PR #10 merged by a true two-parent commit
+  `36ec43d8ce247d50c81bf90d60641d4db9b802b8`.
+- 2G.4B: COMPLETE — post-merge Linux main CI #39770284668
+  SUCCESS (Debug/Release 18/18 each, all repeat gates).
+  Local main fast-forwarded; macOS Debug/Release each 18/18,
+  50-seed UBSan corpus smoke PASS; clean, synchronized main.
+- 2G.5A: IN PROGRESS — guarded formal closure documentation draft.
+- 2G.5B-5C: PENDING — commit/push closure documentation,
+  verify exact post-closure Linux CI, then record final
+  Phase 2G and Phase 2 COMPLETE status.
 
 All 2G targets are opt-in; default Debug and Release builds
 remain unchanged at 18 CTests each. On this Mac, ASan hangs

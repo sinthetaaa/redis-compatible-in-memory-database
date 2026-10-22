@@ -743,8 +743,8 @@ before the corresponding acceptance gate passes.
 
 # Phase 2G Fuzzing Implementation Decisions (2026-10-22)
 
-**Status: feature-branch implementation and Linux CI accepted;
-PR merge and formal closure pending.**
+**Status: implementation merged and post-merge accepted;
+formal documentation closure and exact-head CI pending.**
 
 - Fuzz the actual bounded production RESP2 parser and value model,
   not a mock, through a shared deterministic invariant checker.
@@ -771,6 +771,18 @@ Evidence: GitHub Actions run #39754741830 at feature commit
 19/19 Linux CTests and 10,000 ASan+UBSan libFuzzer runs.
 No production parser, TCP serving mode or database behavior
 was changed by this milestone.
+
+PR #10 was merged as true two-parent commit
+`36ec43d8ce247d50c81bf90d60641d4db9b802b8`.
+Final PR-head Linux Debug/Release CI #39767524677 and
+ASan+UBSan fuzz CI #39767524405 both succeeded.
+Post-merge Linux main CI #39770284668 passed Debug/Release
+18/18 tests per build and the repeat suites; the merged tree
+matches the previously fuzz-tested final PR head.
+Post-merge macOS Debug/Release and 50-seed UBSan PASS.
+No production semantic, Redis command, storage or networking
+changes are authorized by this test-only decision.
+Formal Phase 2G closure-status CI is still pending.
 
 # Decision Maintenance
 

@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine IN PROGRESS. Phases 2A-2F are formally COMPLETE. Phase 2G parser fuzzing passed feature-branch Linux ASan+UBSan/libFuzzer CI; PR merge and post-merge closure are pending.**
+**Project status: Phase 1 COMPLETE; Phase 2 RESP2 Protocol Engine post-merge accepted, formal documentation closure pending. Phases 2A-2F formally COMPLETE; Phase 2G fuzz foundation merged via PR #10, Linux/macOS acceptance PASS. No Redis command-serving endpoint yet.**
 
 The executable now supports a continuously running,
 loopback-only TCP echo mode for transport testing.
@@ -608,7 +608,8 @@ Phase 2F.5C closure documentation commit
 Post-closure Linux Debug/Release CI #39739519389: SUCCESS
 on that exact commit, including full and repeated network test gates.
 Phase 2F is formally COMPLETE. Phase 2G parser fuzz testing
-has passed Linux feature-branch CI; merge/closure remain pending.
+was merged through PR #10; post-merge tests passed.
+Formal closure documentation and its CI are pending.
 
 The executable still serves only raw TCP transport echo data;
 it does not parse RESP2 on its serving path or execute Redis commands.
@@ -616,7 +617,7 @@ it does not parse RESP2 on its serving path or execute Redis commands.
 Current milestone information is maintained in
 [PROJECT_STATE.md](docs/PROJECT_STATE.md).
 
-## Phase 2G — RESP2 Parser Fuzz Testing (In Progress)
+## Phase 2G — RESP2 Parser Fuzz Testing (Post-Merge Accepted)
 
 The actual RESP2 parser is exercised by a shared, bounded
 invariant harness. An opt-in CMake build provides a deterministic
@@ -639,7 +640,16 @@ build directory with Apple Clang and run:
 See [fuzz architecture](docs/PHASE2G_FUZZ_DESIGN.md) for the
 exact limit profile and design decisions.
 
-The Phase 2G PR has not yet been merged into main.
+PR [#10](https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/10)
+was merged as `36ec43d8ce247d50c81bf90d60641d4db9b802b8`.
+At the final PR head, Linux Clang 18 ASan+UBSan fuzz CI
+[#39767524405](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39767524405)
+passed 19/19 CTests, 50 verified seeds and 10,000 fuzz executions.
+Post-merge main Linux Debug/Release CI
+[#39770284668](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/39770284668)
+passed 18/18 CTests per configuration and all repeat gates.
+Post-merge local macOS Debug and Release passed 18/18 each;
+50-seed UBSan replay also passed. Formal closure CI is pending.
 The production executable is still transport-only TCP echo.
 
 ## License
