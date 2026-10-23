@@ -148,6 +148,22 @@ class Database final {
     list_range(std::string_view key, std::int64_t start, std::int64_t stop,
                std::size_t max_reply_bytes) const;
 
+    // Phase 6C.1: binary-safe hash storage. Like list writes, a complete
+    // replacement is staged before mutation; wrong-type operations never
+    // mutate the live entry. Hash field ordering is deliberately unspecified.
+    [[nodiscard]] std::size_t
+    hash_set(std::string key, const std::vector<std::pair<std::string, std::string>>& fields);
+    [[nodiscard]] std::optional<std::string> hash_get(std::string_view key,
+                                                      std::string_view field) const;
+    [[nodiscard]] bool hash_exists(std::string_view key, std::string_view field) const;
+    [[nodiscard]] std::size_t hash_length(std::string_view key) const;
+    [[nodiscard]] std::size_t hash_delete(std::string_view key,
+                                          const std::vector<std::string>& fields);
+    // RESP2 HGETALL-shaped field/value array. Missing keys yield an empty
+    // vector, while nullopt signals an exceeded reply budget. Read-only.
+    [[nodiscard]] std::optional<std::vector<std::pair<std::string, std::string>>>
+    hash_items(std::string_view key, std::size_t max_reply_bytes) const;
+
     // Returns an owned string snapshot. A non-string key throws WrongTypeError;
     // an absent or expired key returns nullopt, never an implicit conversion.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;

@@ -327,6 +327,13 @@ if(BUILD_TESTING)
     add_test(NAME unit.list_storage_foundation COMMAND redisdb-list-foundation-tests)
     set_tests_properties(unit.list_storage_foundation PROPERTIES TIMEOUT 20)
 
+    # Phase 6C.1: hash storage foundation only; no RESP2 hash routes yet.
+    add_executable(redisdb-hash-foundation-tests tests/unit/hash_storage_foundation_test.cpp)
+    target_link_libraries(redisdb-hash-foundation-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-hash-foundation-tests)
+    add_test(NAME unit.hash_storage_foundation COMMAND redisdb-hash-foundation-tests)
+    set_tests_properties(unit.hash_storage_foundation PROPERTIES TIMEOUT 20)
+
     add_executable(
         redisdb-database-tests
         tests/unit/database_test.cpp
