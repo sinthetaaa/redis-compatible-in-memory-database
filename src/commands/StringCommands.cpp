@@ -3,6 +3,7 @@
 #include "redisdb/commands/ArityValidator.hpp"
 #include "redisdb/storage/Database.hpp"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 
@@ -43,6 +44,28 @@ HandlerResult get_command(const storage::Database& database, const Command& comm
     }
 
     return {RespValue::bulk_string(*value)};
+}
+
+HandlerResult append_command(storage::Database& database, const Command& command) {
+    if (!validate_arity(command, ArityRule{2, 2, 1}).valid()) {
+        return {RespValue::error("ERR wrong number of arguments for 'append' command")};
+    }
+
+    const auto& args = command.arguments();
+    const auto length = database.append(args[0], args[1], MaxStringValueBytes);
+    if (!length.has_value()) {
+        // Existing bytes and missing-key state are preserved on rejection.
+        return {RespValue::error("ERR string value exceeds the 8176-byte reply-safe limit")};
+    }
+    return {RespValue::integer(static_cast<std::int64_t>(*length))};
+}
+
+HandlerResult strlen_command(const storage::Database& database, const Command& command) {
+    if (!validate_arity(command, ArityRule{1, 1, 1}).valid()) {
+        return {RespValue::error("ERR wrong number of arguments for 'strlen' command")};
+    }
+    return {RespValue::integer(
+        static_cast<std::int64_t>(database.string_length(command.arguments()[0])))};
 }
 
 HandlerResult mset_command(storage::Database& database, const Command& command) {
@@ -109,6 +132,10 @@ std::vector<CommandRoute> string_routes(storage::Database& database) {
         {"GET", [&database](const Command& command) { return get_command(database, command); }},
         {"MSET", [&database](const Command& command) { return mset_command(database, command); }},
         {"MGET", [&database](const Command& command) { return mget_command(database, command); }},
+        {"APPEND",
+         [&database](const Command& command) { return append_command(database, command); }},
+        {"STRLEN",
+         [&database](const Command& command) { return strlen_command(database, command); }},
     };
 }
 
