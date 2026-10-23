@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5F are merged and validated; Phase 5G active expiration is on a feature branch. Persistence to disk remains NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5G are merged and post-merge validated; Phase 5H deterministic expiration acceptance is on a feature branch. Persistence to disk remains NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -1003,3 +1003,20 @@ sleeping; live RESP2 tests exercise expiration-heavy bursts, two clients,
 FIFO replies and continued server responsiveness. A separate Phase 5H will
 complete the comprehensive expiration acceptance matrix. The server still
 uses lazy expiration on read/write between proactive sweeps.
+
+## Phase 5H — Deterministic Expiration Acceptance (feature implementation)
+
+This validation-only milestone adds a fixed-seed, 4096-operation C++20
+reference-model test across binary-safe keys, fake-clock wall-time shifts,
+SET/SET EX/PX, EXPIRE/PEXPIRE, PERSIST, MSET, APPEND, DEL, GET, EXISTS,
+TTL/PTTL and bounded active sweeps. The independent model computes logical
+expiry and millisecond/rounded-second replies, while randomized probes force
+physical lazy expiry. A separate 513-key deterministic backlog verifies
+zero-budget behavior, strict batch limits, convergence and live-key safety.
+
+A second test exercises two real TCP clients, expiry commands, 192 pipelined
+RESP2 replies, timed replacement, PERSIST and command-error recovery without
+relying on exact scheduling or sleep-sensitive TTL values. No production code,
+new commands, disk persistence or event-loop scheduling policy is changed.
+Phase 5 acceptance remains PENDING until the feature is merged, exact-head
+post-merge Linux CI passes, and a separate closure audit is recorded.
