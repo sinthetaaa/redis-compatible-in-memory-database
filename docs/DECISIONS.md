@@ -163,7 +163,7 @@ against real clients rather than assumed.
 ## ADR-005 — In-Memory Primary Keyspace
 
 **Status:** Accepted
-**Implementation:** Phase 4A keyspace and Phase 6A variant, Phase 6B typed lists, Phase 6C typed hashes and Phase 6D binary-safe sets are implemented. Phase 6D merged as `d21421a` with exact-head main Linux networking and sanitizer/fuzz passing. Memory accounting, persistence and comprehensive Phase 6E wrong-type acceptance remain future milestones.
+**Implementation:** Phase 4A keyspace and Phase 6A variant, Phase 6B typed lists, Phase 6C typed hashes and Phase 6D binary-safe sets are implemented. Phase 6D is formally closed at `281d044`. Phase 6E cross-type WRONGTYPE acceptance tests merged on main as `37aaad4` with exact-head Linux networking/sanitizer CI passing; the Phase 6E docs closure remains gated. Memory accounting, differential tests and persistence remain future milestones.
 
 ### Decision
 
@@ -960,6 +960,37 @@ ADR-005 (typed, authoritative hash-table keyspace).
 These are accepted implementation choices, not claims of a complete
 Redis hash API, persistence, eviction, general Phase 6E wrong-type
 matrix, set command support or performance benchmarks.
+
+# Phase 6E WRONGTYPE Cross-Type Acceptance Record (2026-10-24)
+
+This phase verifies the compatibility behavior already selected under
+ADR-002 (serialized command execution), ADR-004 (bounded RESP2 subset)
+and ADR-005 (authoritative typed keyspace). No new architectural
+decision was introduced and no production C++ command implementation,
+protocol handling or CI workflow was changed.
+
+- **Rejection contract:** The 26 typed command signatures reject all
+  three incompatible stored types with the exact WRONGTYPE response.
+  Each rejected operation preserves the full prior value/type/TTL.
+- **Compatibility exceptions:** SET and MSET deliberately replace the
+  previous type; MGET returns nil for non-string entries. Missing keys
+  retain each command's documented empty or zero-like semantics.
+- **Evidence:** The two new permanent CTests are `unit.wrongtype_matrix`
+  and `integration.resp_wrongtype_matrix`, each covering 78 typed
+  rejection cases plus compatibility, mutation-integrity and pipeline
+  checks. macOS Debug 64/64, Release 64/64, fuzz-enabled 65/65 passed.
+- **Git history:** feature `a66128b077cfbfc22fbe6daca1e053e5fdaa111e`
+  on `phase6e/wrongtype-acceptance`, direct two-parent implementation
+  merge `37aaad4068ca0cf4452635737bd219a11d120d4c`, matching tree
+  `2ff6ff4be49c6b81cd787a8c5a4ec4b992b10712`, four modified and
+  two added CMake/docs/tests paths; runtime source unchanged.
+- **Linux CI:** feature `40004381493` (networking) / `40004381506`
+  (Clang 18 libFuzzer ASan/UBSan), and post-implementation main
+  `40005159337` / `40005159401` passed every job and step.
+- **Not yet accepted:** separate five-document closure branch, docs
+  branch CI, two-parent documentation merge and final main CI.
+  Phase 6F memory-accounting hooks and Phase 6G differential tests
+  remain future scope, as do eviction and persistence.
 
 # Phase 6D Set Storage and RESP2 Implementation Record (2026-10-23)
 
