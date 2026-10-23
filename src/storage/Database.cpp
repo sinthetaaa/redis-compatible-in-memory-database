@@ -540,6 +540,160 @@ std::optional<std::vector<std::string>> Database::list_range(std::string_view ke
     return result;
 }
 
+std::size_t Database::hash_set(std::string key,
+                               const std::vector<std::pair<std::string, std::string>>& fields) {
+    if (fields.empty()) {
+        throw std::invalid_argument("hash set requires at least one field/value pair");
+    }
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(std::string_view(key));
+    HashValue next;
+    if (found != entries_.end()) {
+        const auto* previous = std::get_if<HashValue>(&found->second.value);
+        if (previous == nullptr) {
+            throw WrongTypeError{};
+        }
+        next = *previous; // Stage the entire hash before touching the live entry.
+    }
+    std::size_t inserted = 0;
+    for (const auto& [field, value] : fields) {
+        const auto result = next.fields.insert_or_assign(field, value);
+        if (result.second) {
+            ++inserted;
+        }
+    }
+    Value staged = HashValue{std::move(next)};
+    if (found == entries_.end()) {
+        (void)entries_.try_emplace(std::move(key), Entry{std::move(staged)});
+    } else {
+        // Keep existing TTL and index unchanged on hash-field updates.
+        found->second.value = std::move(staged);
+    }
+    return inserted;
+}
+
+std::optional<std::string> Database::hash_get(std::string_view key, std::string_view field) const {
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return std::nullopt;
+    }
+    const auto* hash = std::get_if<HashValue>(&found->second.value);
+    if (hash == nullptr) {
+        throw WrongTypeError{};
+    }
+    const auto element = hash->fields.find(std::string(field));
+    if (element == hash->fields.end()) {
+        return std::nullopt;
+    }
+    return element->second;
+}
+
+bool Database::hash_exists(std::string_view key, std::string_view field) const {
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return false;
+    }
+    const auto* hash = std::get_if<HashValue>(&found->second.value);
+    if (hash == nullptr) {
+        throw WrongTypeError{};
+    }
+    return hash->fields.contains(std::string(field));
+}
+
+std::size_t Database::hash_length(std::string_view key) const {
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return 0;
+    }
+    const auto* hash = std::get_if<HashValue>(&found->second.value);
+    if (hash == nullptr) {
+        throw WrongTypeError{};
+    }
+    return hash->fields.size();
+}
+
+std::size_t Database::hash_delete(std::string_view key, const std::vector<std::string>& fields) {
+    if (fields.empty()) {
+        throw std::invalid_argument("hash delete requires at least one field");
+    }
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return 0;
+    }
+    const auto* hash = std::get_if<HashValue>(&found->second.value);
+    if (hash == nullptr) {
+        throw WrongTypeError{};
+    }
+    HashValue next = *hash; // Preserve original if allocation fails.
+    std::size_t removed = 0;
+    for (const auto& field : fields) {
+        removed += next.fields.erase(field);
+    }
+    if (removed == 0) {
+        return 0;
+    }
+    if (next.fields.empty()) {
+        // Stage index-record construction before modifying either store.
+        std::optional<ExpiryKey> indexed;
+        if (found->second.expires_at.has_value()) {
+            indexed.emplace(*found->second.expires_at, found->first);
+        }
+        if (indexed.has_value()) {
+            expiry_index_.erase(*indexed);
+        }
+        entries_.erase(found);
+    } else {
+        found->second.value = Value{HashValue{std::move(next)}};
+    }
+    return removed;
+}
+
+std::optional<std::vector<std::pair<std::string, std::string>>>
+Database::hash_items(std::string_view key, std::size_t max_reply_bytes) const {
+    // Even a zero-element RESP2 array needs *0\r\n (4 bytes).
+    if (max_reply_bytes < 4) {
+        return std::nullopt;
+    }
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return std::vector<std::pair<std::string, std::string>>{};
+    }
+    const auto* hash = std::get_if<HashValue>(&found->second.value);
+    if (hash == nullptr) {
+        throw WrongTypeError{};
+    }
+    const std::size_t count = hash->fields.size();
+    // Two bulk-string frames need at least 12 encoded bytes per hash field.
+    if (count > max_reply_bytes / 12) {
+        return std::nullopt;
+    }
+    std::size_t total = 3 + std::to_string(count * 2).size();
+    if (total > max_reply_bytes) {
+        return std::nullopt;
+    }
+    for (const auto& [field, value] : hash->fields) {
+        for (const auto* part : {&field, &value}) {
+            const std::size_t overhead = 5 + std::to_string(part->size()).size();
+            if (overhead > max_reply_bytes - total ||
+                part->size() > max_reply_bytes - total - overhead) {
+                return std::nullopt;
+            }
+            total += overhead + part->size();
+        }
+    }
+    std::vector<std::pair<std::string, std::string>> result;
+    result.reserve(count);
+    for (const auto& [field, value] : hash->fields) {
+        result.emplace_back(field, value);
+    }
+    return result;
+}
+
 std::optional<std::string> Database::get(std::string_view key) const {
     (void)expire_if_needed(key);
     const auto found = entries_.find(key);

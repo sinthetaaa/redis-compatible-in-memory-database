@@ -37,6 +37,7 @@ add_library(
     src/commands/StringCommands.cpp
     src/commands/KeyCommands.cpp
     src/commands/ListCommands.cpp
+    src/commands/HashCommands.cpp
     src/commands/CommandErrors.cpp
     src/storage/Database.cpp
     src/storage/Clock.cpp
@@ -183,6 +184,15 @@ if(BUILD_TESTING)
         )
         set_tests_properties(integration.resp_list_commands PROPERTIES TIMEOUT 100)
 
+        # Phase 6C.2: seven RESP2 hash commands tested over real TCP.
+        add_test(
+            NAME integration.resp_hash_commands
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_hash_commands_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_hash_commands PROPERTIES TIMEOUT 110)
+
         add_test(
             NAME integration.resp_multi_string
             COMMAND "${Python3_EXECUTABLE}"
@@ -326,6 +336,20 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-list-foundation-tests)
     add_test(NAME unit.list_storage_foundation COMMAND redisdb-list-foundation-tests)
     set_tests_properties(unit.list_storage_foundation PROPERTIES TIMEOUT 20)
+
+    # Phase 6C.1: hash storage foundation only; no RESP2 hash routes yet.
+    add_executable(redisdb-hash-foundation-tests tests/unit/hash_storage_foundation_test.cpp)
+    target_link_libraries(redisdb-hash-foundation-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-hash-foundation-tests)
+    add_test(NAME unit.hash_storage_foundation COMMAND redisdb-hash-foundation-tests)
+    set_tests_properties(unit.hash_storage_foundation PROPERTIES TIMEOUT 20)
+
+    # Phase 6C.2: seven hash command handlers, type safety and response bounds.
+    add_executable(redisdb-hash-command-tests tests/unit/hash_commands_test.cpp)
+    target_link_libraries(redisdb-hash-command-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-hash-command-tests)
+    add_test(NAME unit.hash_commands COMMAND redisdb-hash-command-tests)
+    set_tests_properties(unit.hash_commands PROPERTIES TIMEOUT 20)
 
     add_executable(
         redisdb-database-tests
