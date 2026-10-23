@@ -164,6 +164,14 @@ if(BUILD_TESTING)
                     "$<TARGET_FILE:redisdb-server>"
         )
         set_tests_properties(integration.resp_numeric_edge_cases PROPERTIES TIMEOUT 75)
+
+        add_test(
+            NAME integration.resp_multi_client_correctness
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_multi_client_correctness_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_multi_client_correctness PROPERTIES TIMEOUT 110)
     endif()
 
     add_executable(
@@ -301,6 +309,15 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-numeric-hardening-tests)
     add_test(NAME unit.numeric_edge_cases COMMAND redisdb-numeric-hardening-tests)
     set_tests_properties(unit.numeric_edge_cases PROPERTIES TIMEOUT 20)
+
+    add_executable(
+        redisdb-multi-client-model-tests
+        tests/unit/multi_client_model_test.cpp
+    )
+    target_link_libraries(redisdb-multi-client-model-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-multi-client-model-tests)
+    add_test(NAME unit.multi_client_model COMMAND redisdb-multi-client-model-tests)
+    set_tests_properties(unit.multi_client_model PROPERTIES TIMEOUT 20)
 
     add_executable(
         redisdb-key-command-tests
