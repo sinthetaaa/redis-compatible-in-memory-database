@@ -4,12 +4,12 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4C — DEL/EXISTS/TYPE keyspace commands
-- Status: Phases 0–3 and 4A–4B COMPLETE; 4C implemented on feature branch pending Linux CI; 4D–4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 4B two-parent merge `e1dd5e897148723136a911278afd44fb89ed5486` with exact-head main CI #39845218043 and #39845217840 SUCCESS
-- Exact next task: Validate Phase 4C macOS/Linux suites and redis-cli DEL/EXISTS/TYPE; direct-merge `phase4c/del-exists-type` once green; proceed to 4D MSET/MGET
-- Implementation maturity: RESP2 TCP PING/ECHO/QUIT, SET/GET and DEL/EXISTS/TYPE (4C on feature branch); shared binary-safe keyspace; 8176-byte SET value ceiling; no TTL, eviction or persistence
-- Working TCP string database: SET/GET merged and post-merge CI green; DEL/EXISTS/TYPE implemented on feature branch pending Linux CI
+- Current subphase: Phase 4D — atomic MSET and ordered MGET
+- Status: Phases 0–3 and 4A–4C COMPLETE; 4D implemented on feature branch pending CI; 4E–4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 4C two-parent merge `d739707bc4d10c621ff581c577048e66e845472e`; exact-head main CI #39847483678 and #39847483133 SUCCESS
+- Exact next task: Validate Phase 4D on macOS/Linux; direct merge `phase4d/mset-mget-atomic-ordered` once green; begin 4E APPEND/STRLEN
+- Implementation maturity: RESP2 TCP PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET on feature branch; shared binary-safe keyspace; 8176-byte value ceiling and 8192-byte MGET aggregate limit; no TTL, eviction or persistence
+- MSET atomicity implementation: full-keyspace copy-and-swap ensures rollback on allocation failure; O(total keyspace + batch) time and transient memory pending a later optimization
 
 ## 2. Project Identity
 

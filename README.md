@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A–4B COMPLETE; Phase 4C DEL/EXISTS/TYPE implemented on feature branch pending Linux CI. RESP2 TCP serves a shared in-memory string database; TTL and persistence are not implemented.**
+**Project status: Phases 0–3 and 4A–4C COMPLETE; Phase 4D MSET/MGET implemented on a feature branch pending Linux CI. The loopback RESP2 server supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE and MSET/MGET; TTL and persistence remain unimplemented.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -788,6 +788,21 @@ process-local keyspace as SET/GET. Command verbs are case-insensitive,
 keys are case-sensitive, and invalid argument counts produce RESP2 ERR
 without mutating storage. This phase adds no TTL, eviction, AOF,
 snapshots or new Redis SET options.
+
+## Phase 4D — Atomic MSET and Ordered MGET (feature implementation)
+
+MSET validates all key/value pairs and per-value limits before writing. It
+stages the next authoritative keyspace and commits using a single map swap:
+allocation failures during staging leave previous data intact. Repeated keys
+use the last supplied value. This correctness-first mechanism copies the full
+map on each MSET (O(total keys + batch) memory/time); incremental transactional
+staging is a separately measured future optimization.
+
+MGET preserves order and duplicate arguments, returning RESP2 nil bulk strings
+for absent keys. The 8192-byte single-reply pipeline cap is checked including
+array headers and element framing before returning a result. Oversized MGET
+responses produce a bounded ERR without closing the TCP connection. The
+existing 8176-byte maximum individual stored string value remains unchanged.
 
 ## License
 

@@ -4,6 +4,7 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace redisdb::storage {
 
@@ -20,6 +21,16 @@ bool Database::set(std::string key, std::string bytes) {
     const auto inserted =
         entries_.try_emplace(std::move(key), Entry{Value{StringValue{std::move(bytes)}}});
     return inserted.second;
+}
+
+void Database::set_many(const std::vector<std::pair<std::string, std::string>>& pairs) {
+    // Construct the whole next state before changing the authoritative map.
+    // Allocation failure during cloning or replacement leaves it untouched.
+    auto next = entries_;
+    for (const auto& [key, bytes] : pairs) {
+        next.insert_or_assign(key, Entry{Value{StringValue{bytes}}});
+    }
+    entries_.swap(next);
 }
 
 std::optional<std::string> Database::get(std::string_view key) const {
