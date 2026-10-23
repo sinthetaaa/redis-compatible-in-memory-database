@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0–5 and Phase 6A–6B formally closed; Phase 6C hash storage and seven RESP2 routes merged (`7b0abaa`) with green main exact-head Linux CI. 6C documentation closure CI is separately gated. Phase 6D–6G and Phases 7–19 remain future scope.
+**Architecture state:** Phases 0–5 and 6A–6C formally closed. Phase 6D set storage and six RESP2 set routes accepted on main at `d21421a`; exact-head main Linux Debug/Release and sanitizer/fuzz passed. Phase 6D docs closure CI remains separately gated; Phase 6E–6G and Phases 7–19 are future scope.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -21,7 +21,7 @@ are hidden by lazy checks, while a deadline-ordered index supports at most
 32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
 Connection admission, parser framing, replies and work are bounded.
 
-Eviction, set commands, comprehensive collection compatibility, AOF,
+Eviction, comprehensive collection compatibility/Phase 6E matrices, AOF,
 snapshots, restart recovery and deployment remain future milestones.
 
 ---
@@ -1223,6 +1223,37 @@ Implementation feature head `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`;
 non-fast-forward implementation merge `7df2e08209468ae3e8a619e25451abe9196bda11`;
 post-merge Linux workflows `39973111123` and `39973111117` success.
 
+
+### Phase 6D — Set Storage and RESP2 Command Architecture (accepted implementation)
+
+The owned `SetValue::members` is a binary-safe `std::unordered_set` and
+its iteration order is not guaranteed. Five typed database operations
+`set_add`, `set_remove`, `set_contains`, `set_cardinality`, `set_members`
+execute under the single event-loop command thread. Mutations stage new
+owned values before replacement; mismatched types throw WrongTypeError.
+Nonempty set mutations preserve TTL; removing the final member removes
+the key and deadline index record. Lazy and active expiration behavior
+continues through the existing database and event-loop machinery.
+
+`commands::set_routes(database)` registers SADD, SREM, SISMEMBER,
+SCARD, SMEMBERS and SMISMEMBER without modifying the protocol parser.
+SMEMBERS returns unordered owned bulk elements within an 8,192-byte
+encoded reply; SMISMEMBER is a positional RESP2 array of 0/1 integers.
+Duplicate add/remove arguments count each distinct changed member once.
+SADD checks reply-safe member sizes before storage mutation. Request
+framing, pipelining, multi-client visibility and output backpressure
+reuse existing tested infrastructure.
+
+The Phase 6D implementation consists of two feature commits
+`743261636c2926f40b56f61856bcb9725e8e9b72` and
+`40657326e93631d8851c780424a730389b1f2cbb`, merged without a PR
+as `d21421ad910a179ea877fc7f1e555688ca8a81a8`. Parent and feature
+tree checks match; nine implementation files changed. macOS regression
+counts are 62/62 Debug, 62/62 Release, 63/63 fuzz-enabled. Exact-head
+main Linux Debug/Release `39996097334` and Clang 18 ASan/UBSan/fuzz
+`39996097046` passed. Documentation-only closure remains a separate gate.
+Neither persistence, set algebra, random-member commands, memory accounting,
+full Redis compatibility nor the Phase 6E wrong-type matrix is claimed.
 
 ### Phase 6C — Implemented Hash Storage and RESP2 Command Path
 

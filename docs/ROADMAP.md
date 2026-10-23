@@ -689,12 +689,12 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A/6B formally closed; 6C hash implementation accepted on `main`, separate five-document closure CI required; 6D next
+**Status:** IN PROGRESS — 6A, 6B, 6C formally closed; 6D set implementation merged and accepted on main, five-document closure CI pending; 6E–6G next
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
-- [x] 6C — Hash storage and commands (implementation merge `7b0abaa`; post-merge Linux `39984084722` / `39984084843` PASS; formal docs closure CI separately gated)
-- [ ] 6D — Set storage and commands
+- [x] 6C — Hash storage and commands (formal docs closure `201c3f1`; final networking `39987655559` and fuzz `39987655669` PASS)
+- [x] 6D — Set storage and commands (implementation merge `d21421a`; main Linux `39996097334` / `39996097046` PASS; formal docs-only closure gated)
 - [ ] 6E — Wrong-type errors
 - [ ] 6F — Collection memory accounting hooks
 - [ ] 6G — Differential tests
@@ -773,10 +773,48 @@ post-implementation Linux `39984084722` (Debug/Release) and `39984084843`
 feature commits, remote pushes and implementation merge were guarded;
 no PR, history rewrite, forced push or branch deletion occurred.
 
-**Formal closure gate:** a separately reviewed five-document-only branch,
-its exact-head Linux CI, a guarded two-parent docs merge and final
-post-closure main CI are necessary before starting Phase 6D. The Phase 6
-acceptance gate remains open until 6D–6G and their tests are accepted.
+**Historical Phase 6C closure:** separately reviewed documentation
+merged as `201c3f1f3036ad70e69d8a15b84fc5202782fc97` and final
+main Linux networking `39987655559` and fuzz `39987655669` passed.
+Phase 6D implementation was started only after that closure. The Phase 6
+acceptance gate remains open until 6D formal closure and 6E–6G.
+
+### Phase 6D implementation acceptance — PASS (2026-10-23)
+
+The accepted starting point is formal Phase 6C closure
+`201c3f1f3036ad70e69d8a15b84fc5202782fc97`.
+Binary-safe set storage and RESP2 routes were implemented on retained
+branch `phase6d/set-storage-commands`. First commit
+`743261636c2926f40b56f61856bcb9725e8e9b72` introduces `set_add`,
+`set_remove`, `set_contains`, `set_cardinality`, `set_members` plus tests.
+Second commit `40657326e93631d8851c780424a730389b1f2cbb` adds SADD,
+SREM, SISMEMBER, SCARD, SMEMBERS and SMISMEMBER, command tests and
+real TCP integration coverage. The direct two-parent no-ff implementation
+merge `d21421ad910a179ea877fc7f1e555688ca8a81a8` has parents
+`201c3f1f3036ad70e69d8a15b84fc5202782fc97` and the second feature
+commit. Merge/feature tree `e1cadc1b2c86b24d37ce6819bd3926c87eda507d`;
+exactly nine source/test/build files and no documentation/CI changes.
+
+Exact byte-wise uniqueness, duplicate argument counts, missing key reads,
+WRONGTYPE handling, TTL preservation, deleting the last member and the
+expiry-index record, reply-safe writes, 8,192-byte bounded unordered
+SMEMBERS and positional integer SMISMEMBER are verified. Coverage includes
+request fragmentation, pipelining, concurrent TCP clients and existing
+string/list/hash interoperability. No set algebra, random sampling,
+blocking commands or full Redis set compatibility is claimed.
+
+Local macOS Debug/Release 62/62 and fuzz-enabled 63/63 passed, including
+three new permanent CTests. Feature-head Linux networking `39995306323`
+and fuzz `39995306807` passed. Post-implementation main networking
+`39996097334` and Clang 18 sanitizer/fuzz `39996097046` both passed
+at the exact implementation merge, with every job and step green.
+
+**Formal closure gate:** independent five-document-only `phase6d/closure-audit`
+branch, exact-head docs Linux CI, a two-parent no-ff docs-only merge and
+post-closure main Linux CI remain required before Phase 6E begins.
+The Phase 6 acceptance gate is still open for 6E–6G; eviction,
+persistence, remote deployment, memory accounting and differential
+Redis-subset testing have not been implemented in Phase 6D.
 
 ### Acceptance Gate
 

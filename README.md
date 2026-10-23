@@ -9,21 +9,24 @@ key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
 **Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS.
-Phase 6A typed values and Phase 6B lists are formally closed. Phase 6C
-binary-safe hash storage and seven RESP2 hash commands have been merged as
-`7b0abaa20b65b6095dd432784aced4a16fc70d32` and independently verified
-in Linux Debug/Release and Clang 18 ASan+UBSan/fuzz CI. Its documentation-only
-formal closure remains gated on independent docs-branch and post-closure
-`main` CI. Phase 6D sets is next; older milestone notes below are historical.**
+Phase 6A, 6B and 6C are formally closed. Phase 6D set-storage
+and six TCP RESP2 commands are implementation-accepted on `main` as
+`d21421ad910a179ea877fc7f1e555688ca8a81a8`; Linux Debug/Release
+`39996097334` and Clang 18 ASan/UBSan/fuzz `39996097046` have passed
+at this exact merge commit. The separately gated Phase 6D five-document
+closure and final post-closure CI remain open. Phase 6E WRONGTYPE
+acceptance is next only after formal 6D closure. Older historical
+milestone statements below are not current instructions.**
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
-integers, keys, TTL, lists, and the hash subset HSET/HGET/HEXISTS/HLEN/
-HDEL/HMGET/HGETALL. Wrong-type accesses reject incompatible stored kinds;
-MGET yields nil for non-string entries. Set commands, the comprehensive
-Phase 6E matrix, eviction, persistence and deployment remain future work.
+integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
+and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
+accesses return WRONGTYPE; MGET returns nil for non-string keys. The
+comprehensive Phase 6E wrong-type matrix, eviction, persistence,
+full Redis compatibility and deployment remain future milestones.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
-The RESP2 mode now executes the documented string/key/TTL/list/hash subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
+The RESP2 mode now executes the documented string/key/TTL/list/hash/set subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
 
 ## Project Goals
 
@@ -132,6 +135,44 @@ post-implementation main Linux networking `39984084722` and fuzz
 implementation acceptance; formal docs closure requires separately
 verified documentation-branch and post-closure main CI. No PR, force push
 or feature-branch deletion was used.
+
+## Phase 6D — Set Storage and Six RESP2 Commands (implementation accepted)
+
+`SetValue` owns an unordered set of binary-safe byte strings. The five
+database primitives `set_add`, `set_remove`, `set_contains`,
+`set_cardinality`, and `set_members` provide unique-member insertions,
+removals, membership, cardinality and owned reply-budgeted snapshots.
+SADD counts only distinct new members, SREM counts distinct existing
+members removed and deletes the key and expiry-index record on last removal.
+Successful partial mutations preserve TTL. All operations honor lazy expiry,
+and mismatched types return `WRONGTYPE` without changing the value.
+
+The serialized, loopback-only RESP2 dispatcher now exposes SADD, SREM,
+SISMEMBER, SCARD, SMEMBERS and SMISMEMBER. SMEMBERS ordering is
+unspecified; SMISMEMBER returns positional 0/1 integers including
+repeated requested members. Replies are capped at 8,192 bytes and
+SADD applies the existing 8,176-byte reply-safe member limit.
+The storage/command tests cover binary data, duplicates, missing keys,
+wrong types, TTL preservation and expiry-index deletion, size limits,
+request fragmentation, pipelining and multiple TCP clients.
+
+**Exact implementation acceptance:** prior Phase 6C formal closure
+`201c3f1f3036ad70e69d8a15b84fc5202782fc97`; retained feature
+`phase6d/set-storage-commands`, first storage commit
+`743261636c2926f40b56f61856bcb9725e8e9b72`, second command commit
+`40657326e93631d8851c780424a730389b1f2cbb`; direct two-parent
+implementation merge `d21421ad910a179ea877fc7f1e555688ca8a81a8`
+with parents Phase 6C closure and the second command feature commit.
+Feature and merge tree `e1cadc1b2c86b24d37ce6819bd3926c87eda507d`;
+exactly nine code/test/build files changed and no docs or CI workflows.
+macOS Debug/Release 62/62 each, fuzz-enabled 63/63. Feature-head
+Linux networking `39995306323` and fuzz `39995306807`, post-merge
+main networking `39996097334` and fuzz `39996097046`: all passed.
+
+**Formal closure remains gated:** independent review of exactly five
+documents, docs-branch Linux CI, a two-parent docs-only merge to `main`,
+and final post-closure Linux CI. Phase 6E–6G, eviction, AOF, snapshots,
+recovery, remote deployment and benchmark claims are not included here.
 
 ## Current Functionality
 
@@ -379,7 +420,7 @@ Documented subsets of `INFO` and `CONFIG GET`.
 
 Full Redis compatibility is explicitly out of scope.
 
-Connectivity, string, integer, key, expiration, the six Phase 6B list commands and seven Phase 6C hash commands are implemented. Set and introspection commands remain planned.
+Connectivity, string, integer, key, expiration, list, hash and the six Phase 6D set commands are implemented. Introspection and broader Redis compatibility remain planned.
 
 ## Persistence Design
 
