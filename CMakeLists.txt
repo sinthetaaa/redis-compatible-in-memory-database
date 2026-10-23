@@ -297,6 +297,13 @@ if(BUILD_TESTING)
     )
     set_tests_properties(unit.command_errors PROPERTIES TIMEOUT 10)
 
+    # Phase 6A type-system groundwork: no collection command routes yet.
+    add_executable(redisdb-storage-value-tests tests/unit/storage_value_test.cpp)
+    target_link_libraries(redisdb-storage-value-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-storage-value-tests)
+    add_test(NAME unit.storage_value COMMAND redisdb-storage-value-tests)
+    set_tests_properties(unit.storage_value PROPERTIES TIMEOUT 15)
+
     add_executable(
         redisdb-database-tests
         tests/unit/database_test.cpp
