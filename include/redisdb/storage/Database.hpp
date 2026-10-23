@@ -141,6 +141,12 @@ class Database final {
                                         bool left);
     [[nodiscard]] std::size_t list_length(std::string_view key) const;
     [[nodiscard]] std::optional<std::string> list_pop(std::string_view key, bool left);
+    // Inclusive indexes; negative indexes are relative to the end. Absence or
+    // an empty range returns an empty vector. A nullopt signals that the
+    // encoded RESP2 array would exceed max_reply_bytes (no mutation).
+    [[nodiscard]] std::optional<std::vector<std::string>>
+    list_range(std::string_view key, std::int64_t start, std::int64_t stop,
+               std::size_t max_reply_bytes) const;
 
     // Returns an owned string snapshot. A non-string key throws WrongTypeError;
     // an absent or expired key returns nullopt, never an implicit conversion.

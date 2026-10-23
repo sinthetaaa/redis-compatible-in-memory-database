@@ -36,6 +36,7 @@ add_library(
     src/commands/ConnectivityCommands.cpp
     src/commands/StringCommands.cpp
     src/commands/KeyCommands.cpp
+    src/commands/ListCommands.cpp
     src/commands/CommandErrors.cpp
     src/storage/Database.cpp
     src/storage/Clock.cpp
@@ -175,6 +176,14 @@ if(BUILD_TESTING)
         set_tests_properties(integration.resp_expiration_acceptance PROPERTIES TIMEOUT 90)
 
         add_test(
+            NAME integration.resp_list_commands
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_list_commands_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_list_commands PROPERTIES TIMEOUT 100)
+
+        add_test(
             NAME integration.resp_multi_string
             COMMAND "${Python3_EXECUTABLE}"
                     "${PROJECT_SOURCE_DIR}/tests/integration/resp_multi_string_test.py"
@@ -303,6 +312,13 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-storage-value-tests)
     add_test(NAME unit.storage_value COMMAND redisdb-storage-value-tests)
     set_tests_properties(unit.storage_value PROPERTIES TIMEOUT 15)
+
+    # Phase 6B.2: six list command handlers; live RESP2 integration suite.
+    add_executable(redisdb-list-command-tests tests/unit/list_commands_test.cpp)
+    target_link_libraries(redisdb-list-command-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-list-command-tests)
+    add_test(NAME unit.list_commands COMMAND redisdb-list-command-tests)
+    set_tests_properties(unit.list_commands PROPERTIES TIMEOUT 20)
 
     # Phase 6B.1: owned list storage and safe cross-type command routing.
     add_executable(redisdb-list-foundation-tests tests/unit/list_storage_foundation_test.cpp)

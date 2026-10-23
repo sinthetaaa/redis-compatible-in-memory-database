@@ -1,6 +1,7 @@
 #include "redisdb/storage/Database.hpp"
 
 #include <charconv>
+#include <iterator>
 #include <limits>
 #include <set>
 #include <stdexcept>
@@ -463,6 +464,78 @@ std::optional<std::string> Database::list_pop(std::string_view key, bool left) {
         list->elements.pop_front();
     } else {
         list->elements.pop_back();
+    }
+    return result;
+}
+
+std::optional<std::vector<std::string>> Database::list_range(std::string_view key,
+                                                             std::int64_t start, std::int64_t stop,
+                                                             std::size_t max_reply_bytes) const {
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return std::vector<std::string>{};
+    }
+    const auto* list = std::get_if<ListValue>(&found->second.value);
+    if (list == nullptr) {
+        throw WrongTypeError{};
+    }
+    const std::size_t size = list->elements.size();
+    if (size == 0) {
+        return std::vector<std::string>{};
+    }
+
+    // Avoid signed negation of INT64_MIN and overflow in size/index arithmetic.
+    const auto negative_magnitude = [](std::int64_t index) -> std::uint64_t {
+        return static_cast<std::uint64_t>(-(index + 1)) + 1U;
+    };
+    std::size_t first = 0;
+    if (start >= 0) {
+        const auto offset = static_cast<std::uint64_t>(start);
+        if (offset >= size) {
+            return std::vector<std::string>{};
+        }
+        first = static_cast<std::size_t>(offset);
+    } else {
+        const auto magnitude = negative_magnitude(start);
+        first = magnitude >= size ? 0 : size - static_cast<std::size_t>(magnitude);
+    }
+
+    std::size_t last = 0;
+    if (stop >= 0) {
+        const auto offset = static_cast<std::uint64_t>(stop);
+        last = offset >= size ? size - 1 : static_cast<std::size_t>(offset);
+    } else {
+        const auto magnitude = negative_magnitude(stop);
+        if (magnitude > size) {
+            return std::vector<std::string>{};
+        }
+        last = size - static_cast<std::size_t>(magnitude);
+    }
+    if (first > last) {
+        return std::vector<std::string>{};
+    }
+    const std::size_t count = last - first + 1;
+    // Each RESP2 bulk item has at least six bytes ($0\r\n\r\n).
+    if (count > max_reply_bytes / 6) {
+        return std::nullopt;
+    }
+    std::size_t total = 3 + std::to_string(count).size();
+    if (total > max_reply_bytes) {
+        return std::nullopt;
+    }
+    std::vector<std::string> result;
+    result.reserve(count);
+    auto it = list->elements.begin();
+    std::advance(it, static_cast<std::ptrdiff_t>(first));
+    for (std::size_t i = 0; i < count; ++i, ++it) {
+        const std::size_t bytes = it->size();
+        const std::size_t overhead = 5 + std::to_string(bytes).size();
+        if (overhead > max_reply_bytes - total || bytes > max_reply_bytes - total - overhead) {
+            return std::nullopt;
+        }
+        total += overhead + bytes;
+        result.push_back(*it);
     }
     return result;
 }
