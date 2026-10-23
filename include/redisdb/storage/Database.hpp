@@ -7,6 +7,7 @@
 #include <functional>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -28,6 +29,16 @@ struct TransparentStringHash {
 // Accepts optional minus sign; rejects plus, whitespace, leading zeroes,
 // empty values, embedded bytes, and out-of-range magnitudes.
 [[nodiscard]] std::optional<std::int64_t> parse_integer64(std::string_view text) noexcept;
+
+// Missing, string and collection identity after lazy expiration.
+enum class StoredType { None, String, List, Hash, Set };
+
+// Database callers can distinguish wrong types from missing keys or limits.
+class WrongTypeError final : public std::logic_error {
+  public:
+    WrongTypeError()
+        : std::logic_error("WRONGTYPE Operation against a key holding the wrong kind of value") {}
+};
 
 enum class IntegerMutationError { None, InvalidInteger, Overflow };
 struct IntegerMutationResult {
@@ -119,7 +130,26 @@ class Database final {
     // The caller serializes this with all other database operations.
     [[nodiscard]] SweepResult sweep_expired(std::size_t budget);
 
-    // Returns an owned snapshot, independent of future mutations or rehashing.
+    // Phase 6B.1: collection type identity, with live-key/lazy-TTL semantics.
+    [[nodiscard]] StoredType type_of(std::string_view key) const;
+
+    // Owned list primitives. All inserts stage the complete new list first;
+    // wrong types throw WrongTypeError without mutation. Empty push input is
+    // invalid. Existing TTL survives mutations; removing the last item deletes
+    // the key and its expiration index record.
+    [[nodiscard]] std::size_t list_push(std::string key, const std::vector<std::string>& values,
+                                        bool left);
+    [[nodiscard]] std::size_t list_length(std::string_view key) const;
+    [[nodiscard]] std::optional<std::string> list_pop(std::string_view key, bool left);
+    // Inclusive indexes; negative indexes are relative to the end. Absence or
+    // an empty range returns an empty vector. A nullopt signals that the
+    // encoded RESP2 array would exceed max_reply_bytes (no mutation).
+    [[nodiscard]] std::optional<std::vector<std::string>>
+    list_range(std::string_view key, std::int64_t start, std::int64_t stop,
+               std::size_t max_reply_bytes) const;
+
+    // Returns an owned string snapshot. A non-string key throws WrongTypeError;
+    // an absent or expired key returns nullopt, never an implicit conversion.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
     [[nodiscard]] bool exists(std::string_view key) const;
     [[nodiscard]] bool erase(std::string_view key);

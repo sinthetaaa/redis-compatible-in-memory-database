@@ -14,6 +14,15 @@ namespace {
 
 using protocol::RespValue;
 
+bool has_wrong_string_type(const storage::Database& database, std::string_view key) {
+    const auto kind = database.type_of(key);
+    return kind != storage::StoredType::None && kind != storage::StoredType::String;
+}
+
+HandlerResult wrong_type_reply() {
+    return {RespValue::error("WRONGTYPE Operation against a key holding the wrong kind of value")};
+}
+
 HandlerResult set_command(storage::Database& database, const Command& command) {
     const auto& arguments = command.arguments();
     // Preserve the existing mandatory-two-argument form, and accept exactly
@@ -56,6 +65,9 @@ HandlerResult get_command(const storage::Database& database, const Command& comm
         return {RespValue::error("ERR wrong number of arguments for 'get' command")};
     }
 
+    if (has_wrong_string_type(database, command.arguments()[0])) {
+        return wrong_type_reply();
+    }
     const auto value = database.get(command.arguments()[0]);
     if (!value.has_value()) {
         return {RespValue::null_bulk_string()};
@@ -75,6 +87,9 @@ HandlerResult append_command(storage::Database& database, const Command& command
     }
 
     const auto& args = command.arguments();
+    if (has_wrong_string_type(database, args[0])) {
+        return wrong_type_reply();
+    }
     const auto length = database.append(args[0], args[1], MaxStringValueBytes);
     if (!length.has_value()) {
         // Existing bytes and missing-key state are preserved on rejection.
@@ -86,6 +101,9 @@ HandlerResult append_command(storage::Database& database, const Command& command
 HandlerResult strlen_command(const storage::Database& database, const Command& command) {
     if (!validate_arity(command, ArityRule{1, 1, 1}).valid()) {
         return {RespValue::error("ERR wrong number of arguments for 'strlen' command")};
+    }
+    if (has_wrong_string_type(database, command.arguments()[0])) {
+        return wrong_type_reply();
     }
     return {RespValue::integer(
         static_cast<std::int64_t>(database.string_length(command.arguments()[0])))};
@@ -107,6 +125,9 @@ HandlerResult integer_command(storage::Database& database, const Command& comman
         operand = *parsed;
     }
 
+    if (has_wrong_string_type(database, command.arguments()[0])) {
+        return wrong_type_reply();
+    }
     const auto result = database.adjust_integer(command.arguments()[0], operand, subtract);
     switch (result.error) {
     case storage::IntegerMutationError::None:
@@ -151,7 +172,10 @@ HandlerResult mget_command(const storage::Database& database, const Command& com
     std::vector<RespValue> values;
     values.reserve(keys.size());
     for (const auto& key : keys) {
-        auto value = database.get(key);
+        // Redis MGET returns nil for a non-string value, not WRONGTYPE.
+        auto value = database.type_of(key) == storage::StoredType::String
+                         ? database.get(key)
+                         : std::optional<std::string>{};
         std::size_t additional = 5; // $-1\r\n for missing keys
         if (value) {
             // Check before framing arithmetic or allocation: stored values
