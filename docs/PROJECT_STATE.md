@@ -2,14 +2,21 @@
 
 ## 1. Snapshot
 
-- Updated: 2026-10-23 (Phase 6D implementation merged into `main`, verified by post-merge Linux Debug/Release and Clang 18 sanitizer/fuzz; separate docs-only closure in preparation).
-- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 and 6A–6C formally closed. Phase 6D set implementation ACCEPTED, formal five-document closure PENDING. Phases 6E–6G NOT STARTED.
-- Current subphase: Phase 6D.3B five-document-only closure draft from accepted implementation merge `d21421ad910a179ea877fc7f1e555688ca8a81a8`; branch `phase6d/closure-audit` (local draft, no commit or push yet).
-- Last completed engineering milestone: Five binary-safe set Database primitives and six live RESP2 routes SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER with uniqueness, TTL preservation, last-member expiry-index deletion, WRONGTYPE and bounded replies. macOS Debug/Release 62/62 each and fuzz-enabled 63/63. Post-implementation main Linux networking `39996097334` and Clang 18 sanitizer/fuzz `39996097046` green at the exact merge SHA.
-- Exact next task: Review and test the five-document Phase 6D closure draft, commit and normally push only `phase6d/closure-audit`, independently accept both exact-head docs-branch Linux workflows, create guarded two-parent docs-only merge into `main`, and verify the new main SHA with both post-closure Linux workflows. Only then begin Phase 6E wrong-type acceptance.
+- Updated: 2026-10-23 (Phase 6D independently and formally closed at `281d044f4f09ac4b33f4323067ef4bc20c46bbbe`; Phase 6E wrong-type test-only feature under local development).
+- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 and 6A–6D formally COMPLETE, Phase 6E wrong-type acceptance IN PROGRESS but NOT ACCEPTED, 6F–6G NOT STARTED.
+- Current subphase: Phase 6E.1A — local cross-product WRONGTYPE unit and TCP test matrix with three-document closure-status synchronization; feature `phase6e/wrongtype-acceptance`, not yet committed/pushed or Linux-certified.
+- Last completed engineering milestone: Phase 6D formal five-document closure `281d044f4f09ac4b33f4323067ef4bc20c46bbbe`, parents `d21421ad910a179ea877fc7f1e555688ca8a81a8` and `c030abe0d6339a78bad62542f715581b1f1b5f3e`, tree `287bbc48c8f2ed93288eded5a65f433cf9e1e28e`. Final Linux networking `39999397205` and Clang 18 ASan/UBSan/fuzz `39999397202` both passed every job and step; macOS Debug/Release 62/62 and fuzz-enabled 63/63 PASS.
+- Exact next task: Validate Phase 6E.1A WRONGTYPE cross-type matrix locally, independently review its six files and guard the first feature commit/push; require exact-head Linux Debug/Release and sanitizer/fuzz CI before any merge. Keep 6F–6G unstarted and do not declare 6E complete prematurely.
 - Current commands: PING/ECHO/QUIT; string SET/GET/MSET/MGET/APPEND/STRLEN/integer operations; key DEL/EXISTS/TYPE; EXPIRE/PEXPIRE/TTL/PTTL/PERSIST/SET EX/PX; list LPUSH/RPUSH/LLEN/LPOP/RPOP/LRANGE; hash HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL; set SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER.
 - Scope limits: Set/hash collections are unordered. SMISMEMBER positional 0/1; 8,192-byte reply ceiling and 8,176-byte SADD member cap. No SPOP, set algebra, complete Phase 6E WRONGTYPE matrix, memory accounting hooks, collection differential tests, eviction, persistence, restart recovery, remote deployment or benchmarks. Phase 6 acceptance gate remains open until 6E–6G are accepted.
 - Current-status authority: This top snapshot and new Phase 6D implementation record supersede earlier historical continuation instructions in this file. `docs/ROADMAP.md` tracks remaining work.
+
+### Phase 6D formal closure — VERIFIED PASS (2026-10-23)
+
+- **Final main:** `281d044f4f09ac4b33f4323067ef4bc20c46bbbe`; exact two parents `d21421ad910a179ea877fc7f1e555688ca8a81a8` and `c030abe0d6339a78bad62542f715581b1f1b5f3e`; tree `287bbc48c8f2ed93288eded5a65f433cf9e1e28e` equals the reviewed five-document feature tree.
+- **Final exact-head push CI:** Linux Debug/Release `39999397205` SUCCESS; Linux Clang 18 ASan+UBSan/fuzz `39999397202` SUCCESS; all jobs and steps green. The former documentation feature `phase6d/closure-audit` and implementation feature `phase6d/set-storage-commands` remain retained.
+- **Read-only Phase 6E.0A independent audit:** PASS with all ten Phase 6D exact-head feature/merge workflows accepted, macOS Debug/Release 62/62, fuzz-enabled 63/63, synchronized clean main. No source, workflow, or history changes made by the audit.
+- **Scope boundary:** Six implemented set commands are accepted; 6E comprehensive WRONGTYPE cross-product verification, 6F memory accounting hooks and 6G differential tests are separate incomplete stages. This record supersedes the draft-time snapshot that appears in older milestone notes.
 
 ### Phase 6D set storage and six RESP2 commands — implementation accepted (2026-10-23)
 
