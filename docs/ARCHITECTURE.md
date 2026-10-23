@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0–5 and 6A–6C formally closed. Phase 6D set storage and six RESP2 set routes accepted on main at `d21421a`; exact-head main Linux Debug/Release and sanitizer/fuzz passed. Phase 6D docs closure CI remains separately gated; Phase 6E–6G and Phases 7–19 are future scope.
+**Architecture state (2026-10-24):** Phases 0–5 and 6A–6D formally closed. Phase 6E WRONGTYPE cross-type validation is implementation-accepted on main `37aaad4`, with green feature and post-implementation Linux CI. Its documentation-only formal closure and final main CI remain gated. Phases 6F–6G and Phases 7–19 remain future work. This milestone adds tests and documentation without modifying the runtime architecture.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -1223,6 +1223,32 @@ Implementation feature head `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`;
 non-fast-forward implementation merge `7df2e08209468ae3e8a619e25451abe9196bda11`;
 post-merge Linux workflows `39973111123` and `39973111117` success.
 
+
+### Phase 6E — Existing-Type WRONGTYPE Cross-Product Acceptance
+
+The command dispatcher continues to serialize operations against one
+authoritative, type-tagged database. Phase 6E makes no changes to the
+production command routes, stored value representation, TTL index,
+epoll/kqueue event loop, RESP2 parser or message framing. It adds one
+in-process dispatcher C++ CTest and one process-level real TCP RESP2
+CTest with 26 typed command signatures across three incompatible
+stored types (78 rejection cases per suite). Both check exact
+WRONGTYPE errors, unchanged values/types/deadlines and cross-client
+observability. Missing keys do not produce false WRONGTYPE responses;
+MGET uses nil for a non-string entry; SET/MSET explicitly replace types.
+The TCP matrix also checks recovery across pipelined requests.
+
+Retained feature `phase6e/wrongtype-acceptance` commit
+`a66128b077cfbfc22fbe6daca1e053e5fdaa111e` has tree
+`2ff6ff4be49c6b81cd787a8c5a4ec4b992b10712`; direct implementation
+merge `37aaad4068ca0cf4452635737bd219a11d120d4c` has exactly two
+parents and the identical tree. Six test/build/docs files changed;
+source handlers and CI definitions are byte-identical to Phase 6D.
+macOS Debug and Release 64/64, fuzz-enabled 65/65; feature networking
+`40004381493` and fuzz `40004381506`, main networking `40005159337`
+and fuzz `40005159401`, all passed. Formal document-closure gates
+remain pending. Memory accounting and Redis differential testing are
+separate Phase 6F and 6G work.
 
 ### Phase 6D — Set Storage and RESP2 Command Architecture (accepted implementation)
 

@@ -8,15 +8,18 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-23): Phases 0–5 and 6A–6D formally
-COMPLETE; overall Phase 6 remains IN PROGRESS. Phase 6D final documentation
-closure `281d044f4f09ac4b33f4323067ef4bc20c46bbbe` passed independent
-Linux Debug/Release `39999397205` and Clang 18 ASan+UBSan/fuzz
-`39999397202`, with clean synchronized main. Phase 6E cross-type WRONGTYPE
-acceptance is being developed on `phase6e/wrongtype-acceptance`; its test
-implementation, feature commit and Linux CI are NOT YET ACCEPTED.
-Phase 6F–6G, eviction, persistence and deployment remain future work.
-Older milestone statements below describe historical checkpoints.**
+**Project status (2026-10-24): Phases 0–5 and 6A–6D formally
+COMPLETE; Phase 6 remains IN PROGRESS. Phase 6E cross-type WRONGTYPE
+acceptance has been implementation-merged on `main` as
+`37aaad4068ca0cf4452635737bd219a11d120d4c`, after reviewed feature
+`a66128b077cfbfc22fbe6daca1e053e5fdaa111e` and green exact-head
+Linux feature and main implementation CI. Tests cover 26 incompatible
+command/type combinations for each applicable type, 78 matrix cases in
+both the unit and live TCP suites; macOS Debug/Release 64/64 and
+fuzz-enabled 65/65 passed. Phase 6E formal five-document closure and
+final post-closure Linux CI are still PENDING, so do not begin Phase 6F.
+Phases 6F–6G, eviction, persistence and deployment remain future work.
+Historical milestone records below are not current instructions.**
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
 integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
@@ -135,6 +138,38 @@ post-implementation main Linux networking `39984084722` and fuzz
 implementation acceptance; formal docs closure requires separately
 verified documentation-branch and post-closure main CI. No PR, force push
 or feature-branch deletion was used.
+
+## Phase 6E — Cross-Type WRONGTYPE Acceptance (implementation merged)
+
+This is a test-and-documentation-only milestone. The existing string,
+list, hash and set handlers are unchanged. A dedicated C++ dispatcher
+matrix and a real TCP RESP2 integration suite each exercise 26 typed
+commands against the three incompatible stored types, totaling 78
+wrong-type cases per suite. Every incompatible operation must return the
+exact WRONGTYPE error while retaining the original type, full value
+and expiry metadata. Binary-safe keys and representative payloads,
+missing-key behavior, permitted SET/MSET replacement, MGET nil for
+non-string values, and pipeline recovery after errors are also checked.
+
+The permanent CTests are `unit.wrongtype_matrix` and
+`integration.resp_wrongtype_matrix`. This addition raises local CTest
+counts from 62 to 64 in Debug/Release and from 63 to 65 with the fuzz
+corpus smoke test enabled. The reviewed feature
+`a66128b077cfbfc22fbe6daca1e053e5fdaa111e` on retained branch
+`phase6e/wrongtype-acceptance` has tree
+`2ff6ff4be49c6b81cd787a8c5a4ec4b992b10712` and one parent,
+the Phase 6D closure `281d044f4f09ac4b33f4323067ef4bc20c46bbbe`.
+The direct two-parent test/CMake/docs merge into main is
+`37aaad4068ca0cf4452635737bd219a11d120d4c`, with that same tree
+and exactly six affected files (four modified, two new). No server,
+storage, command implementation or GitHub CI workflow file changed.
+
+Feature-head Linux networking `40004381493` and Clang 18 sanitizer/fuzz
+`40004381506` passed; exact implementation-merge main networking
+`40005159337` and sanitizer/fuzz `40005159401` also passed.
+Formal completion remains gated on independent five-document review,
+documentation-branch Linux CI, a two-parent docs-only merge into main,
+and final post-closure Linux CI. Phase 6F–6G remain unstarted.
 
 ## Phase 6D — Set Storage and Six RESP2 Commands (implementation accepted)
 

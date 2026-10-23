@@ -689,7 +689,7 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A–6D formally closed with exact-head Linux CI; 6E WRONGTYPE acceptance local tests in progress and not yet committed; 6F–6G NOT STARTED
+**Status:** IN PROGRESS — 6A–6D formally complete. Phase 6E 78-case WRONGTYPE matrix implementation accepted on main `37aaad4` with green Linux CI; the separately reviewed five-document formal closure and final post-closure CI remain required. Phase 6F–6G NOT STARTED.
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
@@ -698,6 +698,36 @@ formal closure record and deliberate compatibility limitations.
 - [ ] 6E — Wrong-type errors
 - [ ] 6F — Collection memory accounting hooks
 - [ ] 6G — Differential tests
+
+### Phase 6E implementation acceptance — PASS (2026-10-24)
+
+Retained feature `phase6e/wrongtype-acceptance` was committed as
+`a66128b077cfbfc22fbe6daca1e053e5fdaa111e` from final Phase 6D
+closure `281d044f4f09ac4b33f4323067ef4bc20c46bbbe`. It added the
+permanent CTests `unit.wrongtype_matrix` and
+`integration.resp_wrongtype_matrix`, each with 26 typed commands x three
+incompatible stored values = 78 precise WRONGTYPE rejection cases.
+The acceptance also verifies error atomicity, full value/type/TTL
+preservation, missing keys, binary-safe values, permitted SET/MSET
+replacement, MGET nil for incompatible stored kinds and pipeline
+recovery. The two-parent no-ff implementation merge to main is
+`37aaad4068ca0cf4452635737bd219a11d120d4c`, with second parent
+being the feature SHA and first parent being the Phase 6D closure.
+Feature and merge tree `2ff6ff4be49c6b81cd787a8c5a4ec4b992b10712`;
+exactly four modified build/docs files plus two added tests. Production
+command/server/storage sources and CI workflows are unchanged.
+
+Local macOS Debug/Release 64/64 and fuzz-enabled 65/65 passed. Both
+feature-head Linux workflows `40004381493` and `40004381506` passed;
+post-implementation main Linux networking `40005159337` and Clang 18
+sanitizer/fuzz `40005159401` passed with every job and step green.
+
+**Formal closure gate remains open:** separately reviewed exactly-five-
+document feature, its exact-head Linux Debug/Release and ASan/UBSan/fuzz,
+guarded two-parent docs-only merge, and final post-closure main CI.
+Only then update the 6E checkbox and begin Phase 6F memory accounting.
+Phase 6G differential testing, eviction, persistence and deployment
+remain future work.
 
 ### Phase 6D formal closure acceptance — PASS (2026-10-23)
 
