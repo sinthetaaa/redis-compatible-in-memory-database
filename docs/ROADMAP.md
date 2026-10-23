@@ -664,7 +664,7 @@ unsupported Redis command options remain future phases.
 
 # Phase 5 — TTL and Expiration
 
-**Status:** IN PROGRESS (5A–5F merged and validated; 5G bounded active expiration on feature branch)
+**Status:** IN PROGRESS (5A–5G merged and post-merge validated; 5H acceptance suite on feature branch)
 
 - [x] 5A — Clock abstraction (merged `05d0ca4`, post-merge Linux CI passed)
 - [x] 5B — Expiration metadata (merged `f51d8ad`, post-merge Linux CI passed)
@@ -672,8 +672,8 @@ unsupported Redis command options remain future phases.
 - [x] 5D — EXPIRE, PEXPIRE (merged `7169576`, post-merge Linux CI passed)
 - [x] 5E — TTL, PTTL, PERSIST (merged `7782dfc`, post-merge Linux CI passed)
 - [x] 5F — SET EX/PX (merged `2756f01`, post-merge Linux CI passed)
-- [ ] 5G — Active expiration (bounded deadline index, 32 checks/100ms event-loop turn; CI/merge pending)
-- [ ] 5H — Deterministic expiration tests
+- [x] 5G — Active expiration (merged `5c1cf93`; bounded deadline index, 32 checks/100ms; post-merge CI passed)
+- [ ] 5H — Deterministic expiration tests (fixed-seed model, 513-key sweep, RESP2 acceptance; CI/merge pending)
 
 ### Acceptance Gate
 

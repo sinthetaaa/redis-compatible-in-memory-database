@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 5 — TTL and Expiration (IN PROGRESS); Phases 0–4 COMPLETE
-- Current subphase: Phase 5G — bounded active expiration, isolated feature branch (CI and merge pending)
-- Status: Phases 0–4 and 5A–5F COMPLETE; 5G under validation; 5H and Phases 6–19 NOT STARTED
-- Last completed milestone: Phase 5F two-parent main merge `2756f017a65bae51fdd1ebcbde2fa4e315ab34f5`; post-merge Linux CI #39938093896 (48/48 Debug and Release) and sanitizer/fuzz #39938094657 (49/49, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
-- Exact next task: Validate the bounded expiration index and event-loop housekeeping, macOS Debug/Release/fuzz regression, exact-head Linux CI, then guarded direct two-parent merge without PR; Phase 5H deterministic expiration tests follow.
+- Current subphase: Phase 5H — deterministic expiration acceptance on isolated feature branch (CI and merge pending)
+- Status: Phases 0–4 and 5A–5G COMPLETE; 5H under validation; Phases 6–19 NOT STARTED
+- Last completed milestone: Phase 5G two-parent main merge `5c1cf932fb3457fe727c4b9551df79439b56428f`; post-merge Linux CI #39941780831 (50/50 Debug and Release) and sanitizer/fuzz #39941780912 (51/51, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
+- Exact next task: Run Phase 5H fixed-seed reference-model and bounded-sweep acceptance tests plus live RESP2 integration, full macOS regression, exact-head Linux CI and guarded direct two-parent merge without PR. Formal Phase 5 closure audit follows; do not begin Phase 6 until closure.
 - Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
 - Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.
