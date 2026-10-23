@@ -61,7 +61,8 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
     net::ConnectionManager manager(net::TcpListener::bind_loopback(port), poller, limits);
     // One database for all TCP connections; the single event-loop thread
     // serializes each command. It must outlive dispatcher route closures.
-    storage::Database database;
+    storage::SystemClock server_clock;
+    storage::Database database(server_clock);
     auto routes = commands::connectivity_routes();
     for (auto& route : commands::string_routes(database)) {
         routes.push_back(std::move(route));
@@ -115,8 +116,17 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
     install_command_signals();
     std::cout << "RESP_READY 127.0.0.1:" << manager.listener_port() << '\n' << std::flush;
     constexpr auto PollInterval = std::chrono::milliseconds{100};
+    constexpr std::size_t MaxExpiryChecksPerTurn = 32;
+    auto next_sweep = server_clock.monotonic_now();
     while (command_stop_requested == 0) {
         (void)manager.poll_once(PollInterval);
+        // Maintenance is outside each individual command but serialized on
+        // the same event-loop thread: bounded work, no data races or timers.
+        const auto current = server_clock.monotonic_now();
+        if (current >= next_sweep) {
+            (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+            next_sweep = current + PollInterval;
+        }
     }
     std::cout << "RESP_STOPPED\n" << std::flush;
 }

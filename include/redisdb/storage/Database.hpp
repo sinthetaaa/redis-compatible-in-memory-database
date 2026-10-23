@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -46,8 +47,8 @@ enum class SetWithExpiryResult { Set, OutOfRange };
 // The caller serializes access; this class is not independently synchronized.
 // Phase 5C enforces deadlines on demand, using an injectable wall clock.
 // Logically const reads can remove expired entries; callers serialize access.
-// TTL/PTTL/PERSIST are introduced in 5E; active expiry, eviction and
-// durability/persistence to disk are not implemented.
+// TTL/PTTL/PERSIST are introduced in 5E; Phase 5G adds bounded active
+// expiry. Eviction and durability/persistence to disk are not implemented.
 class Database final {
   public:
     // The default database uses a process-lifetime production SystemClock.
@@ -109,6 +110,15 @@ class Database final {
     // One clock sample, with overflow-safe signed-epoch subtraction.
     [[nodiscard]] std::int64_t remaining_ttl(std::string_view key, bool milliseconds) const;
 
+    struct SweepResult {
+        std::size_t inspected = 0;
+        std::size_t deleted = 0;
+    };
+    // Deterministic, bounded maintenance turn: inspect at most `budget`
+    // earliest deadlines. No full-table scan; unchanged live keys are safe.
+    // The caller serializes this with all other database operations.
+    [[nodiscard]] SweepResult sweep_expired(std::size_t budget);
+
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
     [[nodiscard]] bool exists(std::string_view key) const;
@@ -116,7 +126,10 @@ class Database final {
     // Physical entry count. With lazy-only expiration, untouched expired
     // entries can remain until accessed (5G adds active sweeping).
     [[nodiscard]] std::size_t size() const noexcept { return entries_.size(); }
-    void clear() noexcept { entries_.clear(); }
+    void clear() noexcept {
+        entries_.clear();
+        expiry_index_.clear();
+    }
 
   private:
     // Treat deadline <= current wall time as expired. This is logically
@@ -124,6 +137,11 @@ class Database final {
     [[nodiscard]] bool expire_if_needed(std::string_view key) const;
     const Clock& clock_;
     mutable std::unordered_map<std::string, Entry, TransparentStringHash, std::equal_to<>> entries_;
+    // Ordered index contains exactly one (deadline, binary key) per volatile
+    // entry. All mutation paths maintain it; scans never depend on hash
+    // iterators surviving a rehash, erase or MSET clone-and-swap.
+    using ExpiryKey = std::pair<WallTimePoint, std::string>;
+    mutable std::set<ExpiryKey> expiry_index_;
 };
 
 } // namespace redisdb::storage

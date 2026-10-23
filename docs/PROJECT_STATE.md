@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 5 — TTL and Expiration (IN PROGRESS); Phases 0–4 COMPLETE
-- Current subphase: Phase 5F — SET EX/PX atomic relative expiration on feature branch (validation/merge pending)
-- Status: Phases 0–4 and 5A–5E COMPLETE; 5F under validation; 5G–5H and Phases 6–19 NOT STARTED
-- Last completed milestone: Phase 5E two-parent main merge `7782dfc3b9899ba70e1006e2e0b8024d0426c0e3`; post-merge Linux CI #39931900587 (46/46 Debug and Release) and sanitizer/fuzz #39931900483 (47/47, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
-- Exact next task: Validate Phase 5F deterministic SET EX/PX unit tests and live RESP2 integration, full local regression, exact-head Linux CI, then guarded direct two-parent merge without PR. Phase 5G active expiration follows.
+- Current subphase: Phase 5G — bounded active expiration, isolated feature branch (CI and merge pending)
+- Status: Phases 0–4 and 5A–5F COMPLETE; 5G under validation; 5H and Phases 6–19 NOT STARTED
+- Last completed milestone: Phase 5F two-parent main merge `2756f017a65bae51fdd1ebcbde2fa4e315ab34f5`; post-merge Linux CI #39938093896 (48/48 Debug and Release) and sanitizer/fuzz #39938094657 (49/49, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
+- Exact next task: Validate the bounded expiration index and event-loop housekeeping, macOS Debug/Release/fuzz regression, exact-head Linux CI, then guarded direct two-parent merge without PR; Phase 5H deterministic expiration tests follow.
 - Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
 - Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.

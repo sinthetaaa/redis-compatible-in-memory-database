@@ -2,6 +2,7 @@
 
 #include <charconv>
 #include <limits>
+#include <set>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -27,7 +28,7 @@ bool Database::expire_if_needed(std::string_view key) const {
         *found->second.expires_at > clock_.wall_now()) {
         return false;
     }
-    // Access-driven deletion: no global scan and no eviction of live keys.
+    expiry_index_.erase(ExpiryKey{*found->second.expires_at, found->first});
     entries_.erase(found);
     return true;
 }
@@ -53,16 +54,16 @@ bool Database::set(std::string key, std::string bytes) {
     (void)expire_if_needed(key);
     auto found = entries_.find(std::string_view(key));
     if (found != entries_.end()) {
-        // Construct first; moving a string into the same variant alternative
-        // cannot require allocation with the standard string allocator.
         Value replacement = StringValue{std::move(bytes)};
+        if (found->second.expires_at.has_value()) {
+            // Index removal precedes the no-throw value move. Any key-copy
+            // allocation failure leaves the old entry completely untouched.
+            expiry_index_.erase(ExpiryKey{*found->second.expires_at, found->first});
+        }
         found->second.value = std::move(replacement);
-        // Redis SET (without future KEEPTTL option) replaces any old deadline.
-        // The value is fully staged before metadata is cleared.
         found->second.expires_at.reset();
         return false;
     }
-
     const auto inserted =
         entries_.try_emplace(std::move(key), Entry{Value{StringValue{std::move(bytes)}}});
     return inserted.second;
@@ -73,16 +74,12 @@ SetWithExpiryResult Database::set_with_expiration(std::string key, std::string b
     using NativeDuration = WallTimePoint::duration;
     using Rep = NativeDuration::rep;
     using Period = NativeDuration::period;
-    // Match the system-clock representation checks already used by EXPIRE.
     static_assert(std::is_integral_v<Rep> && std::is_signed_v<Rep>);
     static_assert(std::numeric_limits<Rep>::digits == 63);
     static_assert(Period::num == 1 && Period::den % 1000 == 0);
     constexpr std::int64_t TicksPerMillisecond = Period::den / 1000;
     constexpr std::int64_t TicksPerSecond = Period::den;
     constexpr std::int64_t Max = std::numeric_limits<Rep>::max();
-
-    // A rejected SET has zero side effects, even if its target has an expired
-    // deadline. Sample once, and check before allocating or touching the map.
     if (amount <= 0) {
         return SetWithExpiryResult::OutOfRange;
     }
@@ -97,27 +94,49 @@ SetWithExpiryResult Database::set_with_expiration(std::string key, std::string b
         return SetWithExpiryResult::OutOfRange;
     }
     const WallTimePoint deadline{NativeDuration{now_ticks + delta}};
-
-    // Prepare an owned complete replacement before the first mutation.
-    // Existing map iterators must not be used after an expiration callback.
     Entry replacement{Value{StringValue{std::move(bytes)}}, deadline};
+
+    // Stage index allocation before touching the authoritative entry.
+    // Roll back the new index record if insertion of a new entry throws.
     const auto found = entries_.find(std::string_view(key));
+    std::optional<ExpiryKey> previous_record;
+    if (found != entries_.end() && found->second.expires_at.has_value() &&
+        *found->second.expires_at != deadline) {
+        previous_record.emplace(*found->second.expires_at, found->first);
+    }
+    const auto indexed = expiry_index_.emplace(deadline, key);
     if (found != entries_.end()) {
         found->second = std::move(replacement);
+        if (previous_record.has_value()) {
+            expiry_index_.erase(*previous_record);
+        }
     } else {
-        (void)entries_.try_emplace(std::move(key), std::move(replacement));
+        try {
+            (void)entries_.try_emplace(std::move(key), std::move(replacement));
+        } catch (...) {
+            if (indexed.second) {
+                expiry_index_.erase(indexed.first);
+            }
+            throw;
+        }
     }
     return SetWithExpiryResult::Set;
 }
 
 void Database::set_many(const std::vector<std::pair<std::string, std::string>>& pairs) {
-    // Construct the whole next state before changing the authoritative map.
-    // Allocation failure during cloning or replacement leaves it untouched.
+    // Both authoritative structures are fully staged before commit.
+    // Duplicate MSET keys are last-wins, while prior TTL metadata is cleared.
     auto next = entries_;
+    auto next_expiry = expiry_index_;
     for (const auto& [key, bytes] : pairs) {
+        const auto existing = next.find(key);
+        if (existing != next.end() && existing->second.expires_at.has_value()) {
+            next_expiry.erase(ExpiryKey{*existing->second.expires_at, existing->first});
+        }
         next.insert_or_assign(key, Entry{Value{StringValue{bytes}}});
     }
     entries_.swap(next);
+    expiry_index_.swap(next_expiry);
 }
 
 std::optional<std::size_t> Database::append(std::string_view key, std::string_view suffix,
@@ -206,7 +225,16 @@ bool Database::set_expiration(std::string_view key, WallTimePoint deadline) {
     if (found == entries_.end()) {
         return false;
     }
+    const auto previous = found->second.expires_at;
+    std::optional<ExpiryKey> previous_record;
+    if (previous.has_value() && *previous != deadline) {
+        previous_record.emplace(*previous, found->first);
+    }
+    (void)expiry_index_.emplace(deadline, found->first);
     found->second.expires_at = deadline;
+    if (previous_record.has_value()) {
+        expiry_index_.erase(*previous_record);
+    }
     return true;
 }
 
@@ -222,39 +250,41 @@ bool Database::clear_expiration(std::string_view key) {
     if (found == entries_.end()) {
         return false;
     }
-    const bool was_set = found->second.expires_at.has_value();
+    if (!found->second.expires_at.has_value()) {
+        return false;
+    }
+    expiry_index_.erase(ExpiryKey{*found->second.expires_at, found->first});
     found->second.expires_at.reset();
-    return was_set;
+    return true;
 }
 
 ExpireResult Database::expire_after(std::string_view key, std::int64_t amount, bool milliseconds) {
     using NativeDuration = WallTimePoint::duration;
     using Rep = NativeDuration::rep;
     using Period = NativeDuration::period;
-    // Supported Linux and macOS system_clock implementations use signed
-    // 64-bit, sub-millisecond integral ticks; avoid duration_cast overflow.
     static_assert(std::is_integral_v<Rep> && std::is_signed_v<Rep>);
     static_assert(std::numeric_limits<Rep>::digits == 63);
     static_assert(Period::num == 1 && Period::den % 1000 == 0);
     constexpr std::int64_t TicksPerMillisecond = Period::den / 1000;
     constexpr std::int64_t TicksPerSecond = Period::den;
-
-    // Sample now only once: the deadline must not depend on a second clock
-    // read, and an expired key must not be revived by EXPIRE/PEXPIRE.
     const auto now = clock_.wall_now();
     const auto found = entries_.find(key);
     if (found == entries_.end()) {
         return ExpireResult::Missing;
     }
-    if (found->second.expires_at.has_value() && *found->second.expires_at <= now) {
+    const auto previous = found->second.expires_at;
+    if (previous.has_value() && *previous <= now) {
+        expiry_index_.erase(ExpiryKey{*previous, found->first});
         entries_.erase(found);
         return ExpireResult::Missing;
     }
     if (amount <= 0) {
+        if (previous.has_value()) {
+            expiry_index_.erase(ExpiryKey{*previous, found->first});
+        }
         entries_.erase(found);
         return ExpireResult::Deleted;
     }
-
     const std::int64_t scale = milliseconds ? TicksPerMillisecond : TicksPerSecond;
     constexpr std::int64_t Max = std::numeric_limits<Rep>::max();
     if (amount > Max / scale) {
@@ -265,7 +295,16 @@ ExpireResult Database::expire_after(std::string_view key, std::int64_t amount, b
     if (now_ticks > Max - delta) {
         return ExpireResult::OutOfRange;
     }
-    found->second.expires_at = WallTimePoint{NativeDuration{now_ticks + delta}};
+    const WallTimePoint deadline{NativeDuration{now_ticks + delta}};
+    std::optional<ExpiryKey> previous_record;
+    if (previous.has_value() && *previous != deadline) {
+        previous_record.emplace(*previous, found->first);
+    }
+    (void)expiry_index_.emplace(deadline, found->first);
+    found->second.expires_at = deadline;
+    if (previous_record.has_value()) {
+        expiry_index_.erase(*previous_record);
+    }
     return ExpireResult::Set;
 }
 
@@ -282,6 +321,7 @@ std::int64_t Database::remaining_ttl(std::string_view key, bool milliseconds) co
     const auto now = clock_.wall_now();
     const auto deadline = *found->second.expires_at;
     if (deadline <= now) {
+        expiry_index_.erase(ExpiryKey{deadline, found->first});
         entries_.erase(found);
         return -2;
     }
@@ -334,8 +374,36 @@ bool Database::erase(std::string_view key) {
     if (found == entries_.end()) {
         return false;
     }
+    if (found->second.expires_at.has_value()) {
+        expiry_index_.erase(ExpiryKey{*found->second.expires_at, found->first});
+    }
     entries_.erase(found);
     return true;
+}
+
+Database::SweepResult Database::sweep_expired(std::size_t budget) {
+    SweepResult result;
+    if (budget == 0 || expiry_index_.empty()) {
+        return result;
+    }
+    const auto now = clock_.wall_now();
+    // No scan of persistent or future-deadline keys. Both inspected and
+    // deleted counts are <= budget; work per turn is bounded by index cost.
+    while (result.inspected < budget && !expiry_index_.empty()) {
+        const auto earliest = expiry_index_.begin();
+        if (earliest->first > now) {
+            break;
+        }
+        // Protect against stale index records if a future writer is buggy.
+        const auto found = entries_.find(earliest->second);
+        if (found != entries_.end() && found->second.expires_at == earliest->first) {
+            entries_.erase(found);
+            ++result.deleted;
+        }
+        expiry_index_.erase(earliest);
+        ++result.inspected;
+    }
+    return result;
 }
 
 } // namespace redisdb::storage
