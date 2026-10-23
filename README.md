@@ -8,12 +8,22 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS. Phase 6A is closed; Phase 6B list storage and commands are implemented, merged at `7df2e08`, and accepted by exact-head Linux Debug/Release and Clang 18 ASan+UBSan/fuzz CI. The five-document Phase 6B formal closure is being recorded; 6C hash storage and commands are next only after closure CI. Older milestone notes below are historical.**
+**Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS.
+Phase 6A typed values and Phase 6B lists are formally closed. Phase 6C
+binary-safe hash storage and seven RESP2 hash commands have been merged as
+`7b0abaa20b65b6095dd432784aced4a16fc70d32` and independently verified
+in Linux Debug/Release and Clang 18 ASan+UBSan/fuzz CI. Its documentation-only
+formal closure remains gated on independent docs-branch and post-closure
+`main` CI. Phase 6D sets is next; older milestone notes below are historical.**
 
-The loopback-only RESP2 server supports PING/ECHO/QUIT; string, integer, key and TTL commands; and the list subset `LPUSH`, `RPUSH`, `LLEN`, `LPOP`, `RPOP`, `LRANGE`. Existing string/list wrong-type requests return RESP2 WRONGTYPE errors; `MGET` treats non-string entries as nil. Hash/set commands, comprehensive Phase 6E wrong-type validation, eviction, AOF, snapshots, and deployment remain future work.
+The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
+integers, keys, TTL, lists, and the hash subset HSET/HGET/HEXISTS/HLEN/
+HDEL/HMGET/HGETALL. Wrong-type accesses reject incompatible stored kinds;
+MGET yields nil for non-string entries. Set commands, the comprehensive
+Phase 6E matrix, eviction, persistence and deployment remain future work.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
-The RESP2 mode now executes the documented string/key/TTL/list subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
+The RESP2 mode now executes the documented string/key/TTL/list/hash subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
 
 ## Project Goals
 
@@ -85,9 +95,43 @@ merge and feature tree `1acc6498c99f007fa4f747e578ebc43ca85ee814`.
 The eleven-file implementation added focused list unit and live TCP coverage.
 Local macOS Debug/Release each passed 56/56; fuzz-enabled passed 57/57.
 Feature Linux CI `39972085606` / `39972085386`, and post-merge Linux CI
-`39973111123` / `39973111117` passed all exact-head jobs and steps. The
-original feature branch remains retained; formal documentation closure is
-separately gated before moving to Phase 6C.
+`39973111123` / `39973111117` passed all exact-head jobs and steps. The original Phase 6B feature branch remains retained. Its separate
+five-document closure merged as `81798723a794f261682844a4fe01dc5adf9eeb35`;
+post-closure Linux networking `39975274770` and fuzz `39975274694` passed.
+
+## Phase 6C — Hash Storage and RESP2 Commands (implementation accepted)
+
+`HashValue` uses an owned `std::unordered_map<std::string, std::string>`
+with byte-exact field names and values; iteration order is unspecified.
+Database primitives `hash_set`, `hash_get`, `hash_exists`, `hash_length`,
+`hash_delete`, and `hash_items` implement insert/overwrite, lookup,
+cardinality, deletion and reply-budgeted retrieval. Duplicate HSET fields
+are last-write-wins and newly added fields count once. Hash mutations
+preserve a live key's TTL; HDEL of the last field removes the key and
+its expiration-index record. Wrong types do not silently change the value.
+
+RESP2 handlers expose `HSET`, `HGET`, `HEXISTS`, `HLEN`, `HDEL`, `HMGET`,
+and `HGETALL` on the shared, serialized loopback-only server. HMGET
+preserves requested field order and returns nil for missing fields;
+HGETALL returns unordered field/value pairs. Replies are bounded to
+8,192 bytes; individual HSET fields/values are limited to reply-safe
+sizes. Comprehensive Phase 6E wrong-type testing and set commands remain
+separate future milestones; this is a deliberate supported subset.
+
+**Acceptance evidence:** Phase 6C started at final Phase 6B closure
+`81798723a794f261682844a4fe01dc5adf9eeb35`. Storage feature commit
+`0a6a560dc6bc9746617bd8da7d020cd921993916` and hash-command commit
+`88817b205b511f7bf4799ea2a675a74845427f16` were merged directly
+with two parents into `main` as `7b0abaa20b65b6095dd432784aced4a16fc70d32`;
+feature and merge tree `1fdac28176454971c28281da8ded2ed0a2108d2e`.
+The combined implementation changed exactly nine files. Local macOS
+Debug/Release passed 59/59 each and fuzz-enabled passed 60/60.
+Feature-head Linux networking `39983170325` and fuzz `39983170439` passed;
+post-implementation main Linux networking `39984084722` and fuzz
+`39984084843` also passed with every required job/step green. This is
+implementation acceptance; formal docs closure requires separately
+verified documentation-branch and post-closure main CI. No PR, force push
+or feature-branch deletion was used.
 
 ## Current Functionality
 
@@ -238,8 +282,8 @@ Stop the foreground process with Ctrl+C.
 `--smoke-echo` reflects received bytes unchanged.
 It is not a Redis protocol endpoint, and `redis-cli`
 cannot be used to validate Redis commands against it.
-The future production database server is not yet
-implemented.
+The RESP2 command-server mode is available separately via `--resp2-server`;
+`--smoke-echo` itself accepts no Redis commands.
 
 ## Test
 
@@ -335,7 +379,7 @@ Documented subsets of `INFO` and `CONFIG GET`.
 
 Full Redis compatibility is explicitly out of scope.
 
-Connectivity, string, integer, key, expiration and the six listed Phase 6B list commands are implemented. Hash/set and introspection commands remain planned.
+Connectivity, string, integer, key, expiration, the six Phase 6B list commands and seven Phase 6C hash commands are implemented. Set and introspection commands remain planned.
 
 ## Persistence Design
 

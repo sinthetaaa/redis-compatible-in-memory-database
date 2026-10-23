@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0–5 and Phase 6A accepted; Phase 6B binary-safe list storage and six RESP2 list routes implemented, merged and post-merge Linux CI verified. Phase 6C–6G hash/set/general wrong-type/memory/differential work and Phases 7–19 remain future scope.
+**Architecture state:** Phases 0–5 and Phase 6A–6B formally closed; Phase 6C hash storage and seven RESP2 routes merged (`7b0abaa`) with green main exact-head Linux CI. 6C documentation closure CI is separately gated. Phase 6D–6G and Phases 7–19 remain future scope.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -21,7 +21,7 @@ are hidden by lazy checks, while a deadline-ordered index supports at most
 32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
 Connection admission, parser framing, replies and work are bounded.
 
-Eviction, hash/set commands, comprehensive collection compatibility, AOF,
+Eviction, set commands, comprehensive collection compatibility, AOF,
 snapshots, restart recovery and deployment remain future milestones.
 
 ---
@@ -1217,13 +1217,46 @@ measures the serialized reply against its 8,192-byte frame cap before
 allocating returned copies. New list pushes reject elements larger than
 8,176 bytes; the wire subset intentionally omits pop-count overloads and
 blocking list commands. The tests include fragmented/pipelined TCP and
-multi-client visibility. Phase 6E extends wrong-type coverage across future
-hash/set operations.
+multi-client visibility. Phase 6E extends the comprehensive collection wrong-type test matrix.
 
 Implementation feature head `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`;
 non-fast-forward implementation merge `7df2e08209468ae3e8a619e25451abe9196bda11`;
 post-merge Linux workflows `39973111123` and `39973111117` success.
 
+
+### Phase 6C — Implemented Hash Storage and RESP2 Command Path
+
+Binary-safe hash keys are `HashValue::fields`, an owned unordered map from
+field bytes to value bytes; there is deliberately no ordering promise.
+`Database::hash_set` stages a complete hash replacement before publishing
+existing-key updates, counts only newly inserted distinct fields and
+preserves existing TTL/index metadata. `hash_get`, `hash_exists`, and
+`hash_length` are typed read operations. `hash_delete` stages deletion,
+removing the entire key and associated expiry-index record on the last
+field. `hash_items` validates the full RESP2 HGETALL reply budget before
+returning an independent owned snapshot. All operations honor lazy expiry
+and reject existing non-hash values without partial mutation.
+
+`commands::hash_routes(database)` joins the same serialized event-loop
+registry as string, key and list handlers. `HSET`, `HGET`, `HEXISTS`,
+`HLEN`, `HDEL`, `HMGET`, and `HGETALL` are exposed over RESP2 with
+bounded frames. HMGET preserves requested field order with distinct nil
+responses; HGETALL emits unspecified iteration order; write inputs have
+reply-safe field/value size checks. Unit tests and live-TCP integration
+cover binary fields, duplicate writes/deletes, missing entries, wrong
+kinds, TTL, framing, pipelines, concurrent client visibility, bounds,
+and optional redis-cli compatibility. Full Redis hash API, RESP3, hash
+iteration order, persistence, memory accounting and set routes are not
+claimed by this subphase.
+
+The isolated feature used commits `0a6a560dc6bc9746617bd8da7d020cd921993916`
+and `88817b205b511f7bf4799ea2a675a74845427f16` on
+`phase6c/hash-storage-commands`. Direct two-parent implementation merge
+`7b0abaa20b65b6095dd432784aced4a16fc70d32` preserves the feature
+tree `1fdac28176454971c28281da8ded2ed0a2108d2e` and modifies nine
+implementation files. Feature Linux networking/fuzz CI `39983170325` and
+`39983170439`, then main post-merge Linux `39984084722` and `39984084843`,
+are green. macOS Debug/Release 59/59 and fuzz-enabled 60/60 passed.
 
 ## Entry Metadata
 

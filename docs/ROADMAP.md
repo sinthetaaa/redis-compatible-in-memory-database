@@ -689,11 +689,11 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A and 6B implementation accepted; 6C NEXT after formal Phase 6B closure
+**Status:** IN PROGRESS — 6A/6B formally closed; 6C hash implementation accepted on `main`, separate five-document closure CI required; 6D next
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
-- [x] 6B — List storage and commands (merge `7df2e08`; post-merge Linux CI `39973111123` and `39973111117` PASS; formal docs closure in progress)
-- [ ] 6C — Hash storage and commands
+- [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
+- [x] 6C — Hash storage and commands (implementation merge `7b0abaa`; post-merge Linux `39984084722` / `39984084843` PASS; formal docs closure CI separately gated)
 - [ ] 6D — Set storage and commands
 - [ ] 6E — Wrong-type errors
 - [ ] 6F — Collection memory accounting hooks
@@ -734,11 +734,49 @@ sanitation) passed. Post-merge main CI `39973111123` and `39973111117`
 passed with all jobs and steps green. The audited combined implementation
 scope is eleven files. No PR, force push or branch deletion.
 
-This records implementation acceptance; five-document closure feature,
-its independent exact-head CI, direct closure merge and post-closure CI
-remain a separate final milestone before Phase 6C. Hash/set functionality,
-blocking list operations, general Phase 6E wrong-type coverage, eviction,
-persistence and deployment remain outside Phase 6B.
+This Phase 6B implementation acceptance is historical; its separately
+audited five-document closure later merged at `8179872` and passed exact
+post-closure Linux runs `39975274770` and `39975274694`. Hash functionality
+was implemented in Phase 6C. Set commands, blocking list operations,
+general Phase 6E wrong-type coverage, eviction, persistence and deployment
+remain outside Phase 6B.
+
+### Phase 6C implementation acceptance — PASS (2026-10-23)
+
+The accepted baseline is Phase 6B final docs closure commit
+`81798723a794f261682844a4fe01dc5adf9eeb35`, with independently
+accepted Linux networking `39975274770` and fuzz `39975274694`.
+
+The retained feature branch `phase6c/hash-storage-commands` holds storage
+foundation commit `0a6a560dc6bc9746617bd8da7d020cd921993916` and RESP2
+hash-route commit `88817b205b511f7bf4799ea2a675a74845427f16`.
+Direct two-parent non-fast-forward implementation merge
+`7b0abaa20b65b6095dd432784aced4a16fc70d32` has the prior 6B closure
+and second feature commit as parents. Merge and feature tree are both
+`1fdac28176454971c28281da8ded2ed0a2108d2e`; nine implementation
+files changed, with no documentation edits or workflow modifications.
+
+Six binary-safe hash storage APIs and seven TCP RESP2 commands
+(HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL) work with the shared
+single-threaded database, lazy/active expiry and existing string/list
+routes. They support field overwrite, missing/nil semantics, wrong-type
+rejection, TTL retention on mutations, last-field deletion with expiry-index
+cleanup, bounded replies, fragmented/pipelined requests, cross-client
+visibility and optional redis-cli. Hash iteration order is unspecified;
+full Redis hash compatibility and future Phase 6E type matrices are not
+claimed. Existing 8,192-byte reply and reply-safe input limits apply.
+
+macOS Debug/Release 59/59 and fuzz-enabled 60/60 passed. Feature-head Linux
+networking `39983170325` and fuzz `39983170439` passed. Exact-head main
+post-implementation Linux `39984084722` (Debug/Release) and `39984084843`
+(Clang 18 sanitizer/fuzz) passed with every job and step green. Both
+feature commits, remote pushes and implementation merge were guarded;
+no PR, history rewrite, forced push or branch deletion occurred.
+
+**Formal closure gate:** a separately reviewed five-document-only branch,
+its exact-head Linux CI, a guarded two-parent docs merge and final
+post-closure main CI are necessary before starting Phase 6D. The Phase 6
+acceptance gate remains open until 6D–6G and their tests are accepted.
 
 ### Acceptance Gate
 
