@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5C are merged and validated; Phase 5D EXPIRE/PEXPIRE is on a feature branch. TTL/PTTL/PERSIST commands remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5D are merged and validated; Phase 5E TTL/PTTL/PERSIST is on a feature branch. SET EX/PX, active expiration, and persistence to disk remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -941,6 +941,26 @@ live key or its previous expiration. The implementation supports nanosecond
 and microsecond system clocks used by Linux and macOS. TTL/PTTL/PERSIST,
 SET EX/PX, conditional NX/XX/GT/LT, active sweeps and persistence remain
 outside Phase 5D; value/reply limits and full-map MSET staging are unchanged.
+
+## Phase 5E — TTL, PTTL and PERSIST (feature implementation)
+
+`TTL key` reports the remaining lifetime in rounded whole seconds, while
+`PTTL key` returns truncated whole milliseconds. Both return RESP2 integer
+`-2` for missing/expired keys and `-1` for existing persistent keys. A live
+key with less than one millisecond remaining can return PTTL zero; it remains
+accessible until its deadline. `PERSIST key` removes a live key's deadline
+without modifying its value and returns integer one only when a deadline was
+removed. All three commands require exactly one key and support binary keys.
+
+The storage layer computes each TTL result from one injected wall-clock sample,
+with unsigned tick arithmetic to avoid overflow across the signed Unix epoch.
+Seconds round to the nearest integer (half-up); milliseconds truncate, without
+extra clock reads or background sweeping. Deterministic manual-clock tests
+cover exact expiration, rounding boundaries, maximum native timepoint spans,
+rollback and deadline preservation. Live RESP2 tests cover two TCP clients,
+pipelining, case-insensitive verbs, persistence and error/arity recovery.
+SET EX/PX, conditional expiry options, active expiration and durability are
+still future milestones; the value/reply size limits remain unchanged.
 
 ## License
 

@@ -227,6 +227,51 @@ ExpireResult Database::expire_after(std::string_view key, std::int64_t amount, b
     return ExpireResult::Set;
 }
 
+std::int64_t Database::remaining_ttl(std::string_view key, bool milliseconds) const {
+    // Do not call expiration() and sample the clock again: a single command
+    // must classify existence and compute its remaining time consistently.
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return -2;
+    }
+    if (!found->second.expires_at.has_value()) {
+        return -1;
+    }
+    const auto now = clock_.wall_now();
+    const auto deadline = *found->second.expires_at;
+    if (deadline <= now) {
+        entries_.erase(found);
+        return -2;
+    }
+
+    using Duration = WallTimePoint::duration;
+    using Rep = Duration::rep;
+    using Period = Duration::period;
+    static_assert(std::is_integral_v<Rep> && std::is_signed_v<Rep>);
+    static_assert(std::numeric_limits<Rep>::digits == 63);
+    static_assert(Period::num == 1 && Period::den % 1000 == 0);
+    // Subtracting signed duration reps could overflow across the epoch.
+    // For deadline > now, unsigned modular subtraction gives the exact
+    // nonnegative 0..UINT64_MAX tick interval without signed overflow.
+    const auto high = static_cast<std::uint64_t>(deadline.time_since_epoch().count());
+    const auto low = static_cast<std::uint64_t>(now.time_since_epoch().count());
+    const std::uint64_t ticks_remaining = high - low;
+    constexpr std::uint64_t TicksPerSecond = Period::den;
+    constexpr std::uint64_t TicksPerMillisecond = Period::den / 1000;
+    const auto scale = milliseconds ? TicksPerMillisecond : TicksPerSecond;
+    std::uint64_t units = ticks_remaining / scale;
+    // Redis TTL seconds uses nearest-integer rounding, rather than floor.
+    // Compare the remainder to half a second without adding to a large
+    // duration and risking unsigned wraparound.
+    if (!milliseconds && ticks_remaining % scale >= (scale + 1) / 2) {
+        ++units;
+    }
+    // Every supported native clock has >=1000 ticks/ms; therefore even a
+    // maximum uint64 interval becomes a representable signed millisecond TTL.
+    static_assert(TicksPerMillisecond >= 1000);
+    return static_cast<std::int64_t>(units);
+}
+
 std::optional<std::string> Database::get(std::string_view key) const {
     (void)expire_if_needed(key);
     const auto found = entries_.find(key);

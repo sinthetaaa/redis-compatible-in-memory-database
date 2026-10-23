@@ -143,6 +143,14 @@ if(BUILD_TESTING)
         set_tests_properties(integration.resp_expire_pexpire PROPERTIES TIMEOUT 75)
 
         add_test(
+            NAME integration.resp_ttl_pttl_persist
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_ttl_pttl_persist_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_ttl_pttl_persist PROPERTIES TIMEOUT 75)
+
+        add_test(
             NAME integration.resp_multi_string
             COMMAND "${Python3_EXECUTABLE}"
                     "${PROJECT_SOURCE_DIR}/tests/integration/resp_multi_string_test.py"
@@ -297,6 +305,12 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-expire-command-tests)
     add_test(NAME unit.expire_commands COMMAND redisdb-expire-command-tests)
     set_tests_properties(unit.expire_commands PROPERTIES TIMEOUT 20)
+
+    add_executable(redisdb-ttl-command-tests tests/unit/ttl_pttl_persist_test.cpp)
+    target_link_libraries(redisdb-ttl-command-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-ttl-command-tests)
+    add_test(NAME unit.ttl_pttl_persist COMMAND redisdb-ttl-command-tests)
+    set_tests_properties(unit.ttl_pttl_persist PROPERTIES TIMEOUT 20)
 
     add_executable(redisdb-lazy-expiration-tests tests/unit/lazy_expiration_test.cpp)
     target_link_libraries(redisdb-lazy-expiration-tests PRIVATE redisdb-core)

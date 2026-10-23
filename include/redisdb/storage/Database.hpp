@@ -42,7 +42,8 @@ enum class ExpireResult { Missing, Set, Deleted, OutOfRange };
 // The caller serializes access; this class is not independently synchronized.
 // Phase 5C enforces deadlines on demand, using an injectable wall clock.
 // Logically const reads can remove expired entries; callers serialize access.
-// TTL commands, active expiry, eviction and persistence are not implemented.
+// TTL/PTTL/PERSIST are introduced in 5E; active expiry, eviction and
+// durability/persistence to disk are not implemented.
 class Database final {
   public:
     // The default database uses a process-lifetime production SystemClock.
@@ -92,6 +93,11 @@ class Database final {
     // without changing a live key's value/deadline.
     [[nodiscard]] ExpireResult expire_after(std::string_view key, std::int64_t amount,
                                             bool milliseconds);
+
+    // Redis-compatible remaining lifetime. -2: absent/expired; -1: persistent.
+    // Seconds are rounded to nearest integer; milliseconds truncate.
+    // One clock sample, with overflow-safe signed-epoch subtraction.
+    [[nodiscard]] std::int64_t remaining_ttl(std::string_view key, bool milliseconds) const;
 
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
