@@ -164,7 +164,7 @@ against real clients rather than assumed.
 ## ADR-005 — In-Memory Primary Keyspace
 
 **Status:** Accepted
-**Implementation:** Phase 4A keyspace and Phase 6A owned variant foundation implemented; Phase 6A accepted at `5043cc7` after exact-merge-head CI.
+**Implementation:** Phase 4A keyspace, Phase 6A owned variant foundation, and Phase 6B typed list operations are implemented. Phase 6B merged at `7df2e08` and passed exact-head Linux Debug/Release and sanitizer/fuzz CI.
 
 ### Decision
 
@@ -194,6 +194,24 @@ The stored `Entry` deadline remains absolute wall time. Phase 6A does not
 open collection-valued database insertion or RESP2 collection commands;
 wrong-type safety on reachable multi-type entries must be implemented as
 those APIs are introduced in subsequent Phase 6 subphases.
+
+Phase 6B accepted continuation (2026-10-23): lists now have process-owned
+binary-safe operations, with whole-list staging on pushes to retain strong
+exception safety. Mutations preserve existing expiration deadlines; last-pop
+deletes the key and its index record. Existing string routes use checked
+variant access and issue `WRONGTYPE` on lists; MGET returns nil for non-string
+keys, while SET/MSET replace typed keys with strings. The six basic list
+commands are registered on the single-threaded RESP2 execution path.
+LRANGE uses inclusive negative index normalization, overflow-safe bounds,
+and a premeasured 8,192-byte response limit. Per-element wire input is
+bounded to 8,176 bytes. The list node allocation and repeated-copy costs
+remain deliberate performance tradeoffs for Phase 14 to measure.
+
+Acceptance: feature commits `18e27a0`, `00dddb0`, direct implementation
+merge `7df2e08`, exact-head post-merge Linux Debug/Release `39973111123`,
+Clang 18 sanitizer/fuzz `39973111117` — all PASS. Hash/set routes,
+comprehensive Phase 6E type errors, eviction and persistence are not yet
+implemented. The separate Phase 6B documentation closure remains pending.
 
 ### Rationale
 
