@@ -664,11 +664,11 @@ unsupported Redis command options remain future phases.
 
 # Phase 5 — TTL and Expiration
 
-**Status:** IN PROGRESS (5A merged and validated; 5B metadata on feature branch)
+**Status:** IN PROGRESS (5A–5B merged and validated; 5C lazy expiration on feature branch)
 
 - [x] 5A — Clock abstraction (merged `05d0ca4`, post-merge Linux CI passed)
-- [ ] 5B — Expiration metadata (wall deadlines and lifecycle tests; CI/merge pending)
-- [ ] 5C — Lazy expiration
+- [x] 5B — Expiration metadata (merged `f51d8ad`, post-merge Linux CI passed)
+- [ ] 5C — Lazy expiration (injected wall clock and per-key enforcement; CI/merge pending)
 - [ ] 5D — EXPIRE, PEXPIRE
 - [ ] 5E — TTL, PTTL, PERSIST
 - [ ] 5F — SET EX/PX

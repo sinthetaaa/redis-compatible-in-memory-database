@@ -10,6 +10,26 @@
 #include <vector>
 
 namespace redisdb::storage {
+namespace {
+const Clock& production_clock() noexcept {
+    static const SystemClock clock;
+    return clock;
+}
+} // namespace
+
+Database::Database() noexcept : clock_(production_clock()) {}
+Database::Database(const Clock& clock) noexcept : clock_(clock) {}
+
+bool Database::expire_if_needed(std::string_view key) const {
+    const auto found = entries_.find(key);
+    if (found == entries_.end() || !found->second.expires_at.has_value() ||
+        *found->second.expires_at > clock_.wall_now()) {
+        return false;
+    }
+    // Access-driven deletion: no global scan and no eviction of live keys.
+    entries_.erase(found);
+    return true;
+}
 
 std::optional<std::int64_t> parse_integer64(std::string_view text) noexcept {
     if (text.empty() || text.front() == '+') {
@@ -29,6 +49,7 @@ std::optional<std::int64_t> parse_integer64(std::string_view text) noexcept {
 }
 
 bool Database::set(std::string key, std::string bytes) {
+    (void)expire_if_needed(key);
     auto found = entries_.find(std::string_view(key));
     if (found != entries_.end()) {
         // Construct first; moving a string into the same variant alternative
@@ -58,6 +79,7 @@ void Database::set_many(const std::vector<std::pair<std::string, std::string>>& 
 
 std::optional<std::size_t> Database::append(std::string_view key, std::string_view suffix,
                                             std::size_t max_value_bytes) {
+    (void)expire_if_needed(key);
     auto found = entries_.find(key);
     if (found == entries_.end()) {
         if (suffix.size() > max_value_bytes) {
@@ -88,6 +110,7 @@ std::optional<std::size_t> Database::append(std::string_view key, std::string_vi
 }
 
 std::size_t Database::string_length(std::string_view key) const {
+    (void)expire_if_needed(key);
     const auto found = entries_.find(key);
     if (found == entries_.end()) {
         return 0;
@@ -97,6 +120,7 @@ std::size_t Database::string_length(std::string_view key) const {
 
 IntegerMutationResult Database::adjust_integer(std::string_view key, std::int64_t operand,
                                                bool subtract) {
+    (void)expire_if_needed(key);
     std::int64_t current = 0;
     const auto found = entries_.find(key);
     if (found != entries_.end()) {
@@ -120,21 +144,21 @@ IntegerMutationResult Database::adjust_integer(std::string_view key, std::int64_
         }
     }
 
-    // Integer mutations preserve existing expiration metadata. SET clears
-    // deadlines, so preserve and restore the prior optional value only after
-    // its strong-exception-safe replacement has succeeded. The found iterator
-    // remains valid for an existing key because SET does not insert/rehash it.
-    const auto previous_expiration =
-        found != entries_.end() ? found->second.expires_at : std::nullopt;
+    // Fully stage the new bytes before any existing-key mutation. Preserve
+    // existing deadline without re-entering SET (which clears deadlines and
+    // would resample the clock/possibly invalidate the found iterator).
     const std::int64_t next = subtract ? current - operand : current + operand;
-    (void)set(std::string(key), std::to_string(next));
+    Value replacement = StringValue{std::to_string(next)};
     if (found != entries_.end()) {
-        found->second.expires_at = previous_expiration;
+        found->second.value = std::move(replacement);
+    } else {
+        (void)entries_.try_emplace(std::string(key), Entry{std::move(replacement)});
     }
     return {IntegerMutationError::None, next};
 }
 
 bool Database::set_expiration(std::string_view key, WallTimePoint deadline) {
+    (void)expire_if_needed(key);
     const auto found = entries_.find(key);
     if (found == entries_.end()) {
         return false;
@@ -144,11 +168,13 @@ bool Database::set_expiration(std::string_view key, WallTimePoint deadline) {
 }
 
 std::optional<WallTimePoint> Database::expiration(std::string_view key) const {
+    (void)expire_if_needed(key);
     const auto found = entries_.find(key);
     return found == entries_.end() ? std::nullopt : found->second.expires_at;
 }
 
 bool Database::clear_expiration(std::string_view key) {
+    (void)expire_if_needed(key);
     const auto found = entries_.find(key);
     if (found == entries_.end()) {
         return false;
@@ -159,6 +185,7 @@ bool Database::clear_expiration(std::string_view key) {
 }
 
 std::optional<std::string> Database::get(std::string_view key) const {
+    (void)expire_if_needed(key);
     const auto found = entries_.find(key);
     if (found == entries_.end()) {
         return std::nullopt;
@@ -166,9 +193,13 @@ std::optional<std::string> Database::get(std::string_view key) const {
     return std::get<StringValue>(found->second.value).bytes;
 }
 
-bool Database::exists(std::string_view key) const { return entries_.find(key) != entries_.end(); }
+bool Database::exists(std::string_view key) const {
+    (void)expire_if_needed(key);
+    return entries_.find(key) != entries_.end();
+}
 
 bool Database::erase(std::string_view key) {
+    (void)expire_if_needed(key);
     const auto found = entries_.find(key);
     if (found == entries_.end()) {
         return false;

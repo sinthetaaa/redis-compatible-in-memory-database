@@ -36,11 +36,15 @@ struct IntegerMutationResult {
 
 // Authoritative, process-local, binary-safe keyspace.
 // The caller serializes access; this class is not independently synchronized.
-// Phase 5B stores optional expiration metadata; enforcement and TTL commands
-// are not yet implemented. No eviction or persistence exists.
+// Phase 5C enforces deadlines on demand, using an injectable wall clock.
+// Logically const reads can remove expired entries; callers serialize access.
+// TTL commands, active expiry, eviction and persistence are not implemented.
 class Database final {
   public:
-    Database() = default;
+    // The default database uses a process-lifetime production SystemClock.
+    // An injected clock must outlive this Database (borrowed const reference).
+    Database() noexcept;
+    explicit Database(const Clock& clock) noexcept;
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
     Database(Database&&) = delete;
@@ -71,10 +75,9 @@ class Database final {
     [[nodiscard]] IntegerMutationResult adjust_integer(std::string_view key, std::int64_t operand,
                                                        bool subtract);
 
-    // Metadata-only deadline operations (5B). These methods do NOT enforce
-    // expiration or compare the deadline against the clock. A past deadline
-    // remains visible until Phase 5C introduces lazy expiration.
-    // No implicit key creation; false if a key is absent.
+    // Expiration metadata operations never create keys. An already-expired
+    // key is purged and treated as absent before metadata is read or changed.
+    // Attaching a past deadline makes the key logically absent on next access.
     [[nodiscard]] bool set_expiration(std::string_view key, WallTimePoint deadline);
     [[nodiscard]] std::optional<WallTimePoint> expiration(std::string_view key) const;
     // Returns true only when an existing key had metadata to remove.
@@ -84,11 +87,17 @@ class Database final {
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
     [[nodiscard]] bool exists(std::string_view key) const;
     [[nodiscard]] bool erase(std::string_view key);
+    // Physical entry count. With lazy-only expiration, untouched expired
+    // entries can remain until accessed (5G adds active sweeping).
     [[nodiscard]] std::size_t size() const noexcept { return entries_.size(); }
     void clear() noexcept { entries_.clear(); }
 
   private:
-    std::unordered_map<std::string, Entry, TransparentStringHash, std::equal_to<>> entries_;
+    // Treat deadline <= current wall time as expired. This is logically
+    // const but removes stale physical entries; no background sweep occurs.
+    [[nodiscard]] bool expire_if_needed(std::string_view key) const;
+    const Clock& clock_;
+    mutable std::unordered_map<std::string, Entry, TransparentStringHash, std::equal_to<>> entries_;
 };
 
 } // namespace redisdb::storage

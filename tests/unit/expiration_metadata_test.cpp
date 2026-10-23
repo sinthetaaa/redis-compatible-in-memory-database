@@ -57,13 +57,13 @@ RespValue call(const CommandDispatcher& dispatcher, std::string name,
 }
 
 void test_deadlines_and_metadata_lifecycle() {
-    Database database;
+    ManualClock fake;
+    Database database(fake);
     auto routes = redisdb::commands::string_routes(database);
     for (auto& route : redisdb::commands::key_routes(database)) {
         routes.push_back(std::move(route));
     }
     const CommandDispatcher dispatcher(std::move(routes));
-    ManualClock fake;
     const Clock& clock = fake;
     const auto first = clock.wall_now() + 3s;
     const auto second = clock.wall_now() + 9s;
@@ -82,15 +82,10 @@ void test_deadlines_and_metadata_lifecycle() {
     check(database.set_expiration(binary_key, second), "deadline replacement failed");
     check(database.expiration(binary_key) == second, "deadline replacement not visible");
 
-    // Even if wall time passes the deadline, Phase 5B MUST NOT expire keys.
-    fake.advance_wall(1h);
-    check(clock.wall_now() > second, "fake clock did not cross expiration deadline");
+    // In Phase 5C the metadata is enforced only after the clock passes it.
+    check(clock.wall_now() < first, "test deadline is not in the future");
     check(call(dispatcher, "GET", {binary_key}) == RespValue::bulk_string("7"),
-          "5B prematurely hid an expired key");
-    check(call(dispatcher, "EXISTS", {binary_key}) == RespValue::integer(1),
-          "5B prematurely removed expired-key existence");
-    check(call(dispatcher, "TYPE", {binary_key}) == RespValue::simple_string("string"),
-          "5B prematurely changed expired-key type");
+          "unexpired deadline hid a live key");
     check(database.expiration(binary_key) == second, "GET changed stored expiration");
 
     check(call(dispatcher, "APPEND", {binary_key, "0"}) == RespValue::integer(2),
@@ -124,14 +119,25 @@ void test_deadlines_and_metadata_lifecycle() {
     check(call(dispatcher, "SET", {binary_key, "reborn"}) == RespValue::simple_string("OK"),
           "key reinsert failed");
     check(!database.expiration(binary_key), "reinserted key inherited old expiration");
+    check(database.set_expiration(binary_key, second), "reattach before deadline failed");
+    fake.advance_wall(1h);
+    check(clock.wall_now() > second, "fake did not cross expiration deadline");
+    check(call(dispatcher, "GET", {binary_key}) == RespValue::null_bulk_string(),
+          "expired key remained visible after deadline");
+    check(call(dispatcher, "EXISTS", {binary_key}) == RespValue::integer(0),
+          "expired key remained present");
+    check(call(dispatcher, "TYPE", {binary_key}) == RespValue::simple_string("none"),
+          "expired key retained its old type");
+    check(!database.expiration(binary_key), "expired key kept metadata after purge");
 }
 
 void test_batch_replacement_and_preserved_deadlines() {
-    Database database;
+    ManualClock fake;
+    Database database(fake);
     auto routes = redisdb::commands::string_routes(database);
     const CommandDispatcher dispatcher(std::move(routes));
-    const auto first = WallTimePoint{} + 55s;
-    const auto second = WallTimePoint{} - 3s;
+    const auto first = fake.wall_now() + 55s;
+    const auto second = fake.wall_now() + 75s;
     const std::string binary_key("\0\xff", 2);
 
     for (const auto& key : {"a", "b", "untouched"}) {
@@ -182,8 +188,7 @@ int main() {
     try {
         test_deadlines_and_metadata_lifecycle();
         test_batch_replacement_and_preserved_deadlines();
-        std::cout
-            << "PASS: Phase 5B wall-deadline metadata, atomic lifecycle, no early expiration\n";
+        std::cout << "PASS: Phase 5B deadline lifecycle retained under Phase 5C lazy expiration\n";
     } catch (const std::exception& error) {
         std::cerr << "FAIL: " << error.what() << '\n';
         return 1;
