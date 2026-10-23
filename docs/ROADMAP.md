@@ -640,12 +640,12 @@ the supported connectivity commands.
 
 # Phase 4 — Core String Database
 
-**Status:** IN PROGRESS (4A–4B merged; 4C implementation on feature branch)
+**Status:** IN PROGRESS (4A–4C merged; 4D MSET/MGET implementation on feature branch)
 
 - [x] 4A — Keyspace and entry model (merged `ed3056c`, main CI accepted)
 - [x] 4B — SET, GET (merged `e1dd5e8`, post-merge Linux CI passed)
-- [x] 4C — DEL, EXISTS, TYPE (implementation; branch Linux CI pending)
-- [ ] 4D — MSET, MGET
+- [x] 4C — DEL, EXISTS, TYPE (merged `d739707`, main CI accepted)
+- [x] 4D — MSET, MGET (implementation; branch Linux CI pending)
 - [ ] 4E — APPEND, STRLEN
 - [ ] 4F — INCR, DECR, INCRBY, DECRBY
 - [ ] 4G — Numeric edge cases and overflow

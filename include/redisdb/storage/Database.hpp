@@ -8,6 +8,8 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace redisdb::storage {
 
@@ -34,6 +36,11 @@ class Database final {
     // Returns true if a new key was created, false if an existing key was replaced.
     // Stages a complete owned replacement before mutating an existing entry.
     [[nodiscard]] bool set(std::string key, std::string bytes);
+
+    // Atomic multi-key replacement, with last-wins semantics for repeated keys.
+    // Clone and swap provides strong exception safety; optimized delta
+    // staging is deferred to a separate measured performance milestone.
+    void set_many(const std::vector<std::pair<std::string, std::string>>& pairs);
 
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
