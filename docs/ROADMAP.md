@@ -640,7 +640,7 @@ the supported connectivity commands.
 
 # Phase 4 — Core String Database
 
-**Status:** IN PROGRESS (4A–4G merged and validated; 4H on feature branch)
+**Status:** COMPLETE (4A–4H merged, validated and formally accepted on 2026-10-23)
 
 - [x] 4A — Keyspace and entry model (merged `ed3056c`, main CI accepted)
 - [x] 4B — SET, GET (merged `e1dd5e8`, post-merge Linux CI passed)
@@ -649,12 +649,18 @@ the supported connectivity commands.
 - [x] 4E — APPEND, STRLEN (merged `18965b3`, post-merge Linux CI passed)
 - [x] 4F — INCR, DECR, INCRBY, DECRBY (merged `f752bed`, main CI accepted)
 - [x] 4G — Numeric edge cases and overflow (merged `d7877af`, post-merge Linux CI passed)
-- [ ] 4H — Multi-client correctness tests (feature implementation; CI and merge pending)
+- [x] 4H — Multi-client correctness tests (merged `31914ae`, main CI accepted)
 
-### Acceptance Gate
+### Acceptance Gate — PASS
 
-Supported string and key commands match the documented
-Redis compatibility subset.
+Supported string and key commands match the documented Redis compatibility subset.
+Phase 4H exact-head main Linux networking CI #39915994311 passed Debug 39/39
+and Release 39/39; Clang 18 ASan/UBSan + fuzz CI #39915994295 passed 40/40,
+verified 50 immutable seeds and completed 10,000 libFuzzer executions.
+macOS Debug 39/39, Release 39/39 and fuzz-enabled 40/40 also passed.
+Known intentional limits: 8,176-byte stored values, 8,192-byte single replies,
+full-keyspace clone-and-swap for MSET. TTL, eviction, AOF, snapshots and
+unsupported Redis command options remain future phases.
 
 # Phase 5 — TTL and Expiration
 

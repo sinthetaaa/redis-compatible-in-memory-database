@@ -3,14 +3,26 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-23
-- Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4H — multi-client correctness and Phase 4 acceptance testing
-- Status: Phases 0–3 and 4A–4G COMPLETE; 4H test implementation on feature branch pending CI and direct merge; Phases 5–19 NOT STARTED
-- Last completed milestone: Phase 4G two-parent main merge `d7877afc2fc95f75e4271ada1736fcaba45e2336`; post-merge Linux CI #39912968997 and sanitizer/fuzz CI #39912968986 SUCCESS
-- Exact next task: Run 4H local and exact-head Linux CI, direct two-parent merge without PR, then formal Phase 4 closure audit before Phase 5 TTL
-- Implementation maturity: All Phase 4 key/string commands merged; 4H adds 2400-step composite model and real multi-client read/write, MSET/MGET snapshot, APPEND, counter and FIFO tests
+- Current phase: Phase 4 — Core String Database COMPLETE; Phases 0–4 COMPLETE
+- Current subphase: Phase 4 formal closure documentation; next implementation Phase 5A — Clock abstraction (NOT STARTED)
+- Status: Phase 4A–4H merged, validated, and accepted; Phases 5–19 NOT STARTED
+- Last completed milestone: Phase 4H two-parent merge `31914ae7127b432f2fb38f3f07ac66a4ae6b435b` on main; post-merge Linux CI #39915994311 and sanitizer/fuzz CI #39915994295 SUCCESS
+- Exact next task: After closure-documentation branch has passed Linux CI and been direct-merged to main, start Phase 5A clock abstraction on a new guarded feature branch. Do not implement TTL behavior ahead of its planned subphases.
+- Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
-- Phase 4H scope: test-only integration hardening; 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn. No production changes unless tests expose a defect.
+- Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.
+
+### Phase 4 formal closure record (2026-10-23)
+
+- **Status:** ACCEPTED. All Phase 4A–4H commits are in main's ancestry; Phase 4H has correct two-parent merge history.
+- **Exact audited main commit:** `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`, parents `d7877afc2fc95f75e4271ada1736fcaba45e2336` and `589a1fd81cf54405a52351bbb9ae17f49b9d2947`.
+- **Linux networking CI:** run `39915994311`, push event at audited SHA, Debug 39/39 and Release 39/39 PASS.
+- **Linux sanitizer/fuzz CI:** run `39915994295`, push event at audited SHA, Clang 18 ASan+UBSan 40/40 PASS; 50 SHA-256-verified RESP2 corpus seeds; 10,000 libFuzzer iterations.
+- **macOS acceptance:** Debug 39/39, Release 39/39 and fuzz-enabled 40/40 PASS on Phase 4H feature SHA `589a1fd81cf54405a52351bbb9ae17f49b9d2947`.
+- **Command coverage:** SET, GET, DEL, EXISTS, TYPE, MSET, MGET, APPEND, STRLEN, INCR, DECR, INCRBY and DECRBY, plus PING, ECHO, QUIT. Binary-safe strings, duplicate key semantics, strict int64 overflow rejection, atomic MSET and cross-client visibility confirmed.
+- **Accepted limits:** 8,176-byte individual stored string value limit and 8,192-byte serialized single-reply limit. MSET full-map clone-and-swap incurs O(keyspace + batch) memory/time. These are documented deviations or optimization targets, not defects resolved by Phase 4.
+- **Not yet implemented:** TTL/expiration, eviction, AOF/snapshots, collection types, full Redis command/SET option compatibility and remote deployment. Phase 5A clock abstraction is NEXT, NOT STARTED.
+- **Repository policy:** no PR for Phase 4H or documentation closure; guarded direct non-force merges, retained feature branches, clean main and exact-head CI evidence.
 
 ## 2. Project Identity
 
@@ -159,7 +171,7 @@
 | 1 | Networking Foundation | COMPLETE |
 | 2 | RESP2 Protocol Engine | COMPLETE |
 | 3 | Command Framework | IN PROGRESS (3A–3C complete; 3D–3F not started) |
-| 4 | Core String Database | NOT STARTED |
+| 4 | Core String Database | COMPLETE |
 | 5 | TTL and Expiration | NOT STARTED |
 | 6 | Collection Data Types | NOT STARTED |
 | 7 | Memory Management and Eviction | NOT STARTED |
@@ -285,35 +297,56 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Native kqueue/epoll pipelining and scheduler regression tests.
 - Linux Debug/Release 18-test suite and pipeline repetition CI gates.
 
+### Phase 3–4 functionality (accepted)
+
+- Production loopback RESP2 command server with shared process-local database,
+  binary-safe value ownership and serialized command execution.
+- RESP2 incremental parsing, bounded FIFO pipelining, serializer and limits,
+  with kqueue on macOS and epoll on Linux.
+- SET/GET, DEL/EXISTS/TYPE, atomic MSET/ordered MGET, APPEND/STRLEN,
+  INCR/DECR/INCRBY/DECRBY and PING/ECHO/QUIT.
+- Signed 64-bit integer parsing and overflow safety; rejected operations
+  preserve existing bytes or missing-key absence.
+- Cross-client state visibility, atomic MGET snapshots, 640 shared counter
+  increments, 360 APPEND writes, QUIT/churn/restart regressions.
+- Linux Debug/Release 39/39 tests each; Clang 18 ASan+UBSan 40/40,
+  50 immutable RESP2 seeds and 10,000 libFuzzer iterations at the audited
+  Phase 4H main merge SHA `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`.
+
 ### Not Yet Implemented
 
-- Production TCP serving with RESP2 command execution.
-- Production RESP2 parser/serializer invocation in the executable serving path.
-- Command execution.
-- In-memory key-value database.
-- Expiration.
-- Eviction.
-- Append-only persistence.
-- Snapshotting and recovery.
-- Observability.
-- Deployment.
+- TTL and expiration (Phase 5).
+- Collection data types (Phase 6).
+- Memory-bounded eviction (Phase 7).
+- Append-only persistence (Phase 8).
+- Snapshotting and recovery (Phase 9).
+- Production observability, remote Linux deployment and demo closure.
 
 ## 7. Supported Commands
 
-No Redis database commands have been implemented.
+**Implemented and validated RESP2 command subset (Phase 4 complete):**
 
-Currently available executable options:
+- Connectivity: `PING`, `ECHO`, `QUIT`.
+- Strings: `SET`, `GET`, `MSET`, `MGET`, `APPEND`, `STRLEN`.
+- Integers: `INCR`, `DECR`, `INCRBY`, `DECRBY`.
+- Keys: `DEL`, `EXISTS`, `TYPE` (string or none).
 
-- --version
-- --help
-- --smoke-echo
-- --port PORT (smoke mode)
-- --max-clients COUNT (smoke mode)
+Commands are case-insensitive; keys and string values are binary-safe.
+All live clients share the same process-local in-memory database. MSET is
+atomic and MGET preserves argument order, including repeated and missing keys.
+Integer mutations use strict signed 64-bit parsing and reject overflow without
+corrupting state. QUIT closes only the requesting connection after its reply.
 
-The smoke listener binds to 127.0.0.1.
-Port 0 selects an ephemeral listener port.
-Smoke mode echoes raw bytes and is not RESP2.
-No database commands are supported.
+**Current executable modes and options:** `--version`, `--help`,
+`--smoke-echo`, `--resp2-server`, `--port PORT`, `--max-clients COUNT`.
+Both server modes bind to loopback `127.0.0.1`; port 0 requests an ephemeral port.
+`--smoke-echo` is raw TCP echo and does not use RESP2; `--resp2-server`
+accepts the implemented RESP2 command subset.
+
+**Intentional limits:** 8,176-byte stored string values and 8,192-byte
+serialized single replies. MSET copies the keyspace before committing.
+This is not a complete Redis server; TTL, eviction, persistence, collection
+commands and Redis SET options remain future work.
 
 ## 8. Persistence Guarantees
 
@@ -1214,6 +1247,30 @@ recovery testing has been completed.
 - Update this file after meaningful milestones.
 
 ## 16. Exact Next Steps
+
+**Current handoff (2026-10-23):** Phases 0–4 are implemented and
+accepted. Phase 4A–4H are already merged into `main` at the audited
+Phase 4H checkpoint `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`.
+Phase 5 is NOT STARTED; **Phase 5A — Clock abstraction is NEXT**.
+
+1. If the Phase 4 closure-documentation feature branch is not yet
+   merged, verify its exact-head Linux Debug/Release and Clang 18
+   sanitizer/fuzz CI, then merge directly into `main` without a PR.
+2. Verify the final closure merge's two parents, remote `main` equality,
+   clean working tree, and **post-merge** Linux validation at the exact
+   new main SHA. Retain the feature branch and external logs.
+3. Begin Phase 5A — Clock abstraction in a fresh feature branch from
+   the verified clean `main`. Make clocks injectable and testable;
+   do not implement expiration semantics ahead of 5B–5H.
+4. Preserve the documented 8,176-byte stored-value cap, 8,192-byte
+   single-reply cap and MSET full-map staging until explicitly redesigned.
+   Do not silently expand Redis compatibility or claim TTL/persistence.
+
+### Superseded Phase 3C continuation checkpoint (historical only)
+
+The following archived checkpoint was correct when Phase 3C was active,
+but is **not a current instruction** and does not describe the current
+RESP2 database server:
 
 Phase 3B formal closure CI #39811900890 passed.
 
