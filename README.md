@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5B are merged and validated; Phase 5C lazy expiration is on a feature branch. TTL commands remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5C are merged and validated; Phase 5D EXPIRE/PEXPIRE is on a feature branch. TTL/PTTL/PERSIST commands remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -923,6 +923,24 @@ behavior, metadata lifecycle, rejection semantics and no premature sweeping.
 The established 8,176-byte value cap, 8,192-byte reply cap, and full-map
 MSET staging remain unchanged. No EXPIRE, PEXPIRE, TTL, PTTL, PERSIST,
 SET EX/PX, active sweeping, AOF, eviction or persistence is added here.
+
+## Phase 5D — EXPIRE and PEXPIRE Basic Commands (feature implementation)
+
+The RESP2 key-command dispatcher gains `EXPIRE key seconds` and
+`PEXPIRE key milliseconds`. Integer arguments follow the existing strict
+signed 64-bit canonical ASCII parser. Missing or already-expired keys return
+`:0`; an existing key returns `:1` when a future deadline is assigned or
+when a non-positive duration deletes it immediately. Binary-safe key names,
+case-insensitive verbs, pipelines and shared-client visibility are retained.
+
+An atomic storage method samples one wall-clock instant and uses native
+system_clock ticks for exact conversion, with explicit bounds checks before
+multiplication and addition. Unrepresentable positive deadlines return
+`ERR invalid expire time in 'expire'/'pexpire' command` without changing a
+live key or its previous expiration. The implementation supports nanosecond
+and microsecond system clocks used by Linux and macOS. TTL/PTTL/PERSIST,
+SET EX/PX, conditional NX/XX/GT/LT, active sweeps and persistence remain
+outside Phase 5D; value/reply limits and full-map MSET staging are unchanged.
 
 ## License
 

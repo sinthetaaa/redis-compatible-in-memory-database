@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 5 — TTL and Expiration (IN PROGRESS); Phases 0–4 COMPLETE
-- Current subphase: Phase 5C — access-driven lazy expiration feature branch (CI and merge pending)
-- Status: Phases 0–4 and 5A–5B COMPLETE; 5C under validation; 5D–5H and Phases 6–19 NOT STARTED
-- Last completed milestone: Phase 5B two-parent main merge `f51d8adce8a8549b68d0d589414e54e8d12d13f5`; post-merge Linux CI #39923103272 (41/41 Debug and Release) and sanitizer/fuzz #39923103331 (42/42, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
-- Exact next task: Run full Phase 5C local and exact-head Linux CI, then direct two-parent merge without PR. Phase 5D EXPIRE/PEXPIRE commands follows; no TTL commands in 5C.
+- Current subphase: Phase 5D — EXPIRE and PEXPIRE basic RESP2 command implementation on feature branch (CI and merge pending)
+- Status: Phases 0–4 and 5A–5C COMPLETE; 5D under validation; 5E–5H and Phases 6–19 NOT STARTED
+- Last completed milestone: Phase 5C two-parent main merge `11b132669af49fe9263052d166edb952e9d3d757`; post-merge Linux CI #39925610242 (42/42 Debug and Release) and sanitizer/fuzz #39925610067 (43/43, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
+- Exact next task: Run full Phase 5D local and exact-head Linux CI and guarded direct two-parent merge without PR, then Phase 5E TTL/PTTL/PERSIST. Phase 5D does not implement conditional NX/XX/GT/LT or remaining TTL commands.
 - Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
 - Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.

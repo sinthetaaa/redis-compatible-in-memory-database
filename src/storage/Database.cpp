@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -182,6 +183,48 @@ bool Database::clear_expiration(std::string_view key) {
     const bool was_set = found->second.expires_at.has_value();
     found->second.expires_at.reset();
     return was_set;
+}
+
+ExpireResult Database::expire_after(std::string_view key, std::int64_t amount, bool milliseconds) {
+    using NativeDuration = WallTimePoint::duration;
+    using Rep = NativeDuration::rep;
+    using Period = NativeDuration::period;
+    // Supported Linux and macOS system_clock implementations use signed
+    // 64-bit, sub-millisecond integral ticks; avoid duration_cast overflow.
+    static_assert(std::is_integral_v<Rep> && std::is_signed_v<Rep>);
+    static_assert(std::numeric_limits<Rep>::digits == 63);
+    static_assert(Period::num == 1 && Period::den % 1000 == 0);
+    constexpr std::int64_t TicksPerMillisecond = Period::den / 1000;
+    constexpr std::int64_t TicksPerSecond = Period::den;
+
+    // Sample now only once: the deadline must not depend on a second clock
+    // read, and an expired key must not be revived by EXPIRE/PEXPIRE.
+    const auto now = clock_.wall_now();
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return ExpireResult::Missing;
+    }
+    if (found->second.expires_at.has_value() && *found->second.expires_at <= now) {
+        entries_.erase(found);
+        return ExpireResult::Missing;
+    }
+    if (amount <= 0) {
+        entries_.erase(found);
+        return ExpireResult::Deleted;
+    }
+
+    const std::int64_t scale = milliseconds ? TicksPerMillisecond : TicksPerSecond;
+    constexpr std::int64_t Max = std::numeric_limits<Rep>::max();
+    if (amount > Max / scale) {
+        return ExpireResult::OutOfRange;
+    }
+    const std::int64_t delta = amount * scale;
+    const std::int64_t now_ticks = now.time_since_epoch().count();
+    if (now_ticks > Max - delta) {
+        return ExpireResult::OutOfRange;
+    }
+    found->second.expires_at = WallTimePoint{NativeDuration{now_ticks + delta}};
+    return ExpireResult::Set;
 }
 
 std::optional<std::string> Database::get(std::string_view key) const {
