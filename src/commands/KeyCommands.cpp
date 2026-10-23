@@ -4,6 +4,7 @@
 #include "redisdb/storage/Database.hpp"
 
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 
 namespace redisdb::commands {
@@ -83,9 +84,19 @@ HandlerResult type_command(const storage::Database& database, const Command& com
         return {RespValue::error("ERR wrong number of arguments for 'type' command")};
     }
 
-    // Phase 4 supports only string values. Phase 6 expands this query
-    // to inspect the variant when collection types are introduced.
-    return {RespValue::simple_string(database.exists(command.arguments()[0]) ? "string" : "none")};
+    switch (database.type_of(command.arguments()[0])) {
+    case storage::StoredType::None:
+        return {RespValue::simple_string("none")};
+    case storage::StoredType::String:
+        return {RespValue::simple_string("string")};
+    case storage::StoredType::List:
+        return {RespValue::simple_string("list")};
+    case storage::StoredType::Hash:
+        return {RespValue::simple_string("hash")};
+    case storage::StoredType::Set:
+        return {RespValue::simple_string("set")};
+    }
+    throw std::logic_error("unexpected stored type");
 }
 
 } // namespace

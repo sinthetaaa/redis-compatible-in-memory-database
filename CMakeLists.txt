@@ -304,6 +304,13 @@ if(BUILD_TESTING)
     add_test(NAME unit.storage_value COMMAND redisdb-storage-value-tests)
     set_tests_properties(unit.storage_value PROPERTIES TIMEOUT 15)
 
+    # Phase 6B.1: owned list storage and safe cross-type command routing.
+    add_executable(redisdb-list-foundation-tests tests/unit/list_storage_foundation_test.cpp)
+    target_link_libraries(redisdb-list-foundation-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-list-foundation-tests)
+    add_test(NAME unit.list_storage_foundation COMMAND redisdb-list-foundation-tests)
+    set_tests_properties(unit.list_storage_foundation PROPERTIES TIMEOUT 20)
+
     add_executable(
         redisdb-database-tests
         tests/unit/database_test.cpp
