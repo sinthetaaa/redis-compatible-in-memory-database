@@ -3,14 +3,26 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-23
-- Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4H — multi-client correctness and Phase 4 acceptance testing
-- Status: Phases 0–3 and 4A–4G COMPLETE; 4H test implementation on feature branch pending CI and direct merge; Phases 5–19 NOT STARTED
-- Last completed milestone: Phase 4G two-parent main merge `d7877afc2fc95f75e4271ada1736fcaba45e2336`; post-merge Linux CI #39912968997 and sanitizer/fuzz CI #39912968986 SUCCESS
-- Exact next task: Run 4H local and exact-head Linux CI, direct two-parent merge without PR, then formal Phase 4 closure audit before Phase 5 TTL
-- Implementation maturity: All Phase 4 key/string commands merged; 4H adds 2400-step composite model and real multi-client read/write, MSET/MGET snapshot, APPEND, counter and FIFO tests
+- Current phase: Phase 4 — Core String Database COMPLETE; Phases 0–4 COMPLETE
+- Current subphase: Phase 4 formal closure documentation; next implementation Phase 5A — Clock abstraction (NOT STARTED)
+- Status: Phase 4A–4H merged, validated, and accepted; Phases 5–19 NOT STARTED
+- Last completed milestone: Phase 4H two-parent merge `31914ae7127b432f2fb38f3f07ac66a4ae6b435b` on main; post-merge Linux CI #39915994311 and sanitizer/fuzz CI #39915994295 SUCCESS
+- Exact next task: After closure-documentation branch has passed Linux CI and been direct-merged to main, start Phase 5A clock abstraction on a new guarded feature branch. Do not implement TTL behavior ahead of its planned subphases.
+- Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
-- Phase 4H scope: test-only integration hardening; 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn. No production changes unless tests expose a defect.
+- Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.
+
+### Phase 4 formal closure record (2026-10-23)
+
+- **Status:** ACCEPTED. All Phase 4A–4H commits are in main's ancestry; Phase 4H has correct two-parent merge history.
+- **Exact audited main commit:** `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`, parents `d7877afc2fc95f75e4271ada1736fcaba45e2336` and `589a1fd81cf54405a52351bbb9ae17f49b9d2947`.
+- **Linux networking CI:** run `39915994311`, push event at audited SHA, Debug 39/39 and Release 39/39 PASS.
+- **Linux sanitizer/fuzz CI:** run `39915994295`, push event at audited SHA, Clang 18 ASan+UBSan 40/40 PASS; 50 SHA-256-verified RESP2 corpus seeds; 10,000 libFuzzer iterations.
+- **macOS acceptance:** Debug 39/39, Release 39/39 and fuzz-enabled 40/40 PASS on Phase 4H feature SHA `589a1fd81cf54405a52351bbb9ae17f49b9d2947`.
+- **Command coverage:** SET, GET, DEL, EXISTS, TYPE, MSET, MGET, APPEND, STRLEN, INCR, DECR, INCRBY and DECRBY, plus PING, ECHO, QUIT. Binary-safe strings, duplicate key semantics, strict int64 overflow rejection, atomic MSET and cross-client visibility confirmed.
+- **Accepted limits:** 8,176-byte individual stored string value limit and 8,192-byte serialized single-reply limit. MSET full-map clone-and-swap incurs O(keyspace + batch) memory/time. These are documented deviations or optimization targets, not defects resolved by Phase 4.
+- **Not yet implemented:** TTL/expiration, eviction, AOF/snapshots, collection types, full Redis command/SET option compatibility and remote deployment. Phase 5A clock abstraction is NEXT, NOT STARTED.
+- **Repository policy:** no PR for Phase 4H or documentation closure; guarded direct non-force merges, retained feature branches, clean main and exact-head CI evidence.
 
 ## 2. Project Identity
 
@@ -159,7 +171,7 @@
 | 1 | Networking Foundation | COMPLETE |
 | 2 | RESP2 Protocol Engine | COMPLETE |
 | 3 | Command Framework | IN PROGRESS (3A–3C complete; 3D–3F not started) |
-| 4 | Core String Database | NOT STARTED |
+| 4 | Core String Database | COMPLETE |
 | 5 | TTL and Expiration | NOT STARTED |
 | 6 | Collection Data Types | NOT STARTED |
 | 7 | Memory Management and Eviction | NOT STARTED |

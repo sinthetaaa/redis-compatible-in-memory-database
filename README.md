@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A–4G COMPLETE; Phase 4H multi-client acceptance testing is on a feature branch pending Linux CI. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY. TTL and persistence remain future work.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5 (TTL and expiration) is NOT STARTED; 5A clock abstraction is NEXT. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -773,7 +773,7 @@ pending a later, separately validated reply-budget redesign. SET options
 such as NX/XX/EX/PX are not supported by Phase 4B. No persistence,
 TTL, eviction or collection types are included.
 
-## Phase 4C — DEL / EXISTS / TYPE (feature implementation)
+## Phase 4C — DEL / EXISTS / TYPE (COMPLETE)
 
 - `DEL key [key ...]` returns an integer count of removed keys;
   repeated key names count at most once because subsequent removals
@@ -789,7 +789,7 @@ keys are case-sensitive, and invalid argument counts produce RESP2 ERR
 without mutating storage. This phase adds no TTL, eviction, AOF,
 snapshots or new Redis SET options.
 
-## Phase 4D — Atomic MSET and Ordered MGET (feature implementation)
+## Phase 4D — Atomic MSET and Ordered MGET (COMPLETE)
 
 MSET validates all key/value pairs and per-value limits before writing. It
 stages the next authoritative keyspace and commits using a single map swap:
@@ -804,7 +804,7 @@ array headers and element framing before returning a result. Oversized MGET
 responses produce a bounded ERR without closing the TCP connection. The
 existing 8176-byte maximum individual stored string value remains unchanged.
 
-## Phase 4E — Binary-Safe APPEND and STRLEN (feature implementation)
+## Phase 4E — Binary-Safe APPEND and STRLEN (COMPLETE)
 
 `APPEND key suffix` atomically extends an existing string, or creates a
 missing key (including for an empty suffix), and returns the new byte length.
@@ -820,7 +820,7 @@ The limit is a temporary reply-budget compatibility constraint, not Redis's
 native string capacity. GET/MGET limits, keyspace ownership and nonpersistent
 process-local semantics remain unchanged. No TTL, AOF, or eviction is added.
 
-## Phase 4F — Signed Integer String Commands (feature implementation)
+## Phase 4F — Signed Integer String Commands (COMPLETE)
 
 `INCR`, `DECR`, `INCRBY`, and `DECRBY` treat missing keys as numeric zero,
 then store a canonical signed 64-bit decimal string and return the resulting
@@ -832,7 +832,7 @@ Arithmetic is validated before execution so no C++ signed overflow occurs,
 including when subtracting INT64_MIN. Storage changes are staged before commit.
 Four-command integration includes 8 concurrent TCP clients incrementing one
 shared counter and verifying all 240 results are unique. This is a correctness
-checkpoint, not a throughput benchmark; Phase 4G is dedicated to numeric
+checkpoint, not a throughput benchmark; Phase 4G added numeric
 edge-case hardening. There is no TTL, persistence or new SET option support.
 
 ## Phase 4G — Numeric Edge-Case and Overflow Hardening
@@ -848,9 +848,9 @@ External-process TCP integration independently computes results using Python
 arbitrary-precision integers, verifies state after every operation across two
 clients, checks malformed bytes and missing-key rollback, and validates exact
 pipelined replies after overflow. This is a correctness milestone, not a
-performance benchmark. Phase 4H will expand multi-client correctness coverage.
+performance benchmark. Phase 4H subsequently expanded multi-client correctness coverage.
 
-## Phase 4H — Multi-Client Correctness (feature tests)
+## Phase 4H — Multi-Client Correctness (COMPLETE)
 
 This acceptance milestone exercises the full existing Phase 4 string/key command
 subset through one process-local keyspace shared by multiple live TCP peers. A
@@ -866,8 +866,8 @@ GET requests cannot promise a consistent snapshot if another client writes
 between them. Further checks cover FIFO pipelining, error isolation, QUIT,
 connection churn, and clean restart. This is a correctness and integration
 checkpoint, not a latency or throughput benchmark. The 8176-byte individual
-string and 8192-byte reply limits remain unchanged. Phase 4 closure follows
-post-merge Linux CI; TTL/persistence are not yet implemented.
+string and 8192-byte reply limits remain unchanged. Phase 4 closure was accepted after exact-head post-merge Linux CI;
+TTL/persistence are not yet implemented.
 
 ## License
 
