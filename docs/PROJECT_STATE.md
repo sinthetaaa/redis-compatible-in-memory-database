@@ -3,11 +3,11 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-23
-- Current phase: Phase 4 — Core String Database COMPLETE; Phases 0–4 COMPLETE
-- Current subphase: Phase 4 formal closure documentation; next implementation Phase 5A — Clock abstraction (NOT STARTED)
-- Status: Phase 4A–4H merged, validated, and accepted; Phases 5–19 NOT STARTED
-- Last completed milestone: Phase 4H two-parent merge `31914ae7127b432f2fb38f3f07ac66a4ae6b435b` on main; post-merge Linux CI #39915994311 and sanitizer/fuzz CI #39915994295 SUCCESS
-- Exact next task: After closure-documentation branch has passed Linux CI and been direct-merged to main, start Phase 5A clock abstraction on a new guarded feature branch. Do not implement TTL behavior ahead of its planned subphases.
+- Current phase: Phase 5 — TTL and Expiration (IN PROGRESS); Phases 0–4 COMPLETE
+- Current subphase: Phase 5A — injectable clock abstraction on feature branch (CI and merge pending)
+- Status: Phases 0–4 COMPLETE; Phase 5A implementation under validation; 5B–5H and Phases 6–19 NOT STARTED
+- Last completed milestone: Phase 4 formal closure two-parent main merge `188e00ca40f48273e789598f3e3a7fc86249a2ba`; post-merge Linux CI #39918403631 (39/39 Debug + Release) and sanitizer/fuzz #39918403444 (40/40, 50 corpus seeds, 10,000 fuzz runs) SUCCESS
+- Exact next task: Validate and direct-merge Phase 5A feature branch after macOS/Linux correctness gates without PR, then start Phase 5B expiration metadata; no expiration behavior until planned subphases.
 - Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
 - Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.
@@ -23,6 +23,16 @@
 - **Accepted limits:** 8,176-byte individual stored string value limit and 8,192-byte serialized single-reply limit. MSET full-map clone-and-swap incurs O(keyspace + batch) memory/time. These are documented deviations or optimization targets, not defects resolved by Phase 4.
 - **Not yet implemented:** TTL/expiration, eviction, AOF/snapshots, collection types, full Redis command/SET option compatibility and remote deployment. Phase 5A clock abstraction is NEXT, NOT STARTED.
 - **Repository policy:** no PR for Phase 4H or documentation closure; guarded direct non-force merges, retained feature branches, clean main and exact-head CI evidence.
+
+### Phase 5A clock design checkpoint (2026-10-23)
+
+- **Status:** Feature implementation and test validation pending exact-head CI and merge.
+- **Starting clean main SHA:** `188e00ca40f48273e789598f3e3a7fc86249a2ba`.
+- **Decision:** ADR-009 dual time domains; monotonic (`steady_clock`) for in-process scheduling and wall (`system_clock`) for future persistent deadlines. Never serialize raw monotonic time points.
+- **API:** `Clock` nonthrowing virtual `monotonic_now()` / `wall_now()`; `SystemClock` production implementation, test-only `ManualClock` injected as `const Clock&`.
+- **Scope:** New clock header/source and clock unit tests; no database entry mutation, TTL, EXPIRE, AOF or networking changes.
+- **Expected suite:** macOS and Linux Debug/Release 40/40; fuzz-enabled 41/41; existing 50-seed immutable parser corpus and Linux 10,000-run libFuzzer gate unchanged.
+- **Next:** Verify feature CI, direct merge, then Phase 5B expiration metadata.
 
 ## 2. Project Identity
 
@@ -172,7 +182,7 @@
 | 2 | RESP2 Protocol Engine | COMPLETE |
 | 3 | Command Framework | IN PROGRESS (3A–3C complete; 3D–3F not started) |
 | 4 | Core String Database | COMPLETE |
-| 5 | TTL and Expiration | NOT STARTED |
+| 5 | TTL and Expiration | IN PROGRESS (5A feature) |
 | 6 | Collection Data Types | NOT STARTED |
 | 7 | Memory Management and Eviction | NOT STARTED |
 | 8 | AOF Persistence | NOT STARTED |
