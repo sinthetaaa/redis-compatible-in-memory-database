@@ -6,25 +6,23 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Phases 0–2 and 3A–3C COMPLETE; 3D–3F NOT STARTED; executable remains transport-only TCP echo
+**Architecture state:** Networking and RESP2 (Phases 0–2), core string/key commands (Phase 4), and TTL/expiration (Phase 5A–5H) implemented and validated; Phase 3 has independently tracked unfinished roadmap subphases; Phase 6 and later data-type/persistence milestones not started.
 
-This document describes the intended system.
+This file contains both the intended design and dated milestone sketches;
+not every planned component below is implemented. Current accepted behavior
+and source-of-truth milestones are recorded in `docs/PROJECT_STATE.md` and
+`docs/ROADMAP.md`.
 
-The build foundation, descriptor ownership, TCP listener,
-portable EventPoller, native kqueue and epoll backends,
-and ConnectionManager are implemented and tested.
+The production executable serves loopback-only TCP RESP2 with a single
+serialized command event loop on macOS kqueue and Linux epoll. A shared
+in-memory keyspace supports strings, integer operations and TTL commands,
+including EXPIRE/PEXPIRE/TTL/PTTL/PERSIST and SET EX/PX. Expired entries
+are hidden by lazy checks, while a deadline-ordered index supports at most
+32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
+Connection admission, parser framing, replies and work are bounded.
 
-The networking library provides bounded nonblocking I/O,
-readiness dispatch, admission control, idle eviction,
-backpressure and per-client failure isolation.
-
-The executable has a continuous transport-only TCP
-smoke loop. RESP2 processing exists in library/test
-integrations, not the production executable; database
-command execution remains unimplemented.
-
-Do not confuse architecture plans with implemented
-or validated functionality.
+Eviction, collections, AOF, snapshots, restart recovery and deployment
+remain roadmap plans rather than production capabilities.
 
 ---
 

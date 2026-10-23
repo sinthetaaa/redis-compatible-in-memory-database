@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5G are merged and post-merge validated; Phase 5H deterministic expiration acceptance is on a feature branch. Persistence to disk remains NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–2, 4 and 5 COMPLETE; Phase 5A–5H TTL/expiration implementation accepted after audited two-parent merge `479fdf4` and exact-head post-merge Linux Debug/Release (52/52) and Clang 18 ASan+UBSan/fuzz (53/53) CI. Phase 3 retains its independent historical roadmap status; Phase 6 collection types and Phases 7–19 have not started. Loopback-only RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, INCR/DECR/INCRBY/DECRBY, EXPIRE/PEXPIRE, TTL/PTTL/PERSIST and SET EX/PX. Eviction, collections and on-disk persistence are NOT IMPLEMENTED.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -250,7 +250,7 @@ AOF / Snapshots / Recovery
 The initial command executor will be single-threaded
 while supporting multiple client connections.
 
-## Planned Command Support
+## Command Support (implemented subset and roadmap)
 
 Connectivity:
 
@@ -279,7 +279,7 @@ Documented subsets of `INFO` and `CONFIG GET`.
 
 Full Redis compatibility is explicitly out of scope.
 
-No Redis command support is implemented yet.
+Connectivity, string, integer, key and listed expiration commands are implemented; collection and introspection commands remain planned.
 
 ## Persistence Design
 
@@ -1018,5 +1018,8 @@ A second test exercises two real TCP clients, expiry commands, 192 pipelined
 RESP2 replies, timed replacement, PERSIST and command-error recovery without
 relying on exact scheduling or sleep-sensitive TTL values. No production code,
 new commands, disk persistence or event-loop scheduling policy is changed.
-Phase 5 acceptance remains PENDING until the feature is merged, exact-head
-post-merge Linux CI passes, and a separate closure audit is recorded.
+Phase 5H was merged as `479fdf4`; exact-head Linux Debug/Release,
+Clang ASan+UBSan, corpus-integrity and 10,000-run fuzz validation passed.
+The formal Phase 5 closure verdict and per-subphase evidence appear in
+`docs/PROJECT_STATE.md`. Older subsection descriptions above capture their
+individual milestones and are historical, not current feature-status claims.
