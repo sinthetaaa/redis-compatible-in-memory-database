@@ -61,6 +61,23 @@ HandlerResult expire_command(storage::Database& database, const Command& command
     return {RespValue::error("ERR unexpected expiration outcome")};
 }
 
+HandlerResult ttl_command(const storage::Database& database, const Command& command,
+                          bool milliseconds, const char* name) {
+    if (!validate_arity(command, ArityRule{1, 1, 1}).valid()) {
+        return {RespValue::error(std::string("ERR wrong number of arguments for '") + name +
+                                 "' command")};
+    }
+    return {RespValue::integer(database.remaining_ttl(command.arguments()[0], milliseconds))};
+}
+
+HandlerResult persist_command(storage::Database& database, const Command& command) {
+    if (!validate_arity(command, ArityRule{1, 1, 1}).valid()) {
+        return {RespValue::error("ERR wrong number of arguments for 'persist' command")};
+    }
+    // The metadata API already handles an expired key as absent, atomically.
+    return {RespValue::integer(database.clear_expiration(command.arguments()[0]) ? 1 : 0)};
+}
+
 HandlerResult type_command(const storage::Database& database, const Command& command) {
     if (!validate_arity(command, ArityRule{1, 1, 1}).valid()) {
         return {RespValue::error("ERR wrong number of arguments for 'type' command")};
@@ -87,6 +104,16 @@ std::vector<CommandRoute> key_routes(storage::Database& database) {
          [&database](const Command& command) {
              return expire_command(database, command, true, "pexpire");
          }},
+        {"TTL",
+         [&database](const Command& command) {
+             return ttl_command(database, command, false, "ttl");
+         }},
+        {"PTTL",
+         [&database](const Command& command) {
+             return ttl_command(database, command, true, "pttl");
+         }},
+        {"PERSIST",
+         [&database](const Command& command) { return persist_command(database, command); }},
     };
 }
 
