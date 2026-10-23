@@ -38,6 +38,7 @@ add_library(
     src/commands/KeyCommands.cpp
     src/commands/CommandErrors.cpp
     src/storage/Database.cpp
+    src/storage/Clock.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -264,6 +265,15 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-database-tests)
     add_test(NAME unit.database COMMAND redisdb-database-tests)
     set_tests_properties(unit.database PROPERTIES TIMEOUT 20)
+
+    add_executable(
+        redisdb-clock-tests
+        tests/unit/clock_test.cpp
+    )
+    target_link_libraries(redisdb-clock-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-clock-tests)
+    add_test(NAME unit.clock COMMAND redisdb-clock-tests)
+    set_tests_properties(unit.clock PROPERTIES TIMEOUT 15)
 
     add_executable(
         redisdb-string-command-tests

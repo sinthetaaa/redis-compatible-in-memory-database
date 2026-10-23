@@ -664,9 +664,9 @@ unsupported Redis command options remain future phases.
 
 # Phase 5 — TTL and Expiration
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS (5A clock abstraction on feature branch; CI/merge pending)
 
-- [ ] 5A — Clock abstraction
+- [ ] 5A — Clock abstraction (interface and deterministic tests; CI/merge pending)
 - [ ] 5B — Expiration metadata
 - [ ] 5C — Lazy expiration
 - [ ] 5D — EXPIRE, PEXPIRE

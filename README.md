@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5 (TTL and expiration) is NOT STARTED; 5A clock abstraction is NEXT. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A clock abstraction is being validated on a feature branch; TTL metadata and expiration behavior are NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -868,6 +868,22 @@ connection churn, and clean restart. This is a correctness and integration
 checkpoint, not a latency or throughput benchmark. The 8176-byte individual
 string and 8192-byte reply limits remain unchanged. Phase 4 closure was accepted after exact-head post-merge Linux CI;
 TTL/persistence are not yet implemented.
+
+## Phase 5A — Injectable Clock Abstraction (feature implementation)
+
+Phase 5A introduces `redisdb::storage::Clock` and `SystemClock` for two
+separate time domains. `monotonic_now()` is based on `steady_clock` and is
+intended for in-process elapsed time and scheduling; `wall_now()` uses
+`system_clock` for future persistence-compatible absolute deadlines.
+Consumers borrow a `const Clock&`, allowing deterministic tests with an
+injectable fake. The unit test controls wall and monotonic time independently,
+including backward wall jumps, without sleeping.
+
+This is the time-source foundation only. No expiration deadlines are stored,
+no keyspace operations are changed, no TTL commands are added, and no value,
+RESP2 reply, or MSET staging limits are modified. Per ADR-009, future persisted
+expiration deadlines must never serialize a raw steady-clock time point.
+Phase 5B will add metadata; expiration semantics belong to 5C–5H.
 
 ## License
 
