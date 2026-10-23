@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Networking/RESP2, command framework, string/key commands, and TTL/expiration (Phases 0–5) are implemented; Phase 6A's owned storage-type variant is integrated and validated. Phase 6B–6G collection operations and Phases 7–19 remain unimplemented.
+**Architecture state:** Phases 0–5 and Phase 6A accepted; Phase 6B binary-safe list storage and six RESP2 list routes implemented, merged and post-merge Linux CI verified. Phase 6C–6G hash/set/general wrong-type/memory/differential work and Phases 7–19 remain future scope.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -21,8 +21,8 @@ are hidden by lazy checks, while a deadline-ordered index supports at most
 32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
 Connection admission, parser framing, replies and work are bounded.
 
-Eviction, collections, AOF, snapshots, restart recovery and deployment
-remain roadmap plans rather than production capabilities.
+Eviction, hash/set commands, comprehensive collection compatibility, AOF,
+snapshots, restart recovery and deployment remain future milestones.
 
 ---
 
@@ -1194,12 +1194,36 @@ Copies are independent. `std::list` provides constant-time end operations
 and preserves non-throwing `Value` move semantics on supported platforms,
 with additional node-allocation cost to revisit during benchmarking.
 
-`storage::Entry` still owns `Value` plus optional absolute wall-clock TTL.
-The production `Database` still creates *only* `StringValue` via its current
-APIs, so existing `std::get<StringValue>` paths stay type-safe by reachability.
-No commands or APIs insert list/hash/set entries in 6A. Typed collection
-mutations, `TYPE` for new types, and WRONGTYPE behavior are future Phase 6
-work; protocol values (`protocol::RespValue`) remain a distinct model.
+`storage::Entry` owns `Value` plus optional absolute wall-clock TTL.
+Phase 6A added the four-way variant only. Phase 6B now exposes list writes
+and reads, while hash/set insertion remains unavailable. Existing string
+accesses use checked type access and return WRONGTYPE for lists. `TYPE` now
+recognizes list keys; `MGET` treats non-string keys as nil. Storage and
+protocol values (`protocol::RespValue`) remain separate models.
+
+### Phase 6B — Implemented List Storage and RESP2 Command Path
+
+`Database::list_push`, `list_length`, `list_pop`, `list_range` and `type_of`
+operate on binary-safe owned list members. End pushes and pops preserve list
+order/duplicates. Mutation preserves existing wall-clock expiration and the
+ordered expiry index; removal of the final element deletes both entry and
+its associated index record. Existing-key `list_push` copies before commit,
+prioritizing exception safety over large-list allocation efficiency.
+
+The shared serialized event-loop dispatcher registers `list_routes(database)`
+and recognizes `LPUSH`, `RPUSH`, `LLEN`, `LPOP`, `RPOP`, `LRANGE` over RESP2.
+LRANGE implements inclusive negative indexes without INT64_MIN overflow and
+measures the serialized reply against its 8,192-byte frame cap before
+allocating returned copies. New list pushes reject elements larger than
+8,176 bytes; the wire subset intentionally omits pop-count overloads and
+blocking list commands. The tests include fragmented/pipelined TCP and
+multi-client visibility. Phase 6E extends wrong-type coverage across future
+hash/set operations.
+
+Implementation feature head `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`;
+non-fast-forward implementation merge `7df2e08209468ae3e8a619e25451abe9196bda11`;
+post-merge Linux workflows `39973111123` and `39973111117` success.
+
 
 ## Entry Metadata
 

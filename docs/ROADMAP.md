@@ -689,10 +689,10 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A implementation accepted; 6B NEXT
+**Status:** IN PROGRESS — 6A and 6B implementation accepted; 6C NEXT after formal Phase 6B closure
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
-- [ ] 6B — List storage and commands
+- [x] 6B — List storage and commands (merge `7df2e08`; post-merge Linux CI `39973111123` and `39973111117` PASS; formal docs closure in progress)
 - [ ] 6C — Hash storage and commands
 - [ ] 6D — Set storage and commands
 - [ ] 6E — Wrong-type errors
@@ -710,6 +710,35 @@ passed 53/53; fuzz-enabled 54/54. The feature and two-parent merge have
 separately green exact-head Linux networking and Clang 18 ASan+UBSan/fuzz
 workflows (run IDs recorded in `docs/PROJECT_STATE.md`). No collection
 commands, general WRONGTYPE handling, eviction, or persistence are claimed.
+
+### Phase 6B implementation acceptance — PASS (2026-10-23)
+
+Feature branch `phase6b/list-storage-commands` contains two reviewed commits:
+`18e27a0995071acfed579aa52d23167f15e16a09` and
+`00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`.
+Two-parent merge `7df2e08209468ae3e8a619e25451abe9196bda11` has
+parents `e895e7cd06474a0ae2e1079591409eace86f517c` and the latter
+feature commit. Its tree equals the feature tree
+`1acc6498c99f007fa4f747e578ebc43ca85ee814`.
+
+`LPUSH`, `RPUSH`, `LLEN`, `LPOP`, `RPOP`, and `LRANGE` are reachable through
+live TCP RESP2 and shared storage. Tests validate binary-safe payloads,
+list ordering, duplicates, missing keys, negative and extreme range indexes,
+WRONGTYPE handling, SET/MSET replacement, MGET nil for non-string entries,
+TTL preservation and last-element expiration-index deletion, capped
+8,192-byte LRANGE replies, parser fragmentation, pipelining, cross-client
+visibility and optional redis-cli interoperability. Local Debug/Release
+passed 56/56 each; fuzz-enabled passed 57/57. Exact-head feature CI
+`39972085606` (Linux Debug/Release) and `39972085386` (Clang 18 fuzz/
+sanitation) passed. Post-merge main CI `39973111123` and `39973111117`
+passed with all jobs and steps green. The audited combined implementation
+scope is eleven files. No PR, force push or branch deletion.
+
+This records implementation acceptance; five-document closure feature,
+its independent exact-head CI, direct closure merge and post-closure CI
+remain a separate final milestone before Phase 6C. Hash/set functionality,
+blocking list operations, general Phase 6E wrong-type coverage, eviction,
+persistence and deployment remain outside Phase 6B.
 
 ### Acceptance Gate
 

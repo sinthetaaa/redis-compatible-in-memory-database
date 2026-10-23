@@ -8,13 +8,12 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS. Phase 6A's owned string/list/hash/set storage value foundation is accepted at two-parent merge `5043cc7` with Linux Debug/Release and Clang 18 ASan+UBSan/fuzz exact-merge-head success. Phase 6B — List storage and commands — is NEXT. The current `docs/ROADMAP.md` marks Phase 3 complete; some older dated progress text remains historical.**
+**Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS. Phase 6A is closed; Phase 6B list storage and commands are implemented, merged at `7df2e08`, and accepted by exact-head Linux Debug/Release and Clang 18 ASan+UBSan/fuzz CI. The five-document Phase 6B formal closure is being recorded; 6C hash storage and commands are next only after closure CI. Older milestone notes below are historical.**
 
-The running loopback-only RESP2 server still exposes only strings, key and TTL commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, INCR/DECR/INCRBY/DECRBY, EXPIRE/PEXPIRE, TTL/PTTL/PERSIST, and SET EX/PX. List/hash/set commands and general WRONGTYPE routing are **NOT IMPLEMENTED**. Eviction, AOF, snapshots, and deployment remain future milestones.
+The loopback-only RESP2 server supports PING/ECHO/QUIT; string, integer, key and TTL commands; and the list subset `LPUSH`, `RPUSH`, `LLEN`, `LPOP`, `RPOP`, `LRANGE`. Existing string/list wrong-type requests return RESP2 WRONGTYPE errors; `MGET` treats non-string entries as nil. Hash/set commands, comprehensive Phase 6E wrong-type validation, eviction, AOF, snapshots, and deployment remain future work.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
-The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
-Phase 4A adds binary-safe storage. Phase 4B wires process-shared in-memory SET/GET over RESP2.
+The RESP2 mode now executes the documented string/key/TTL/list subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
 
 ## Project Goals
 
@@ -61,6 +60,34 @@ Linux CI: `39962981311` / `39962981227` — all exact-head push success.
 The sanitizer CI verifies the 50-seed immutable RESP2 corpus and 10,000
 bounded libFuzzer executions. `std::list` node-allocation overhead remains
 a documented future performance trade-off.
+
+## Phase 6B — List Storage and RESP2 Commands (implementation accepted)
+
+The shared `storage::Database` now stores binary-safe lists as well as strings.
+`list_push`, `list_pop`, `list_length`, `list_range` and `type_of` provide typed
+operations, with expiration preserved by in-place list mutation and deleted
+when the last list element is popped. Existing GET/APPEND/STRLEN/arithmetic
+reject list values via `WrongTypeError`; `MGET` returns nil for non-strings;
+SET and MSET replace a list with a string and clear its TTL as specified.
+
+The loopback-only RESP2 dispatcher exposes `LPUSH`, `RPUSH`, `LLEN`, `LPOP`,
+`RPOP`, and `LRANGE`. Multi-element pushes preserve Redis list order;
+LRANGE supports inclusive and negative indexes, checked signed-64-bit index
+parsing and an 8,192-byte reply limit. Wire list elements are limited to
+8,176 bytes. LPOP/RPOP implement the single-element form only; pop count
+arguments and blocking list operations are outside this milestone.
+
+**Exact acceptance:** first feature commit `18e27a0995071acfed579aa52d23167f15e16a09`;
+second feature commit `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`;
+implementation merge `7df2e08209468ae3e8a619e25451abe9196bda11`, parents
+`e895e7cd06474a0ae2e1079591409eace86f517c` and the second feature commit,
+merge and feature tree `1acc6498c99f007fa4f747e578ebc43ca85ee814`.
+The eleven-file implementation added focused list unit and live TCP coverage.
+Local macOS Debug/Release each passed 56/56; fuzz-enabled passed 57/57.
+Feature Linux CI `39972085606` / `39972085386`, and post-merge Linux CI
+`39973111123` / `39973111117` passed all exact-head jobs and steps. The
+original feature branch remains retained; formal documentation closure is
+separately gated before moving to Phase 6C.
 
 ## Current Functionality
 
@@ -110,7 +137,7 @@ Implemented and validated:
 - Linux Debug/Release pipeline repetition gates in GitHub Actions.
 - Formatting and compiler-warning configuration.
 
-Not yet implemented:
+Historical networking-bootstrap snapshot below (now superseded by the current status and Phase 6B section above):
 
 - A production Redis-compatible TCP command-serving mode.
 - Production RESP2 TCP command-serving path (protocol exists only in library/test integrations).
@@ -308,7 +335,7 @@ Documented subsets of `INFO` and `CONFIG GET`.
 
 Full Redis compatibility is explicitly out of scope.
 
-Connectivity, string, integer, key and listed expiration commands are implemented; collection and introspection commands remain planned.
+Connectivity, string, integer, key, expiration and the six listed Phase 6B list commands are implemented. Hash/set and introspection commands remain planned.
 
 ## Persistence Design
 

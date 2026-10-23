@@ -2,14 +2,25 @@
 
 ## 1. Snapshot
 
-- Updated: 2026-10-23 (Phase 6A implementation post-merge CI verified).
-- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 COMPLETE. Phase 3 is COMPLETE in the authoritative current `docs/ROADMAP.md` (some historical status prose remains stale).
-- Current subphase: 6A Type-safe value representation — IMPLEMENTED AND ACCEPTED on `main` merge `5043cc7cee3124baf809434479e2812c366fba2f`; formal documentation-only closure branch pending independent feature CI and direct merge.
-- Last completed engineering milestone: Four owned storage alternatives (StringValue, ListValue, HashValue, SetValue) with focused regression and retained preexisting string/TTL semantics. Exact post-merge Linux workflow IDs `39962981311`, `39962981227` (both push/completed/success).
-- Exact next task: Validate and integrate this five-document Phase 6A closure branch after its exact-head Linux CI, check post-closure main CI, then begin Phase 6B List storage and commands on a new isolated feature from clean main.
-- Existing commands/TTL: SET/GET, MSET/MGET, APPEND/STRLEN, integer and key commands, EXPIRE/PEXPIRE, TTL/PTTL/PERSIST, SET EX/PX, lazy and indexed bounded active expiration.
-- Scope limits: Production Database still stores only strings through public APIs; no list/hash/set commands, reachable multi-type WRONGTYPE routing, eviction, disk durability, crash recovery, or deployment. Existing stored-string/reply bounds, deadlines, and MSET clone-and-swap remain.
-- Current-status authority: This snapshot, the Phase 6A acceptance record below, and current `docs/ROADMAP.md`. Dated milestones below are historical records, not current task instructions.
+- Updated: 2026-10-23 (Phase 6B implementation merged; independent post-merge Linux CI verified).
+- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 COMPLETE, Phase 6A formally closed, Phase 6B implementation accepted. The live roadmap marks Phase 3 COMPLETE; historical status notes may remain dated.
+- Current subphase: 6B List storage and commands — implementation accepted at two-parent `main` merge `7df2e08209468ae3e8a619e25451abe9196bda11`; formal five-document closure feature `phase6b/closure-audit` is the current task.
+- Last completed engineering milestone: Binary-safe list storage, safe cross-type string access, all six list wire commands, bounded LRANGE and their focused unit/live-TCP acceptance. Local Debug/Release 56/56 each, fuzz-enabled 57/57. Exact post-merge Linux runs `39973111123` and `39973111117` completed successfully.
+- Exact next task: Commit and push this five-document Phase 6B closure on isolated `phase6b/closure-audit`; independently verify both exact-head Linux workflows, directly two-parent merge docs into `main` with remote lease and clean-state checks, verify post-closure Linux CI. Only then begin Phase 6C Hash storage and commands.
+- Existing commands: PING/ECHO/QUIT; SET/GET/MSET/MGET/APPEND/STRLEN and integer operations; DEL/EXISTS/TYPE; EXPIRE/PEXPIRE/TTL/PTTL/PERSIST/SET EX/PX; LPUSH/RPUSH/LLEN/LPOP/RPOP/LRANGE.
+- Scope limits: List operations implement basic Redis-compatible forms, not optional LPOP/RPOP counts or blocking commands. No hash/set network operations, complete Phase 6E wrong-type matrix, eviction, disk durability, crash recovery, or deployment. Bounded framing and per-string limits remain; MSET retains clone-and-swap.
+- Current-status authority: This snapshot, the Phase 6B implementation acceptance below, and live `docs/ROADMAP.md`. Earlier dated milestone notes are historical, not instructions.
+
+### Phase 6B list storage and RESP2 commands — accepted implementation (2026-10-23)
+
+- **Feature branch:** `phase6b/list-storage-commands` retained remotely; first commit `18e27a0995071acfed579aa52d23167f15e16a09` (six-file list storage and cross-type hardening); second commit `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6` (eight-file wire commands/tests). Both commits follow clean Phase 6A closure baseline `e895e7cd06474a0ae2e1079591409eace86f517c`.
+- **Implementation merge:** `7df2e08209468ae3e8a619e25451abe9196bda11`, parents `e895e7cd06474a0ae2e1079591409eace86f517c` and `00dddb0db60913c0a9d8e990c4dd49b71c6b8eb6`, with merge/feature tree `1acc6498c99f007fa4f747e578ebc43ca85ee814` (matching). Exactly eleven combined code/test/CMake files, with no documentation or CI workflow modifications.
+- **Storage:** `Database::type_of`, `list_push`, `list_length`, `list_pop`, `list_range`; owned binary-safe list members, left/right insertion order, duplicate preservation, TTL retained during mutation, last-pop removal from keyspace and expiry index, lazy-expiration consistency, wrong-type rejection without partial mutation.
+- **String and key interop:** GET/APPEND/STRLEN/INCR and related numeric routes return `WRONGTYPE` on lists, `MGET` returns nil for non-string values, `TYPE` returns `list`, SET/MSET replace prior typed entries with strings and clear expiration.
+- **RESP2 wire subset:** LPUSH/RPUSH, LLEN, LPOP/RPOP single-element forms, LRANGE with negative-inclusive indexes, checked signed parsing, 8,176-byte element and 8,192-byte LRANGE reply-safe limits. No count-form pop, blocking queue commands, hashes or sets.
+- **Verification:** Local Debug 56/56, Release 56/56, fuzz-enabled 57/57; permanent `unit.list_storage_foundation`, `unit.list_commands`, `integration.resp_list_commands` plus all older tests. Live-TCP tests cover 8 clients, fragmentation, pipelines, redis-cli (when installed), binary bytes, indexes, wrong-type and TTL. Feature-head Linux `39972085606` and `39972085386`: success. Post-merge main Linux `39973111123` (Debug/Release) and `39973111117` (Clang 18 ASan/UBSan/fuzz): each run is `push`, `completed`, `success` at exact `7df2e08` merge with all jobs/steps green.
+- **Delivery:** No PR, force push, history rewrite or feature deletion. This implementation is ACCEPTED; formal five-document closure on its own branch and its own exact-head/after-merge CI remain pending at the time of this record.
+- **Next exact stage:** Validate, merge and post-closure verify documentation branch `phase6b/closure-audit`; then begin Phase 6C on clean synchronized `main`.
 
 ### Phase 6A type-safe value representation — accepted implementation (2026-10-23)
 
@@ -227,10 +238,10 @@
 | 0 | Repository and Environment Foundation | COMPLETE |
 | 1 | Networking Foundation | COMPLETE |
 | 2 | RESP2 Protocol Engine | COMPLETE |
-| 3 | Command Framework | IN PROGRESS (3A–3C complete; 3D–3F not started) |
+| 3 | Command Framework | COMPLETE (see authoritative roadmap; older notes are dated) |
 | 4 | Core String Database | COMPLETE |
 | 5 | TTL and Expiration | COMPLETE AND ACCEPTED (5A–5H) |
-| 6 | Collection Data Types | NOT STARTED |
+| 6 | Collection Data Types | IN PROGRESS (6A closed; 6B implementation accepted; 6C next after docs closure) |
 | 7 | Memory Management and Eviction | NOT STARTED |
 | 8 | AOF Persistence | NOT STARTED |
 | 9 | Snapshots and Crash Recovery | NOT STARTED |
@@ -283,7 +294,7 @@
 ### Phase 5 Detail
 
 - 5A–5H: COMPLETE AND ACCEPTED — all eight implementation and acceptance subphases merged, all exact-head post-merge Linux CI successful, formal closure record above.
-- Phase 6A: NEXT AFTER documented closure is merged and post-closure CI verified; not started.
+- Phase 6A: COMPLETE. Phase 6B: IMPLEMENTED, post-merge CI PASS, documentation closure pending. Phase 6C: NEXT after formal closure.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
