@@ -140,6 +140,14 @@ if(BUILD_TESTING)
                     "$<TARGET_FILE:redisdb-server>"
         )
         set_tests_properties(integration.resp_multi_string PROPERTIES TIMEOUT 75)
+
+        add_test(
+            NAME integration.resp_append_strlen
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_append_strlen_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_append_strlen PROPERTIES TIMEOUT 75)
     endif()
 
     add_executable(
@@ -250,6 +258,15 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-multi-string-tests)
     add_test(NAME unit.multi_string_commands COMMAND redisdb-multi-string-tests)
     set_tests_properties(unit.multi_string_commands PROPERTIES TIMEOUT 15)
+
+    add_executable(
+        redisdb-append-strlen-tests
+        tests/unit/append_strlen_test.cpp
+    )
+    target_link_libraries(redisdb-append-strlen-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-append-strlen-tests)
+    add_test(NAME unit.append_strlen COMMAND redisdb-append-strlen-tests)
+    set_tests_properties(unit.append_strlen PROPERTIES TIMEOUT 15)
 
     add_executable(
         redisdb-key-command-tests

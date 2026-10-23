@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A–4C COMPLETE; Phase 4D MSET/MGET implemented on a feature branch pending Linux CI. The loopback RESP2 server supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE and MSET/MGET; TTL and persistence remain unimplemented.**
+**Project status: Phases 0–3 and 4A–4D COMPLETE; Phase 4E APPEND/STRLEN implemented on feature branch pending Linux CI. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN. TTL and persistence remain future work.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -803,6 +803,22 @@ for absent keys. The 8192-byte single-reply pipeline cap is checked including
 array headers and element framing before returning a result. Oversized MGET
 responses produce a bounded ERR without closing the TCP connection. The
 existing 8176-byte maximum individual stored string value remains unchanged.
+
+## Phase 4E — Binary-Safe APPEND and STRLEN (feature implementation)
+
+`APPEND key suffix` atomically extends an existing string, or creates a
+missing key (including for an empty suffix), and returns the new byte length.
+`STRLEN key` returns the number of stored bytes, or zero if absent; neither
+operation treats UTF-8 sequences as characters. Keys and suffixes are binary-safe.
+
+APPEND validates the complete new size against the existing 8176-byte
+individual-value ceiling, using subtraction to avoid arithmetic overflow.
+Rejected writes do not modify existing keys or create absent keys; allocation
+failure during staging also leaves the old value intact. Existing values
+created internally above that ceiling reject APPEND (even an empty suffix).
+The limit is a temporary reply-budget compatibility constraint, not Redis's
+native string capacity. GET/MGET limits, keyspace ownership and nonpersistent
+process-local semantics remain unchanged. No TTL, AOF, or eviction is added.
 
 ## License
 

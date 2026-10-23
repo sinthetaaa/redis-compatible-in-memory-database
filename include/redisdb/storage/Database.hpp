@@ -42,6 +42,16 @@ class Database final {
     // staging is deferred to a separate measured performance milestone.
     void set_many(const std::vector<std::pair<std::string, std::string>>& pairs);
 
+    // Atomically append binary bytes to a string, creating a missing key.
+    // The caller selects a storage limit; nullopt means the new value would
+    // exceed the limit and guarantees that no mutation occurred.
+    // The new value is fully staged before modifying an existing entry.
+    [[nodiscard]] std::optional<std::size_t> append(std::string_view key, std::string_view suffix,
+                                                    std::size_t max_value_bytes);
+
+    // Returns byte length, not Unicode code-point count; missing keys are zero.
+    [[nodiscard]] std::size_t string_length(std::string_view key) const;
+
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
     [[nodiscard]] bool exists(std::string_view key) const;

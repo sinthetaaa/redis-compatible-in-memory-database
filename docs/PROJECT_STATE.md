@@ -4,12 +4,13 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4D — atomic MSET and ordered MGET
-- Status: Phases 0–3 and 4A–4C COMPLETE; 4D implemented on feature branch pending CI; 4E–4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 4C two-parent merge `d739707bc4d10c621ff581c577048e66e845472e`; exact-head main CI #39847483678 and #39847483133 SUCCESS
-- Exact next task: Validate Phase 4D on macOS/Linux; direct merge `phase4d/mset-mget-atomic-ordered` once green; begin 4E APPEND/STRLEN
-- Implementation maturity: RESP2 TCP PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET on feature branch; shared binary-safe keyspace; 8176-byte value ceiling and 8192-byte MGET aggregate limit; no TTL, eviction or persistence
-- MSET atomicity implementation: full-keyspace copy-and-swap ensures rollback on allocation failure; O(total keyspace + batch) time and transient memory pending a later optimization
+- Current subphase: Phase 4E — binary-safe APPEND / STRLEN
+- Status: Phases 0–3 and 4A–4D COMPLETE; 4E implemented on feature branch pending Linux CI; 4F–4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 4D two-parent main merge `b457987a18bf074adaed1f4569be59678416fcd5`, post-merge Linux CI #39904620670 and sanitizer/fuzz CI #39904620682 SUCCESS
+- Exact next task: Validate and direct-merge `phase4e/append-strlen-binary-safe` after macOS/Linux checks, without PR; then begin 4F numeric string commands
+- Implementation maturity: Shared binary-safe RESP2 keyspace with SET/GET/DEL/EXISTS/TYPE/MSET/MGET plus APPEND/STRLEN on feature; 8176-byte individual value cap and 8192-byte reply cap
+- APPEND storage policy: validate length using subtraction before allocation; stage replacement before mutation; reject oversized existing and new values without creating or modifying keys
+- STRLEN semantics: byte length, not Unicode code points; missing keys return zero; no TTL, eviction, AOF, or persistence
 
 ## 2. Project Identity
 
