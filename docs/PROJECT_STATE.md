@@ -4,13 +4,13 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4F — signed 64-bit integer string operations
-- Status: Phases 0–3 and 4A–4E COMPLETE; 4F implemented on feature branch pending Linux CI; 4G–4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 4E two-parent main merge `18965b3e6fa60b3d37732f861069abf85d8ad4b6` with Linux CI #39907405493 and sanitizer/fuzz CI #39907405509 SUCCESS
-- Exact next task: Validate and direct-merge `phase4f/signed-integer-string-commands` after macOS/Linux tests, without PR; then begin Phase 4G numeric edge-case and overflow hardening
-- Implementation maturity: Shared binary-safe RESP2 keyspace with key/string commands, plus INCR/DECR/INCRBY/DECRBY on feature; 8176-byte individual value cap and 8192-byte single-reply cap
+- Current subphase: Phase 4G — numeric boundary, overflow and differential testing
+- Status: Phases 0–3 and 4A–4F COMPLETE; 4G regression tests on feature branch pending CI; 4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 4F two-parent main merge `f752bed12a1b1586a41ca60388e9ba43b80d9c34`; post-merge Linux CI #39911301559 and sanitizer/fuzz CI #39911301669 SUCCESS
+- Exact next task: Validate and direct-merge `phase4g/numeric-overflow-hardening` after macOS/Linux tests without PR; then begin 4H multi-client correctness
+- Implementation maturity: Shared binary-safe RESP2 keyspace with integer commands merged; 4G adds independent signed-64-bit overflow model and live Python big-int differential tests; reply/value limits unchanged
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
-- Post-4F: Phase 4G focuses on differential numeric edge-case tests and overflow hardening; 4H focuses on multi-client correctness; no TTL, eviction, AOF or snapshots yet
+- Phase 4G scope: test-only numeric hardening; 13-by-11-by-2 boundary cases, 3000 wide deterministic arithmetic checks, malformed inputs, rollback safety and 96 pipelined TCP replies. No production changes unless a defect is found.
 
 ## 2. Project Identity
 

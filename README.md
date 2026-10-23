@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A–4E COMPLETE; Phase 4F integer operations implemented on feature branch pending Linux CI. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY. TTL and persistence remain future work.**
+**Project status: Phases 0–3 and 4A–4F COMPLETE; Phase 4G numeric boundary hardening is under validation. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY. TTL and persistence remain future work.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -834,6 +834,21 @@ Four-command integration includes 8 concurrent TCP clients incrementing one
 shared counter and verifying all 240 results are unique. This is a correctness
 checkpoint, not a throughput benchmark; Phase 4G is dedicated to numeric
 edge-case hardening. There is no TTL, persistence or new SET option support.
+
+## Phase 4G — Numeric Edge-Case and Overflow Hardening
+
+This phase adds independent numeric regression coverage without changing the
+already-validated storage algorithm or RESP2 command handlers. C++20 unit tests
+use unsigned two's-complement operations and sign-transition checks to avoid
+repeating the production arithmetic's overflow guard. They cover canonical
+and malformed integers, a full signed-64-bit boundary grid, deterministic wide
+values, binary keys, and preservation of stored values after rejected changes.
+
+External-process TCP integration independently computes results using Python
+arbitrary-precision integers, verifies state after every operation across two
+clients, checks malformed bytes and missing-key rollback, and validates exact
+pipelined replies after overflow. This is a correctness milestone, not a
+performance benchmark. Phase 4H will expand multi-client correctness coverage.
 
 ## License
 
