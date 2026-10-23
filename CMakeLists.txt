@@ -351,6 +351,13 @@ if(BUILD_TESTING)
     add_test(NAME unit.hash_commands COMMAND redisdb-hash-command-tests)
     set_tests_properties(unit.hash_commands PROPERTIES TIMEOUT 20)
 
+    # Phase 6D.1: set-storage foundation (not yet network command routes).
+    add_executable(redisdb-set-foundation-tests tests/unit/set_storage_foundation_test.cpp)
+    target_link_libraries(redisdb-set-foundation-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-set-foundation-tests)
+    add_test(NAME unit.set_storage_foundation COMMAND redisdb-set-foundation-tests)
+    set_tests_properties(unit.set_storage_foundation PROPERTIES TIMEOUT 20)
+
     add_executable(
         redisdb-database-tests
         tests/unit/database_test.cpp
