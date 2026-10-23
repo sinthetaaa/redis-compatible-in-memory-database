@@ -689,15 +689,34 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A–6D formally complete. Phase 6E 78-case WRONGTYPE matrix implementation accepted on main `37aaad4` with green Linux CI; the separately reviewed five-document formal closure and final post-closure CI remain required. Phase 6F–6G NOT STARTED.
+**Status:** IN PROGRESS — 6A–6E formally COMPLETE with independent final
+Linux CI. Phase 6E closed through final docs-only main merge `d2dc17d` and
+Networking/fuzz workflows `40007963691` / `40007963507` PASS. Phase 6F
+collection memory accounting and Phase 6G differential testing NOT STARTED.
+Phase 6F.0B is a documentation-only preparatory status synchronization.
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
 - [x] 6C — Hash storage and commands (formal docs closure `201c3f1`; final networking `39987655559` and fuzz `39987655669` PASS)
 - [x] 6D — Set storage and commands (formal docs closure `281d044`; final Linux networking `39999397205` / fuzz `39999397202` PASS)
-- [ ] 6E — Wrong-type errors
+- [x] 6E — Wrong-type errors (formal closure `d2dc17d`; final Linux `40007963691` / `40007963507` PASS)
 - [ ] 6F — Collection memory accounting hooks
 - [ ] 6G — Differential tests
+
+### Phase 6E formal closure — VERIFIED PASS (2026-10-24)
+
+The exact reviewed implementation merge `37aaad4068ca0cf4452635737bd219a11d120d4c`
+and documentation feature `46a20ad3b2da9237741194bd8ddfd2e68a30ab0a`
+were merged in a guarded two-parent docs-only closure commit
+`d2dc17de7b046ed8cf007189a698d7b61e4344f3`, tree
+`aff0976dbffd7e479a63f11b50019f1eabdbb1a7`. Only the five
+approved documentation paths changed. Final `main` Linux Debug/Release
+`40007963691` and Clang 18 ASan/UBSan/fuzz `40007963507` passed all
+jobs and steps. Phase 6F.0A independently reverified the complete ten-
+workflow lineage and macOS Debug/Release 64/64, fuzz-enabled 65/65.
+The Phase 6E implementation record below is retained as historical context;
+its original unclosed gate was satisfied by this final acceptance.
+Phase 6F and 6G engineering remain unstarted.
 
 ### Phase 6E implementation acceptance — PASS (2026-10-24)
 

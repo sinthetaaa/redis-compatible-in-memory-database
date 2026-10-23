@@ -16,6 +16,23 @@ impact assessment, and updated project documentation.
 
 ---
 
+## Verified Phase 6E Formal Closure (2026-10-24)
+
+The previously accepted ADR-002, ADR-004 and ADR-005 remain unchanged.
+Phase 6E added cross-type WRONGTYPE unit/real-TCP acceptance coverage,
+not a new runtime architecture decision. Feature commit `a66128b`,
+implementation merge `37aaad4`, reviewed documentation `46a20ad` and
+final two-parent main closure `d2dc17de7b046ed8cf007189a698d7b61e4344f3`
+(tree `aff0976dbffd7e479a63f11b50019f1eabdbb1a7`) are accepted.
+Final exact-head Linux networking `40007963691` and Clang 18 fuzz/
+ASan/UBSan `40007963507` passed all jobs and steps. The 6F.0A audit
+reconfirmed 64/64 Debug, 64/64 Release and 65/65 fuzz-enabled macOS tests.
+Phase 6F memory accounting and 6G differential validation are NOT STARTED;
+no accounting policy, byte estimator, or eviction decision is approved by
+this documentation-only status synchronization.
+
+---
+
 ## ADR-001 — C++20 and CMake
 
 **Status:** Accepted
