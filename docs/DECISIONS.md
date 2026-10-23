@@ -163,7 +163,7 @@ against real clients rather than assumed.
 ## ADR-005 — In-Memory Primary Keyspace
 
 **Status:** Accepted
-**Implementation:** Phase 4A keyspace, Phase 6A variant, Phase 6B typed lists and Phase 6C typed hashes are implemented. 6C merged as `7b0abaa` and its exact-head Linux networking and sanitizer/fuzz workflows passed. Set storage commands and memory accounting remain future phases.
+**Implementation:** Phase 4A keyspace and Phase 6A variant, Phase 6B typed lists, Phase 6C typed hashes and Phase 6D binary-safe sets are implemented. Phase 6D merged as `d21421a` with exact-head main Linux networking and sanitizer/fuzz passing. Memory accounting, persistence and comprehensive Phase 6E wrong-type acceptance remain future milestones.
 
 ### Decision
 
@@ -960,6 +960,38 @@ ADR-005 (typed, authoritative hash-table keyspace).
 These are accepted implementation choices, not claims of a complete
 Redis hash API, persistence, eviction, general Phase 6E wrong-type
 matrix, set command support or performance benchmarks.
+
+# Phase 6D Set Storage and RESP2 Implementation Record (2026-10-23)
+
+The accepted implementation continues ADR-002 (serialized commands),
+ADR-004 (bounded RESP2 subset) and ADR-005 (authoritative typed keyspace),
+without adding a new incompatible architecture decision.
+
+- **Representation:** `SetValue::members` owns an unordered collection
+  of exact binary byte strings. Set cardinality counts unique members;
+  iteration order is deliberately unspecified.
+- **Exception safety:** SADD and SREM use staged owned replacements;
+  wrong-type access rejects the operation without rewriting prior values.
+  Missing-key reads are empty/zero; no empty set is kept after SREM.
+- **Expiration:** surviving set mutations keep the existing deadline and
+  expiry-index entry. Removing the last member removes both key and index
+  entry. The existing lazy/active expiry mechanisms remain unchanged.
+- **Wire contract:** six supported routes SADD/SREM/SISMEMBER/SCARD/
+  SMEMBERS/SMISMEMBER, with an 8,192-byte RESP2 reply ceiling and
+  8,176-byte reply-safe member limit for SADD. SMEMBERS is unordered;
+  SMISMEMBER returns 0/1 in requested argument order.
+- **Evidence:** first commit `743261636c2926f40b56f61856bcb9725e8e9b72`,
+  second commit `40657326e93631d8851c780424a730389b1f2cbb`,
+  retained branch `phase6d/set-storage-commands`, direct two-parent merge
+  `d21421ad910a179ea877fc7f1e555688ca8a81a8` with nine source/test/
+  build files; feature/merge tree `e1cadc1b2c86b24d37ce6819bd3926c87eda507d`.
+  macOS 62/62 Debug, 62/62 Release, 63/63 fuzz-enabled; exact-head feature
+  Linux `39995306323` / `39995306807` and main Linux `39996097334` /
+  `39996097046` passed, including all jobs and steps.
+- **Exclusions:** set algebra, pop/random sampling, scans, full Redis set
+  options, Phase 6E wrong-type matrix, memory accounting, eviction and
+  disk persistence remain separate work. The formal docs-only closure,
+  its Linux CI and final main acceptance are still gated.
 
 # Decision Maintenance
 
