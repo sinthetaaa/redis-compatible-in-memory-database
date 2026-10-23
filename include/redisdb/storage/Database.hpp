@@ -164,6 +164,21 @@ class Database final {
     [[nodiscard]] std::optional<std::vector<std::pair<std::string, std::string>>>
     hash_items(std::string_view key, std::size_t max_reply_bytes) const;
 
+    // Phase 6D.1: binary-safe set storage, no wire routing in this milestone.
+    // Member equality is byte-exact; iteration order is unspecified. All set
+    // additions/removals stage a full replacement to preserve atomicity.
+    // TTL survives a nonempty mutation; removing the final member removes the
+    // key and associated deadline index entry. Wrong types never mutate.
+    [[nodiscard]] std::size_t set_add(std::string key, const std::vector<std::string>& members);
+    [[nodiscard]] std::size_t set_remove(std::string_view key,
+                                         const std::vector<std::string>& members);
+    [[nodiscard]] bool set_contains(std::string_view key, std::string_view member) const;
+    [[nodiscard]] std::size_t set_cardinality(std::string_view key) const;
+    // Owned unordered snapshot, bounded by the exact RESP2 SMEMBERS byte size.
+    // Missing/expired returns an empty vector; nullopt indicates over budget.
+    [[nodiscard]] std::optional<std::vector<std::string>>
+    set_members(std::string_view key, std::size_t max_reply_bytes) const;
+
     // Returns an owned string snapshot. A non-string key throws WrongTypeError;
     // an absent or expired key returns nullopt, never an implicit conversion.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;

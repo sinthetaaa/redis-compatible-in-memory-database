@@ -694,6 +694,141 @@ Database::hash_items(std::string_view key, std::size_t max_reply_bytes) const {
     return result;
 }
 
+std::size_t Database::set_add(std::string key, const std::vector<std::string>& members) {
+    if (members.empty()) {
+        throw std::invalid_argument("set add requires at least one member");
+    }
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(std::string_view(key));
+    SetValue next;
+    if (found != entries_.end()) {
+        const auto* previous = std::get_if<SetValue>(&found->second.value);
+        if (previous == nullptr) {
+            throw WrongTypeError{};
+        }
+        next = *previous;
+    }
+    std::size_t inserted = 0;
+    for (const auto& member : members) {
+        if (next.members.insert(member).second) {
+            ++inserted;
+        }
+    }
+    if (inserted == 0) {
+        return 0;
+    }
+    Value staged = SetValue{std::move(next)};
+    if (found == entries_.end()) {
+        (void)entries_.try_emplace(std::move(key), Entry{std::move(staged)});
+    } else {
+        found->second.value = std::move(staged);
+    }
+    return inserted;
+}
+
+std::size_t Database::set_remove(std::string_view key, const std::vector<std::string>& members) {
+    if (members.empty()) {
+        throw std::invalid_argument("set remove requires at least one member");
+    }
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return 0;
+    }
+    const auto* set = std::get_if<SetValue>(&found->second.value);
+    if (set == nullptr) {
+        throw WrongTypeError{};
+    }
+    SetValue next = *set;
+    std::size_t removed = 0;
+    for (const auto& member : members) {
+        removed += next.members.erase(member);
+    }
+    if (removed == 0) {
+        return 0;
+    }
+    if (next.members.empty()) {
+        // Materialize the expiry lookup record before changing either store.
+        std::optional<ExpiryKey> indexed;
+        if (found->second.expires_at.has_value()) {
+            indexed.emplace(*found->second.expires_at, found->first);
+        }
+        if (indexed.has_value()) {
+            expiry_index_.erase(*indexed);
+        }
+        entries_.erase(found);
+    } else {
+        found->second.value = Value{SetValue{std::move(next)}};
+    }
+    return removed;
+}
+
+bool Database::set_contains(std::string_view key, std::string_view member) const {
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return false;
+    }
+    const auto* set = std::get_if<SetValue>(&found->second.value);
+    if (set == nullptr) {
+        throw WrongTypeError{};
+    }
+    return set->members.contains(std::string(member));
+}
+
+std::size_t Database::set_cardinality(std::string_view key) const {
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return 0;
+    }
+    const auto* set = std::get_if<SetValue>(&found->second.value);
+    if (set == nullptr) {
+        throw WrongTypeError{};
+    }
+    return set->members.size();
+}
+
+std::optional<std::vector<std::string>> Database::set_members(std::string_view key,
+                                                              std::size_t max_reply_bytes) const {
+    // The empty RESP2 array *0\r\n occupies four bytes.
+    if (max_reply_bytes < 4) {
+        return std::nullopt;
+    }
+    (void)expire_if_needed(key);
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return std::vector<std::string>{};
+    }
+    const auto* set = std::get_if<SetValue>(&found->second.value);
+    if (set == nullptr) {
+        throw WrongTypeError{};
+    }
+    const std::size_t count = set->members.size();
+    // Even an empty bulk string takes six wire bytes: $0\r\n\r\n.
+    if (count > max_reply_bytes / 6) {
+        return std::nullopt;
+    }
+    std::size_t total = 3 + std::to_string(count).size();
+    if (total > max_reply_bytes) {
+        return std::nullopt;
+    }
+    for (const auto& member : set->members) {
+        const std::size_t overhead = 5 + std::to_string(member.size()).size();
+        if (overhead > max_reply_bytes - total ||
+            member.size() > max_reply_bytes - total - overhead) {
+            return std::nullopt;
+        }
+        total += overhead + member.size();
+    }
+    std::vector<std::string> result;
+    result.reserve(count);
+    for (const auto& member : set->members) {
+        result.push_back(member);
+    }
+    return result;
+}
+
 std::optional<std::string> Database::get(std::string_view key) const {
     (void)expire_if_needed(key);
     const auto found = entries_.find(key);
