@@ -34,6 +34,10 @@ struct IntegerMutationResult {
     std::int64_t value = 0;
 };
 
+// One atomic relative deadline operation, sampled against one wall-clock instant.
+// The basic 5D command subset has no NX/XX/GT/LT option flags.
+enum class ExpireResult { Missing, Set, Deleted, OutOfRange };
+
 // Authoritative, process-local, binary-safe keyspace.
 // The caller serializes access; this class is not independently synchronized.
 // Phase 5C enforces deadlines on demand, using an injectable wall clock.
@@ -82,6 +86,12 @@ class Database final {
     [[nodiscard]] std::optional<WallTimePoint> expiration(std::string_view key) const;
     // Returns true only when an existing key had metadata to remove.
     [[nodiscard]] bool clear_expiration(std::string_view key);
+
+    // Relative expiry in whole seconds or milliseconds. Non-positive values
+    // delete an existing key; values too large for system_clock are rejected
+    // without changing a live key's value/deadline.
+    [[nodiscard]] ExpireResult expire_after(std::string_view key, std::int64_t amount,
+                                            bool milliseconds);
 
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;

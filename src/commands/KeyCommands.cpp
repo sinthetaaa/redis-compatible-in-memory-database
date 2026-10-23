@@ -4,6 +4,7 @@
 #include "redisdb/storage/Database.hpp"
 
 #include <cstdint>
+#include <string>
 
 namespace redisdb::commands {
 namespace {
@@ -38,6 +39,28 @@ HandlerResult exists_command(const storage::Database& database, const Command& c
     return {RespValue::integer(present)};
 }
 
+HandlerResult expire_command(storage::Database& database, const Command& command, bool milliseconds,
+                             const char* name) {
+    if (!validate_arity(command, ArityRule{2, 2, 1}).valid()) {
+        return {RespValue::error(std::string("ERR wrong number of arguments for '") + name +
+                                 "' command")};
+    }
+    const auto duration = storage::parse_integer64(command.arguments()[1]);
+    if (!duration.has_value()) {
+        return {RespValue::error("ERR value is not an integer or out of range")};
+    }
+    switch (database.expire_after(command.arguments()[0], *duration, milliseconds)) {
+    case storage::ExpireResult::Missing:
+        return {RespValue::integer(0)};
+    case storage::ExpireResult::Set:
+    case storage::ExpireResult::Deleted:
+        return {RespValue::integer(1)};
+    case storage::ExpireResult::OutOfRange:
+        return {RespValue::error(std::string("ERR invalid expire time in '") + name + "' command")};
+    }
+    return {RespValue::error("ERR unexpected expiration outcome")};
+}
+
 HandlerResult type_command(const storage::Database& database, const Command& command) {
     if (!validate_arity(command, ArityRule{1, 1, 1}).valid()) {
         return {RespValue::error("ERR wrong number of arguments for 'type' command")};
@@ -56,6 +79,14 @@ std::vector<CommandRoute> key_routes(storage::Database& database) {
         {"EXISTS",
          [&database](const Command& command) { return exists_command(database, command); }},
         {"TYPE", [&database](const Command& command) { return type_command(database, command); }},
+        {"EXPIRE",
+         [&database](const Command& command) {
+             return expire_command(database, command, false, "expire");
+         }},
+        {"PEXPIRE",
+         [&database](const Command& command) {
+             return expire_command(database, command, true, "pexpire");
+         }},
     };
 }
 
