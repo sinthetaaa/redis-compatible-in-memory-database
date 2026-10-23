@@ -2,15 +2,28 @@
 
 ## 1. Snapshot
 
-- Updated: 2026-10-23
-- Current phase: Phase 5 — TTL and Expiration COMPLETE AND ACCEPTED on audited main baseline `479fdf46481f1d5b8e3966ae2e56483ab4560db3`.
-- Current subphase: Phase 5 formal documentation-only closure checkpoint; all implementation subphases 5A–5H are complete.
-- Status: Phases 0–2, 4, and 5 COMPLETE; Phase 3 recorded as IN PROGRESS in its historical roadmap; Phase 6–19 NOT STARTED.
-- Last completed milestone: Phase 5H two-parent main merge `479fdf46481f1d5b8e3966ae2e56483ab4560db3`; Linux Debug/Release 52/52, sanitizer/fuzz 53/53, 50 validated RESP2 seeds and 10,000 libFuzzer executions.
-- Exact next task: Independently validate and directly merge this documentation-only closure branch, verify post-closure exact-head Linux CI, then start Phase 6A type-safe value representation from clean synchronized main.
-- Implemented TTL: EXPIRE, PEXPIRE, TTL, PTTL, PERSIST, SET EX/PX, lazy expiration, bounded active sweeping and indexed deadline consistency.
-- Scope limits: Binary-safe strings only; no advanced conditional expiration flags, collection types, eviction, disk durability or crash recovery. Plain SET clears TTL, MSET remains clone-and-swap, and the existing reply/value limits remain.
-- Current-status authority: This snapshot, the Phase 5 closure record below, and the current Phase 5 section in ROADMAP. Earlier milestone checkpoint statements are retained as dated historical evidence.
+- Updated: 2026-10-23 (Phase 6A implementation post-merge CI verified).
+- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 COMPLETE. Phase 3 is COMPLETE in the authoritative current `docs/ROADMAP.md` (some historical status prose remains stale).
+- Current subphase: 6A Type-safe value representation — IMPLEMENTED AND ACCEPTED on `main` merge `5043cc7cee3124baf809434479e2812c366fba2f`; formal documentation-only closure branch pending independent feature CI and direct merge.
+- Last completed engineering milestone: Four owned storage alternatives (StringValue, ListValue, HashValue, SetValue) with focused regression and retained preexisting string/TTL semantics. Exact post-merge Linux workflow IDs `39962981311`, `39962981227` (both push/completed/success).
+- Exact next task: Validate and integrate this five-document Phase 6A closure branch after its exact-head Linux CI, check post-closure main CI, then begin Phase 6B List storage and commands on a new isolated feature from clean main.
+- Existing commands/TTL: SET/GET, MSET/MGET, APPEND/STRLEN, integer and key commands, EXPIRE/PEXPIRE, TTL/PTTL/PERSIST, SET EX/PX, lazy and indexed bounded active expiration.
+- Scope limits: Production Database still stores only strings through public APIs; no list/hash/set commands, reachable multi-type WRONGTYPE routing, eviction, disk durability, crash recovery, or deployment. Existing stored-string/reply bounds, deadlines, and MSET clone-and-swap remain.
+- Current-status authority: This snapshot, the Phase 6A acceptance record below, and current `docs/ROADMAP.md`. Dated milestones below are historical records, not current task instructions.
+
+### Phase 6A type-safe value representation — accepted implementation (2026-10-23)
+
+- **Previous baseline:** `d9bbcaa611f85a8e5e356e7a1fc8a2f44f24cc41`, verified post-Phase-5 closure.
+- **Implementation feature branch:** `phase6a/type-safe-value-representation`, retained remotely. Feature commit `94f7b8d626c5c470101972b3296e68dbb7f67e8f`, a single commit parented directly on prior baseline.
+- **Two-parent implementation merge on main:** `5043cc7cee3124baf809434479e2812c366fba2f`; first parent `d9bbcaa611f85a8e5e356e7a1fc8a2f44f24cc41`, second parent `94f7b8d626c5c470101972b3296e68dbb7f67e8f`. The merge tree and feature tree are both `4cfbf7c0f88cefe0cf0156d0f17962da32f1b898`.
+- **Exact three-file scope:** `include/redisdb/storage/Value.hpp`, new `tests/unit/storage_value_test.cpp`, and `CMakeLists.txt`. No public Database API, command handler, RESP2, network, expiration, CI workflow, or immutable parser corpus changes.
+- **Containers:** `std::string` for StringValue, `std::list<std::string>` for ListValue, `std::unordered_map<std::string,std::string>` for HashValue, and `std::unordered_set<std::string>` for SetValue. All owned and binary-safe; list order/duplicates, hash field overwrite, and set uniqueness are tested. Deep copies, move/no-throw properties, Entry aggregate construction, and independent optional wall-clock TTL metadata are tested. Node-based list allocation is deferred to benchmark-based evaluation.
+- **Local macOS acceptance:** Debug 53/53, Release 53/53, fuzz-enabled 54/54, including `unit.storage_value`; repeated successfully before the guarded implementation merge.
+- **Feature exact-head CI:** Linux Debug/Release `39953114572` PASS; Clang 18 ASan+UBSan/fuzz `39953114723` PASS; push events at the full feature SHA.
+- **Implementation-merge exact-head CI:** Linux Debug/Release `39962981311` PASS and Clang 18 ASan+UBSan/fuzz `39962981227` PASS; both `push`, `completed`, `success` at the full merge SHA. The CI sanitizer workflow verifies 50 immutable parser corpus seeds and performs 10,000 bounded libFuzzer executions.
+- **Guarded delivery:** No PR, force-push, or history rewrite; implementation feature branch retained; local and remote main synchronized at the implementation merge according to guarded Terminal trace.
+- **Phase boundary:** `storage::Value` and `protocol::RespValue` are distinct. No public API can insert a non-string database entry in 6A; existing `std::get<StringValue>` accesses are not reachable with wrong type. Actual collection command semantics and general WRONGTYPE are Phase 6B–6E work. Phase 6A status is accepted as implementation, with formal five-document closure pending its own CI and merge.
+- **Next:** Phase 6B List storage and commands only after the documentation closure is integrated and its new main SHA passes post-merge Linux CI.
 
 ### Phase 5 formal closure record (2026-10-23)
 

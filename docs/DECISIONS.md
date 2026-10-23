@@ -164,7 +164,7 @@ against real clients rather than assumed.
 ## ADR-005 — In-Memory Primary Keyspace
 
 **Status:** Accepted
-**Implementation:** Phase 4A foundation implemented (feature branch; validation pending)
+**Implementation:** Phase 4A keyspace and Phase 6A owned variant foundation implemented; Phase 6A accepted at `5043cc7` after exact-merge-head CI.
 
 ### Decision
 
@@ -176,6 +176,24 @@ An initial candidate representation is:
 
 Use a type-safe value model as collection support
 is introduced.
+
+Phase 6A concrete selection (2026-10-23):
+
+- `StringValue`: owned `std::string` bytes (existing contract).
+- `ListValue`: `std::list<std::string>`, preserving order and duplicates,
+  constant-time insertion/removal at both ends and non-throwing moves.
+  Per-element node allocation and cache locality are later benchmark concerns.
+- `HashValue`: `std::unordered_map<std::string, std::string>`, unique fields
+  and last-write-wins field replacement; no iteration-order promise.
+- `SetValue`: `std::unordered_set<std::string>`, unique byte-exact members;
+  no iteration-order promise.
+
+All nested bytes are owned, including empty, NUL and non-UTF8 values. The
+copyable variant supports existing `Database::set_many` clone-and-swap.
+The stored `Entry` deadline remains absolute wall time. Phase 6A does not
+open collection-valued database insertion or RESP2 collection commands;
+wrong-type safety on reachable multi-type entries must be implemented as
+those APIs are introduced in subsequent Phase 6 subphases.
 
 ### Rationale
 

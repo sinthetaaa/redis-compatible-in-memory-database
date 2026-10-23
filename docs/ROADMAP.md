@@ -689,15 +689,27 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS — 6A implementation accepted; 6B NEXT
 
-- [ ] 6A — Type-safe value representation
+- [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [ ] 6B — List storage and commands
 - [ ] 6C — Hash storage and commands
 - [ ] 6D — Set storage and commands
 - [ ] 6E — Wrong-type errors
 - [ ] 6F — Collection memory accounting hooks
 - [ ] 6G — Differential tests
+
+### Phase 6A acceptance — PASS (2026-10-23)
+
+Four owned, binary-safe variants are type-distinct; list ordering, hash
+field overwrite, set member uniqueness, deep copy/move semantics, aggregate
+`Entry` initialization, and optional wall-clock TTL metadata are tested.
+The existing string-command and expiration engine is unchanged; there is
+no public collection insertion route yet. Local Debug and Release each
+passed 53/53; fuzz-enabled 54/54. The feature and two-parent merge have
+separately green exact-head Linux networking and Clang 18 ASan+UBSan/fuzz
+workflows (run IDs recorded in `docs/PROJECT_STATE.md`). No collection
+commands, general WRONGTYPE handling, eviction, or persistence are claimed.
 
 ### Acceptance Gate
 

@@ -6,7 +6,7 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state:** Networking and RESP2 (Phases 0–2), core string/key commands (Phase 4), and TTL/expiration (Phase 5A–5H) implemented and validated; Phase 3 has independently tracked unfinished roadmap subphases; Phase 6 and later data-type/persistence milestones not started.
+**Architecture state:** Networking/RESP2, command framework, string/key commands, and TTL/expiration (Phases 0–5) are implemented; Phase 6A's owned storage-type variant is integrated and validated. Phase 6B–6G collection operations and Phases 7–19 remain unimplemented.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -1177,18 +1177,29 @@ std::unordered_map<std::string, Entry>
 
 ## Values
 
-Planned type-safe representation:
+Implemented at Phase 6A (owned storage types, *not* RESP2 wire values):
 
 ```cpp
-using Value = std::variant<
-    StringValue,
-    ListValue,
-    HashValue,
-    SetValue
->;
+struct StringValue { std::string bytes; };
+struct ListValue { std::list<std::string> elements; };
+struct HashValue { std::unordered_map<std::string, std::string> fields; };
+struct SetValue { std::unordered_set<std::string> members; };
+using Value = std::variant<StringValue, ListValue, HashValue, SetValue>;
 ```
 
-This is a design sketch, not a final declaration.
+The list preserves order and duplicate byte strings; hash fields and set
+members use exact binary equality, without a defined iteration order.
+Values and collection elements own memory and support embedded NUL/non-UTF8.
+Copies are independent. `std::list` provides constant-time end operations
+and preserves non-throwing `Value` move semantics on supported platforms,
+with additional node-allocation cost to revisit during benchmarking.
+
+`storage::Entry` still owns `Value` plus optional absolute wall-clock TTL.
+The production `Database` still creates *only* `StringValue` via its current
+APIs, so existing `std::get<StringValue>` paths stay type-safe by reachability.
+No commands or APIs insert list/hash/set entries in 6A. Typed collection
+mutations, `TYPE` for new types, and WRONGTYPE behavior are future Phase 6
+work; protocol values (`protocol::RespValue`) remain a distinct model.
 
 ## Entry Metadata
 
