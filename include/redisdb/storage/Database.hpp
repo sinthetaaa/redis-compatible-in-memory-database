@@ -3,6 +3,7 @@
 #include "redisdb/storage/Entry.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <string>
@@ -20,6 +21,17 @@ struct TransparentStringHash {
     [[nodiscard]] std::size_t operator()(std::string_view key) const noexcept {
         return std::hash<std::string_view>{}(key);
     }
+};
+
+// Strict ASCII signed 64-bit decimal parsing, independent of locale.
+// Accepts optional minus sign; rejects plus, whitespace, leading zeroes,
+// empty values, embedded bytes, and out-of-range magnitudes.
+[[nodiscard]] std::optional<std::int64_t> parse_integer64(std::string_view text) noexcept;
+
+enum class IntegerMutationError { None, InvalidInteger, Overflow };
+struct IntegerMutationResult {
+    IntegerMutationError error = IntegerMutationError::None;
+    std::int64_t value = 0;
 };
 
 // Authoritative, process-local, binary-safe keyspace.
@@ -51,6 +63,12 @@ class Database final {
 
     // Returns byte length, not Unicode code-point count; missing keys are zero.
     [[nodiscard]] std::size_t string_length(std::string_view key) const;
+
+    // Atomic signed 64-bit arithmetic. `subtract` avoids negating INT64_MIN.
+    // Missing keys start at zero. Any error preserves the previous value or
+    // absence. No arithmetic may overflow a signed C++ integer.
+    [[nodiscard]] IntegerMutationResult adjust_integer(std::string_view key, std::int64_t operand,
+                                                       bool subtract);
 
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;
