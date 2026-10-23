@@ -6,7 +6,17 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state (2026-10-24):** Phases 0–5 and 6A–6D formally closed. Phase 6E WRONGTYPE cross-type validation is implementation-accepted on main `37aaad4`, with green feature and post-implementation Linux CI. Its documentation-only formal closure and final main CI remain gated. Phases 6F–6G and Phases 7–19 remain future work. This milestone adds tests and documentation without modifying the runtime architecture.
+**Architecture state (2026-10-24):** Phases 0–5 and 6A–6E formally
+closed. Phase 6E 78-case cross-type WRONGTYPE unit and live TCP acceptance
+was merged through implementation `37aaad4`, reviewed documentation
+`46a20ad` and final two-parent main closure
+`d2dc17de7b046ed8cf007189a698d7b61e4344f3` (tree
+`aff0976dbffd7e479a63f11b50019f1eabdbb1a7`). Final exact-head Linux
+networking `40007963691` and Clang 18 sanitizer/fuzz `40007963507` passed.
+No runtime architecture was altered in Phase 6E. Phase 6F memory accounting
+and Phase 6G differential tests are NOT STARTED, and Phases 7–19 remain
+future work. Phase 6F.0B only synchronizes documentation; its memory
+accounting design and implementation require separate review.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -21,7 +31,7 @@ are hidden by lazy checks, while a deadline-ordered index supports at most
 32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
 Connection admission, parser framing, replies and work are bounded.
 
-Eviction, comprehensive collection compatibility/Phase 6E matrices, AOF,
+Collection memory accounting, differential testing, eviction, AOF,
 snapshots, restart recovery and deployment remain future milestones.
 
 ---

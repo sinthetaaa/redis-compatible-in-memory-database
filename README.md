@@ -8,25 +8,28 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-24): Phases 0–5 and 6A–6D formally
-COMPLETE; Phase 6 remains IN PROGRESS. Phase 6E cross-type WRONGTYPE
-acceptance has been implementation-merged on `main` as
-`37aaad4068ca0cf4452635737bd219a11d120d4c`, after reviewed feature
-`a66128b077cfbfc22fbe6daca1e053e5fdaa111e` and green exact-head
-Linux feature and main implementation CI. Tests cover 26 incompatible
-command/type combinations for each applicable type, 78 matrix cases in
-both the unit and live TCP suites; macOS Debug/Release 64/64 and
-fuzz-enabled 65/65 passed. Phase 6E formal five-document closure and
-final post-closure Linux CI are still PENDING, so do not begin Phase 6F.
-Phases 6F–6G, eviction, persistence and deployment remain future work.
-Historical milestone records below are not current instructions.**
+**Project status (2026-10-24): Phases 0–5 and 6A–6E are formally
+COMPLETE; overall Phase 6 remains IN PROGRESS. The Phase 6E cross-type
+WRONGTYPE matrix was implemented through feature `a66128b`, two-parent
+implementation merge `37aaad4`, documentation feature `46a20ad`, and
+formal two-parent documentation merge `d2dc17de7b046ed8cf007189a698d7b61e4344f3`.
+The final reviewed tree is `aff0976dbffd7e479a63f11b50019f1eabdbb1a7`;
+exact-head final Linux networking `40007963691` and Clang 18 ASan/UBSan/fuzz
+`40007963507` passed every job and step. Two permanent matrix CTests cover
+26 commands x 3 incompatible stored types = 78 WRONGTYPE cases per suite;
+macOS Debug/Release 64/64 and fuzz-enabled 65/65 passed in the Phase 6F.0A
+audit. Phase 6F collection memory accounting and Phase 6G differential
+tests are NOT STARTED; Phase 6F.0B is documentation-only preparation.
+Eviction, persistence, recovery, benchmarking and deployment remain future
+work. Historical milestone notes below are not current instructions.**
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
 integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
 and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
 accesses return WRONGTYPE; MGET returns nil for non-string keys. The
-comprehensive Phase 6E wrong-type matrix, eviction, persistence,
-full Redis compatibility and deployment remain future milestones.
+comprehensive Phase 6E wrong-type acceptance matrix is complete; collection
+memory accounting, differential tests, eviction, persistence, full Redis
+compatibility and deployment remain future milestones.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The RESP2 mode now executes the documented string/key/TTL/list/hash/set subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
