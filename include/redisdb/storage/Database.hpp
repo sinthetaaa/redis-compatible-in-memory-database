@@ -38,6 +38,10 @@ struct IntegerMutationResult {
 // The basic 5D command subset has no NX/XX/GT/LT option flags.
 enum class ExpireResult { Missing, Set, Deleted, OutOfRange };
 
+// SET with an expiration either atomically replaces value+deadline or does
+// nothing. An invalid positive deadline must not modify the old key.
+enum class SetWithExpiryResult { Set, OutOfRange };
+
 // Authoritative, process-local, binary-safe keyspace.
 // The caller serializes access; this class is not independently synchronized.
 // Phase 5C enforces deadlines on demand, using an injectable wall clock.
@@ -58,6 +62,12 @@ class Database final {
     // Returns true if a new key was created, false if an existing key was replaced.
     // Stages a complete owned replacement before mutating an existing entry.
     [[nodiscard]] bool set(std::string key, std::string bytes);
+
+    // Validate the full positive relative EX/PX deadline before mutation.
+    // Stage value and deadline together; no intermediate persistent value.
+    // This method does not impose command-layer reply-size limits.
+    [[nodiscard]] SetWithExpiryResult set_with_expiration(std::string key, std::string bytes,
+                                                          std::int64_t amount, bool milliseconds);
 
     // Atomic multi-key replacement, with last-wins semantics for repeated keys.
     // Clone and swap provides strong exception safety; optimized delta

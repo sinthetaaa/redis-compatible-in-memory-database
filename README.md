@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5D are merged and validated; Phase 5E TTL/PTTL/PERSIST is on a feature branch. SET EX/PX, active expiration, and persistence to disk remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5E are merged and validated; Phase 5F SET EX/PX is on a feature branch. Active expiration and persistence to disk remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -968,3 +968,22 @@ No license has been selected yet.
 
 Until a license is added, the repository should
 not be assumed to grant reuse permissions.
+
+## Phase 5F — Atomic SET EX/PX (feature implementation)
+
+`SET key value EX seconds` and `SET key value PX milliseconds` atomically
+replace a string value and its new absolute wall-clock expiration. The existing
+plain two-argument `SET` continues to overwrite values and clear their TTL.
+Only one positive relative EX/PX pair is accepted; other SET options are not
+yet implemented. Binary-safe keys/values, case-insensitive ASCII option names,
+and the 8,176-byte value and 8,192-byte reply limits remain unchanged.
+
+The storage API samples an injected wall clock once and checks native clock
+multiplication/addition bounds **before any mutation**. Non-positive durations,
+invalid integers, unsupported options, oversized values and unrepresentable
+positive deadlines fail without changing an existing value or TTL. Entry
+replacement commits the value and deadline together; no intermediate value
+without expiration is visible to other clients. Deterministic tests cover exact
+millisecond/second deadlines, replacement and error rollback. Live RESP2 tests
+exercise two clients, pipelining, and error recovery. Active sweeping, SET
+NX/XX/GET/KEEPTTL options and disk persistence remain future work.

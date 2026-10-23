@@ -68,6 +68,48 @@ bool Database::set(std::string key, std::string bytes) {
     return inserted.second;
 }
 
+SetWithExpiryResult Database::set_with_expiration(std::string key, std::string bytes,
+                                                  std::int64_t amount, bool milliseconds) {
+    using NativeDuration = WallTimePoint::duration;
+    using Rep = NativeDuration::rep;
+    using Period = NativeDuration::period;
+    // Match the system-clock representation checks already used by EXPIRE.
+    static_assert(std::is_integral_v<Rep> && std::is_signed_v<Rep>);
+    static_assert(std::numeric_limits<Rep>::digits == 63);
+    static_assert(Period::num == 1 && Period::den % 1000 == 0);
+    constexpr std::int64_t TicksPerMillisecond = Period::den / 1000;
+    constexpr std::int64_t TicksPerSecond = Period::den;
+    constexpr std::int64_t Max = std::numeric_limits<Rep>::max();
+
+    // A rejected SET has zero side effects, even if its target has an expired
+    // deadline. Sample once, and check before allocating or touching the map.
+    if (amount <= 0) {
+        return SetWithExpiryResult::OutOfRange;
+    }
+    const auto now = clock_.wall_now();
+    const std::int64_t scale = milliseconds ? TicksPerMillisecond : TicksPerSecond;
+    if (amount > Max / scale) {
+        return SetWithExpiryResult::OutOfRange;
+    }
+    const std::int64_t delta = amount * scale;
+    const std::int64_t now_ticks = now.time_since_epoch().count();
+    if (now_ticks > Max - delta) {
+        return SetWithExpiryResult::OutOfRange;
+    }
+    const WallTimePoint deadline{NativeDuration{now_ticks + delta}};
+
+    // Prepare an owned complete replacement before the first mutation.
+    // Existing map iterators must not be used after an expiration callback.
+    Entry replacement{Value{StringValue{std::move(bytes)}}, deadline};
+    const auto found = entries_.find(std::string_view(key));
+    if (found != entries_.end()) {
+        found->second = std::move(replacement);
+    } else {
+        (void)entries_.try_emplace(std::move(key), std::move(replacement));
+    }
+    return SetWithExpiryResult::Set;
+}
+
 void Database::set_many(const std::vector<std::pair<std::string, std::string>>& pairs) {
     // Construct the whole next state before changing the authoritative map.
     // Allocation failure during cloning or replacement leaves it untouched.

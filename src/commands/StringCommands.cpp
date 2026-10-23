@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace redisdb::commands {
@@ -14,18 +15,39 @@ namespace {
 using protocol::RespValue;
 
 HandlerResult set_command(storage::Database& database, const Command& command) {
-    if (!validate_arity(command, ArityRule{2, 2, 1}).valid()) {
+    const auto& arguments = command.arguments();
+    // Preserve the existing mandatory-two-argument form, and accept exactly
+    // one relative EX/PX option pair. NX/XX/GET/KEEPTTL remain unsupported.
+    if (arguments.size() != 2 && arguments.size() != 4) {
         return {RespValue::error("ERR wrong number of arguments for 'set' command")};
     }
-
-    const auto& arguments = command.arguments();
     if (arguments[1].size() > MaxStringValueBytes) {
         return {RespValue::error("ERR string value exceeds the 8176-byte reply-safe limit")};
     }
+    if (arguments.size() == 2) {
+        (void)database.set(arguments[0], arguments[1]);
+        return {RespValue::simple_string("OK")};
+    }
 
-    // Count, value limits and ownership are validated before mutation.
-    // Phase 5 adds EX/PX; Phase 4B intentionally accepts no SET options.
-    (void)database.set(arguments[0], arguments[1]);
+    // Parse options as ASCII bytes, independent of locale and binary keys.
+    const std::string_view option = arguments[2];
+    const bool seconds = option.size() == 2 && (option[0] == 'E' || option[0] == 'e') &&
+                         (option[1] == 'X' || option[1] == 'x');
+    const bool milliseconds = option.size() == 2 && (option[0] == 'P' || option[0] == 'p') &&
+                              (option[1] == 'X' || option[1] == 'x');
+    if (!seconds && !milliseconds) {
+        return {RespValue::error("ERR syntax error")};
+    }
+    const auto amount = storage::parse_integer64(arguments[3]);
+    if (!amount.has_value()) {
+        return {RespValue::error("ERR value is not an integer or out of range")};
+    }
+    // Redis SET rejects non-positive timeouts, unlike EXPIRE's delete-now.
+    if (*amount <= 0 ||
+        database.set_with_expiration(arguments[0], arguments[1], *amount, milliseconds) ==
+            storage::SetWithExpiryResult::OutOfRange) {
+        return {RespValue::error("ERR invalid expire time in 'set' command")};
+    }
     return {RespValue::simple_string("OK")};
 }
 
