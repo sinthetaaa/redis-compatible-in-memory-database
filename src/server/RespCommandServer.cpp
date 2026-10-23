@@ -7,6 +7,7 @@
 #include "redisdb/commands/HashCommands.hpp"
 #include "redisdb/commands/KeyCommands.hpp"
 #include "redisdb/commands/ListCommands.hpp"
+#include "redisdb/commands/SetCommands.hpp"
 #include "redisdb/commands/StringCommands.hpp"
 #include "redisdb/net/Connection.hpp"
 #include "redisdb/net/ConnectionManager.hpp"
@@ -76,6 +77,9 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
         routes.push_back(std::move(route));
     }
     for (auto& route : commands::hash_routes(database)) {
+        routes.push_back(std::move(route));
+    }
+    for (auto& route : commands::set_routes(database)) {
         routes.push_back(std::move(route));
     }
     const commands::CommandDispatcher dispatcher(std::move(routes));
