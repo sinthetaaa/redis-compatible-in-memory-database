@@ -156,6 +156,14 @@ if(BUILD_TESTING)
                     "$<TARGET_FILE:redisdb-server>"
         )
         set_tests_properties(integration.resp_integer_commands PROPERTIES TIMEOUT 75)
+
+        add_test(
+            NAME integration.resp_numeric_edge_cases
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_numeric_edge_cases_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_numeric_edge_cases PROPERTIES TIMEOUT 75)
     endif()
 
     add_executable(
@@ -284,6 +292,15 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-integer-command-tests)
     add_test(NAME unit.integer_commands COMMAND redisdb-integer-command-tests)
     set_tests_properties(unit.integer_commands PROPERTIES TIMEOUT 15)
+
+    add_executable(
+        redisdb-numeric-hardening-tests
+        tests/unit/numeric_edge_cases_test.cpp
+    )
+    target_link_libraries(redisdb-numeric-hardening-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-numeric-hardening-tests)
+    add_test(NAME unit.numeric_edge_cases COMMAND redisdb-numeric-hardening-tests)
+    set_tests_properties(unit.numeric_edge_cases PROPERTIES TIMEOUT 20)
 
     add_executable(
         redisdb-key-command-tests
