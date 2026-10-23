@@ -159,6 +159,14 @@ if(BUILD_TESTING)
         set_tests_properties(integration.resp_set_ex_px PROPERTIES TIMEOUT 75)
 
         add_test(
+            NAME integration.resp_active_expiration
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_active_expiration_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_active_expiration PROPERTIES TIMEOUT 75)
+
+        add_test(
             NAME integration.resp_multi_string
             COMMAND "${Python3_EXECUTABLE}"
                     "${PROJECT_SOURCE_DIR}/tests/integration/resp_multi_string_test.py"
@@ -325,6 +333,12 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-set-ex-px-tests)
     add_test(NAME unit.set_ex_px COMMAND redisdb-set-ex-px-tests)
     set_tests_properties(unit.set_ex_px PROPERTIES TIMEOUT 20)
+
+    add_executable(redisdb-active-expiration-tests tests/unit/active_expiration_test.cpp)
+    target_link_libraries(redisdb-active-expiration-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-active-expiration-tests)
+    add_test(NAME unit.active_expiration COMMAND redisdb-active-expiration-tests)
+    set_tests_properties(unit.active_expiration PROPERTIES TIMEOUT 20)
 
     add_executable(redisdb-lazy-expiration-tests tests/unit/lazy_expiration_test.cpp)
     target_link_libraries(redisdb-lazy-expiration-tests PRIVATE redisdb-core)

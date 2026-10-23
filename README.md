@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5E are merged and validated; Phase 5F SET EX/PX is on a feature branch. Active expiration and persistence to disk remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5F are merged and validated; Phase 5G active expiration is on a feature branch. Persistence to disk remains NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -987,3 +987,19 @@ without expiration is visible to other clients. Deterministic tests cover exact
 millisecond/second deadlines, replacement and error rollback. Live RESP2 tests
 exercise two clients, pipelining, and error recovery. Active sweeping, SET
 NX/XX/GET/KEEPTTL options and disk persistence remain future work.
+
+## Phase 5G — Bounded Active Expiration (feature implementation)
+
+A deadline-ordered index now tracks volatile entries; all SET, MSET, EXPIRE,
+PEXPIRE, PERSIST, DEL and lazy-expiration paths update it in the same event-loop
+thread. The index uses binary-safe key strings and preserves strong exception
+safety for MSET's clone-and-swap, while an invalid SET EX/PX never changes the
+key or its deadline. The event loop sweeps at most 32 due records every 100ms,
+using a monotonic clock for cadence and a single wall-time sample per sweep.
+No full hash-table scans, worker threads, background timer or disk I/O occur.
+
+Deterministic fake-clock unit tests inspect physical entry counts without
+sleeping; live RESP2 tests exercise expiration-heavy bursts, two clients,
+FIFO replies and continued server responsiveness. A separate Phase 5H will
+complete the comprehensive expiration acceptance matrix. The server still
+uses lazy expiration on read/write between proactive sweeps.
