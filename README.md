@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A–4F COMPLETE; Phase 4G numeric boundary hardening is under validation. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY. TTL and persistence remain future work.**
+**Project status: Phases 0–3 and 4A–4G COMPLETE; Phase 4H multi-client acceptance testing is on a feature branch pending Linux CI. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY. TTL and persistence remain future work.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -849,6 +849,25 @@ arbitrary-precision integers, verifies state after every operation across two
 clients, checks malformed bytes and missing-key rollback, and validates exact
 pipelined replies after overflow. This is a correctness milestone, not a
 performance benchmark. Phase 4H will expand multi-client correctness coverage.
+
+## Phase 4H — Multi-Client Correctness (feature tests)
+
+This acceptance milestone exercises the full existing Phase 4 string/key command
+subset through one process-local keyspace shared by multiple live TCP peers. A
+2400-step composite C++ command-dispatch reference model checks command-level
+behavior, including binary keys, duplicate MSET/MGET operands, APPEND, and
+integer operations. The TCP suite checks 640 counter increments across eight
+writers and three readers, 280 MSET writes with four concurrent MGET snapshot
+readers, and 360 concurrent APPENDs with unique token preservation. All expected
+results are order-independent where scheduling is nondeterministic.
+
+A single MGET command is used to test an atomic multi-key snapshot; separate
+GET requests cannot promise a consistent snapshot if another client writes
+between them. Further checks cover FIFO pipelining, error isolation, QUIT,
+connection churn, and clean restart. This is a correctness and integration
+checkpoint, not a latency or throughput benchmark. The 8176-byte individual
+string and 8192-byte reply limits remain unchanged. Phase 4 closure follows
+post-merge Linux CI; TTL/persistence are not yet implemented.
 
 ## License
 

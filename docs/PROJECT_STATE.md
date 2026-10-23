@@ -4,13 +4,13 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4G — numeric boundary, overflow and differential testing
-- Status: Phases 0–3 and 4A–4F COMPLETE; 4G regression tests on feature branch pending CI; 4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 4F two-parent main merge `f752bed12a1b1586a41ca60388e9ba43b80d9c34`; post-merge Linux CI #39911301559 and sanitizer/fuzz CI #39911301669 SUCCESS
-- Exact next task: Validate and direct-merge `phase4g/numeric-overflow-hardening` after macOS/Linux tests without PR; then begin 4H multi-client correctness
-- Implementation maturity: Shared binary-safe RESP2 keyspace with integer commands merged; 4G adds independent signed-64-bit overflow model and live Python big-int differential tests; reply/value limits unchanged
+- Current subphase: Phase 4H — multi-client correctness and Phase 4 acceptance testing
+- Status: Phases 0–3 and 4A–4G COMPLETE; 4H test implementation on feature branch pending CI and direct merge; Phases 5–19 NOT STARTED
+- Last completed milestone: Phase 4G two-parent main merge `d7877afc2fc95f75e4271ada1736fcaba45e2336`; post-merge Linux CI #39912968997 and sanitizer/fuzz CI #39912968986 SUCCESS
+- Exact next task: Run 4H local and exact-head Linux CI, direct two-parent merge without PR, then formal Phase 4 closure audit before Phase 5 TTL
+- Implementation maturity: All Phase 4 key/string commands merged; 4H adds 2400-step composite model and real multi-client read/write, MSET/MGET snapshot, APPEND, counter and FIFO tests
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
-- Phase 4G scope: test-only numeric hardening; 13-by-11-by-2 boundary cases, 3000 wide deterministic arithmetic checks, malformed inputs, rollback safety and 96 pipelined TCP replies. No production changes unless a defect is found.
+- Phase 4H scope: test-only integration hardening; 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn. No production changes unless tests expose a defect.
 
 ## 2. Project Identity
 
