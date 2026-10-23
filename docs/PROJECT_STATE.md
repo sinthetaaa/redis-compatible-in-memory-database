@@ -2,14 +2,25 @@
 
 ## 1. Snapshot
 
-- Updated: 2026-10-23 (Phase 6B implementation merged; independent post-merge Linux CI verified).
-- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 COMPLETE, Phase 6A formally closed, Phase 6B implementation accepted. The live roadmap marks Phase 3 COMPLETE; historical status notes may remain dated.
-- Current subphase: 6B List storage and commands — implementation accepted at two-parent `main` merge `7df2e08209468ae3e8a619e25451abe9196bda11`; formal five-document closure feature `phase6b/closure-audit` is the current task.
-- Last completed engineering milestone: Binary-safe list storage, safe cross-type string access, all six list wire commands, bounded LRANGE and their focused unit/live-TCP acceptance. Local Debug/Release 56/56 each, fuzz-enabled 57/57. Exact post-merge Linux runs `39973111123` and `39973111117` completed successfully.
-- Exact next task: Commit and push this five-document Phase 6B closure on isolated `phase6b/closure-audit`; independently verify both exact-head Linux workflows, directly two-parent merge docs into `main` with remote lease and clean-state checks, verify post-closure Linux CI. Only then begin Phase 6C Hash storage and commands.
-- Existing commands: PING/ECHO/QUIT; SET/GET/MSET/MGET/APPEND/STRLEN and integer operations; DEL/EXISTS/TYPE; EXPIRE/PEXPIRE/TTL/PTTL/PERSIST/SET EX/PX; LPUSH/RPUSH/LLEN/LPOP/RPOP/LRANGE.
-- Scope limits: List operations implement basic Redis-compatible forms, not optional LPOP/RPOP counts or blocking commands. No hash/set network operations, complete Phase 6E wrong-type matrix, eviction, disk durability, crash recovery, or deployment. Bounded framing and per-string limits remain; MSET retains clone-and-swap.
-- Current-status authority: This snapshot, the Phase 6B implementation acceptance below, and live `docs/ROADMAP.md`. Earlier dated milestone notes are historical, not instructions.
+- Updated: 2026-10-23 (Phase 6C implementation merged and independently accepted on Linux; documentation-only formal closure now being prepared).
+- Current phase: Phase 6 — Collection Data Types IN PROGRESS; Phases 0–5 COMPLETE; Phase 6A and Phase 6B formally closed; 6C hash storage and seven RESP2 commands have accepted implementation. Phase 6D sets is next after 6C closure.
+- Current subphase: 6C documentation closure feature `phase6c/closure-audit`, based on clean two-parent implementation merge `7b0abaa20b65b6095dd432784aced4a16fc70d32`.
+- Last completed engineering milestone: Six binary-safe hash storage APIs and seven live RESP2 hash commands (HSET, HGET, HEXISTS, HLEN, HDEL, HMGET, HGETALL), typed access, TTL/index preservation and bounded replies. macOS Debug/Release 59/59 and fuzz-enabled 60/60; exact postmerge Linux networking `39984084722` and fuzz `39984084843` both completed successfully with all jobs and steps green.
+- Exact next task: Review five-document-only Phase 6C closure on `phase6c/closure-audit`, commit and normally push only that branch, independently accept its exact-head Linux networking and fuzz workflows, two-parent direct merge docs into `main`, verify post-closure Linux runs at the final merge SHA, then begin Phase 6D Set Storage and Commands.
+- Existing commands: PING/ECHO/QUIT; SET/GET/MSET/MGET/APPEND/STRLEN and integer operations; DEL/EXISTS/TYPE; EXPIRE/PEXPIRE/TTL/PTTL/PERSIST/SET EX/PX; LPUSH/RPUSH/LLEN/LPOP/RPOP/LRANGE; HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL.
+- Scope limits: Hash HGETALL has unspecified iteration order; HMGET is positional with nil for absent fields; bounded RESP2 replies and reply-safe write size checks. No set network operations, full Redis hash options, comprehensive Phase 6E wrong-type matrix, eviction, persistence, restart recovery or deployment. List operations omit count-form pops and blocking commands.
+- Current-status authority: This snapshot, the Phase 6C acceptance below and `docs/ROADMAP.md`. Earlier dated Phase 6B and older milestone checkpoints are historical, not future instructions.
+
+### Phase 6C hash storage and RESP2 commands — accepted implementation (2026-10-23)
+
+- **History:** Phase 6B formal closure `81798723a794f261682844a4fe01dc5adf9eeb35`, green Linux networking/fuzz `39975274770` / `39975274694`. Phase 6C feature `phase6c/hash-storage-commands` retained at final commit `88817b205b511f7bf4799ea2a675a74845427f16`, with first hash foundation commit `0a6a560dc6bc9746617bd8da7d020cd921993916`.
+- **Implementation merge:** Two-parent non-fast-forward commit `7b0abaa20b65b6095dd432784aced4a16fc70d32`, parents `81798723a794f261682844a4fe01dc5adf9eeb35` and `88817b205b511f7bf4799ea2a675a74845427f16`. Merge and accepted feature tree `1fdac28176454971c28281da8ded2ed0a2108d2e`. Exactly nine implementation files changed; neither workflow nor documentation altered in the implementation merge.
+- **Storage:** `hash_set`, `hash_get`, `hash_exists`, `hash_length`, `hash_delete`, `hash_items` on binary-safe owned hash fields. HSET last-wins and counts distinct new fields; the stored hash is unordered. Existing TTL and expiry index survive field mutation; deleting the final field removes the key and corresponding expiry metadata; lazy expiration remains consistent.
+- **RESP2 and compatibility:** Seven live routes HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL; HGET/HMGET return nil for missing fields, HGETALL produces an unordered alternating field/value reply, reply size at most 8,192 bytes. Non-hash storage reports WRONGTYPE; string GET/APPEND/arithmetic reject hash, MGET treats hash as nil; SET/MSET replace hash and clear TTL. Tests include binary bytes, malformed arity, large replies, fragmentation, pipelines, multi-client correctness and optional redis-cli.
+- **Tests:** macOS Debug 59/59, Release 59/59 and fuzz-enabled 60/60; newly added unit `unit.hash_storage_foundation`, `unit.hash_commands` and live `integration.resp_hash_commands`. First storage feature CI `39979350475` / `39979350423` and second feature CI `39983170325` / `39983170439` accepted. Post-implementation main Linux `39984084722` (Debug/Release) and `39984084843` (Clang 18 ASan/UBSan/fuzz) completed success at exact merge SHA with all jobs and steps passing.
+- **Workflow:** Feature branch preserved; no PR, forced push, rebasing or deletion. Formal closure is a distinct five-document-only feature, reviewed CI gate, direct merge, and post-closure CI gate. A prior checkpoint must not be treated as current instructions.
+- **Next exact subphase:** Phase 6C.4A docs-only draft and validation, then 6C.4B docs commit/push plus feature Linux CI; then 6C.4C two-parent docs merge and final CI; only afterward Phase 6D.
+
 
 ### Phase 6B list storage and RESP2 commands — accepted implementation (2026-10-23)
 

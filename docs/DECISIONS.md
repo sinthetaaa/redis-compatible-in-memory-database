@@ -126,12 +126,11 @@ also passed in both configurations.
 ## ADR-004 — RESP2 Protocol Compatibility
 
 **Status:** Accepted
-**Implementation:** Partial — Phases 2A-2E protocol library,
-framing, and bounded pipeline are merged and validated through
-PR #8. Phase 2F parser/framing safety and native peer-isolation
-regressions are merged through PR #9, with post-merge macOS/Linux
-Debug and Release validation. Production RESP2 command serving
-and Redis command execution remain pending.
+**Implementation:** RESP2 parsing, framed pipelining and the
+loopback-only serialized command server are live. Phases 3–5 implement
+connectivity/string/key/TTL behavior; 6B provides six list commands;
+6C provides seven hash commands after exact-head local and Linux CI.
+Other Redis commands and RESP3 remain unsupported.
 
 ### Decision
 
@@ -164,7 +163,7 @@ against real clients rather than assumed.
 ## ADR-005 — In-Memory Primary Keyspace
 
 **Status:** Accepted
-**Implementation:** Phase 4A keyspace, Phase 6A owned variant foundation, and Phase 6B typed list operations are implemented. Phase 6B merged at `7df2e08` and passed exact-head Linux Debug/Release and sanitizer/fuzz CI.
+**Implementation:** Phase 4A keyspace, Phase 6A variant, Phase 6B typed lists and Phase 6C typed hashes are implemented. 6C merged as `7b0abaa` and its exact-head Linux networking and sanitizer/fuzz workflows passed. Set storage commands and memory accounting remain future phases.
 
 ### Decision
 
@@ -925,6 +924,42 @@ Feature `38c5354` merged directly as `d733daa`.
 Post-merge Linux #39828953490 and fuzz
 #39829737702 both passed. macOS Debug/Release
 and UBSan-enabled regressions also passed.
+
+# Phase 6C Hash Storage and RESP2 Implementation Record (2026-10-23)
+
+No new architecture decision record is necessary: Phase 6C implements
+ADR-002 (serialized execution), ADR-004 (bounded RESP2 subset) and
+ADR-005 (typed, authoritative hash-table keyspace).
+
+- **Representation:** `HashValue::fields` owns a binary-safe
+  `std::unordered_map<std::string, std::string>`; order is unspecified.
+  Field overwrites use last-write-wins, and HSET counts newly inserted
+  distinct fields rather than total arguments.
+- **Exception and type safety:** mutations stage owned replacements
+  before updating the authoritative entry. Wrong types produce `WRONGTYPE`
+  without silently rewriting strings/lists; SET/MSET may replace a hash,
+  and MGET returns nil for non-string keys as already specified.
+- **Expiration:** modifying fields preserves the existing key deadline;
+  removing the final field removes the key and its expiry-index record.
+  Lazy expiration continues to treat expired hashes as missing.
+- **Protocol boundary:** only HSET, HGET, HEXISTS, HLEN, HDEL, HMGET and
+  HGETALL are supported; requests and outputs remain bounded. HMGET has
+  positional nil results; HGETALL iteration order is intentionally
+  unspecified, and the entire RESP2 HGETALL response is budget checked.
+- **Validation:** live TCP, multiple clients, pipelines, fragmented
+  requests, binary field/value bytes, wrong-type/TTL cases, optional
+  redis-cli, reply limits and existing regressions. macOS Debug/Release
+  59/59 each; fuzz-enabled 60/60. Feature CI `39983170325` and
+  `39983170439`; implementation-main CI `39984084722` and `39984084843`
+  passed at the exact accepted SHA.
+- **Delivery:** storage commit `0a6a560`, command commit `88817b2`,
+  two-parent merge `7b0abaa20b65b6095dd432784aced4a16fc70d32`;
+  nine-file implementation diff and retained feature branch; no PR,
+  history rewrite or force push. Formal five-document closure CI follows.
+
+These are accepted implementation choices, not claims of a complete
+Redis hash API, persistence, eviction, general Phase 6E wrong-type
+matrix, set command support or performance benchmarks.
 
 # Decision Maintenance
 
