@@ -689,15 +689,25 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A, 6B, 6C formally closed; 6D set implementation merged and accepted on main, five-document closure CI pending; 6E–6G next
+**Status:** IN PROGRESS — 6A–6D formally closed with exact-head Linux CI; 6E WRONGTYPE acceptance local tests in progress and not yet committed; 6F–6G NOT STARTED
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
 - [x] 6C — Hash storage and commands (formal docs closure `201c3f1`; final networking `39987655559` and fuzz `39987655669` PASS)
-- [x] 6D — Set storage and commands (implementation merge `d21421a`; main Linux `39996097334` / `39996097046` PASS; formal docs-only closure gated)
+- [x] 6D — Set storage and commands (formal docs closure `281d044`; final Linux networking `39999397205` / fuzz `39999397202` PASS)
 - [ ] 6E — Wrong-type errors
 - [ ] 6F — Collection memory accounting hooks
 - [ ] 6G — Differential tests
+
+### Phase 6D formal closure acceptance — PASS (2026-10-23)
+
+Final two-parent documentation merge `281d044f4f09ac4b33f4323067ef4bc20c46bbbe`
+uses Phase 6D implementation merge `d21421ad910a179ea877fc7f1e555688ca8a81a8`
+and reviewed five-document feature `c030abe0d6339a78bad62542f715581b1f1b5f3e`.
+Both final `main` push workflows `39999397205` and `39999397202` passed all
+Linux Debug/Release and Clang 18 sanitizer/fuzz jobs and steps. The 6E.0A
+read-only audit again passed macOS Debug/Release 62/62 and fuzz-enabled 63/63.
+Phase 6E cross-type WRONGTYPE acceptance is a separate, unfinished milestone.
 
 ### Phase 6A acceptance — PASS (2026-10-23)
 

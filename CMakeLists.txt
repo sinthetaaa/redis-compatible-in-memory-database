@@ -194,6 +194,15 @@ if(BUILD_TESTING)
         )
         set_tests_properties(integration.resp_hash_commands PROPERTIES TIMEOUT 110)
 
+        # Phase 6E.1A: real TCP cross-type WRONGTYPE acceptance matrix.
+        add_test(
+            NAME integration.resp_wrongtype_matrix
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_wrongtype_matrix_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_wrongtype_matrix PROPERTIES TIMEOUT 110)
+
         # Phase 6D.2: six RESP2 set commands tested on real multi-client TCP.
         add_test(
             NAME integration.resp_set_commands
@@ -360,6 +369,13 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-hash-command-tests)
     add_test(NAME unit.hash_commands COMMAND redisdb-hash-command-tests)
     set_tests_properties(unit.hash_commands PROPERTIES TIMEOUT 20)
+
+    # Phase 6E.1A: cross-type WRONGTYPE matrix (four value families).
+    add_executable(redisdb-wrongtype-matrix-tests tests/unit/wrongtype_matrix_test.cpp)
+    target_link_libraries(redisdb-wrongtype-matrix-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-wrongtype-matrix-tests)
+    add_test(NAME unit.wrongtype_matrix COMMAND redisdb-wrongtype-matrix-tests)
+    set_tests_properties(unit.wrongtype_matrix PROPERTIES TIMEOUT 30)
 
     # Phase 6D.2: set RESP2 command handlers, type and response bounds.
     add_executable(redisdb-set-command-tests tests/unit/set_commands_test.cpp)

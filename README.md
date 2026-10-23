@@ -8,15 +8,15 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS.
-Phase 6A, 6B and 6C are formally closed. Phase 6D set-storage
-and six TCP RESP2 commands are implementation-accepted on `main` as
-`d21421ad910a179ea877fc7f1e555688ca8a81a8`; Linux Debug/Release
-`39996097334` and Clang 18 ASan/UBSan/fuzz `39996097046` have passed
-at this exact merge commit. The separately gated Phase 6D five-document
-closure and final post-closure CI remain open. Phase 6E WRONGTYPE
-acceptance is next only after formal 6D closure. Older historical
-milestone statements below are not current instructions.**
+**Project status (2026-10-23): Phases 0–5 and 6A–6D formally
+COMPLETE; overall Phase 6 remains IN PROGRESS. Phase 6D final documentation
+closure `281d044f4f09ac4b33f4323067ef4bc20c46bbbe` passed independent
+Linux Debug/Release `39999397205` and Clang 18 ASan+UBSan/fuzz
+`39999397202`, with clean synchronized main. Phase 6E cross-type WRONGTYPE
+acceptance is being developed on `phase6e/wrongtype-acceptance`; its test
+implementation, feature commit and Linux CI are NOT YET ACCEPTED.
+Phase 6F–6G, eviction, persistence and deployment remain future work.
+Older milestone statements below describe historical checkpoints.**
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
 integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
