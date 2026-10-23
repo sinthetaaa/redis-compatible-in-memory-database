@@ -664,7 +664,7 @@ unsupported Redis command options remain future phases.
 
 # Phase 5 — TTL and Expiration
 
-**Status:** IN PROGRESS (5A–5G merged and post-merge validated; 5H acceptance suite on feature branch)
+**Status:** COMPLETE AND ACCEPTED (2026-10-23; audited implementation baseline `479fdf4`)
 
 - [x] 5A — Clock abstraction (merged `05d0ca4`, post-merge Linux CI passed)
 - [x] 5B — Expiration metadata (merged `f51d8ad`, post-merge Linux CI passed)
@@ -672,13 +672,20 @@ unsupported Redis command options remain future phases.
 - [x] 5D — EXPIRE, PEXPIRE (merged `7169576`, post-merge Linux CI passed)
 - [x] 5E — TTL, PTTL, PERSIST (merged `7782dfc`, post-merge Linux CI passed)
 - [x] 5F — SET EX/PX (merged `2756f01`, post-merge Linux CI passed)
-- [x] 5G — Active expiration (merged `5c1cf93`; bounded deadline index, 32 checks/100ms; post-merge CI passed)
-- [ ] 5H — Deterministic expiration tests (fixed-seed model, 513-key sweep, RESP2 acceptance; CI/merge pending)
+- [x] 5G — Active expiration (merged `5c1cf93`, bounded index, 32 checks per 100 ms, post-merge Linux CI passed)
+- [x] 5H — Deterministic expiration acceptance (merged `479fdf4`, post-merge Linux CI passed)
 
-### Acceptance Gate
+### Acceptance Gate — PASS
 
-Correct TTL semantics, invisible expired keys,
-bounded active expiration and deterministic tests.
+Expired keys are invisible on access; injectable wall-time deadlines and
+monotonic event-loop scheduling coexist; active cleanup is deadline-ordered
+and bounded. Correct TTL/PTTL rounding, value/deadline atomicity, mutation
+index consistency, cross-client behavior and deterministic model testing
+were verified in macOS Debug 52/52, Release 52/52, fuzz-enabled 53/53;
+Linux Debug 52/52, Release 52/52, Clang 18 ASan+UBSan 53/53 at exact
+baseline `479fdf4`. The immutable 50-seed RESP2 corpus and 10,000 Linux
+libFuzzer executions also passed. See `docs/PROJECT_STATE.md` for the
+formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 

@@ -317,7 +317,7 @@ Compatibility differences must be explicit.
 ## ADR-009 — Expiration Time Model
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** Phase 5A–5H COMPLETE AND ACCEPTED (audited baseline `479fdf4`)
 
 ### Decision
 
@@ -345,6 +345,17 @@ Account for clock changes when restoring TTLs.
 
 Ensure overwrites, deletes, collection operations
 and recovery interact consistently with expiration.
+
+
+### Phase 5 closure note (2026-10-23)
+
+Phase 5 implements injectable wall/monotonic time, lazy expiration and
+bounded indexed active expiration (maximum 32 due records per event-loop
+maintenance turn, nominal 100 ms cadence). Deadline indexing and metadata
+are maintained through overwrites, mutations, MSET and deletes. Fixed-seed
+model testing, exact deadline tests and post-merge Linux sanitizer/fuzz CI
+passed. Serializing/restoring TTL across restarts remains deferred to
+AOF/snapshot/recovery phases; no disk durability is implied by this ADR.
 
 ---
 

@@ -3,14 +3,38 @@
 ## 1. Snapshot
 
 - Updated: 2026-10-23
-- Current phase: Phase 5 — TTL and Expiration (IN PROGRESS); Phases 0–4 COMPLETE
-- Current subphase: Phase 5H — deterministic expiration acceptance on isolated feature branch (CI and merge pending)
-- Status: Phases 0–4 and 5A–5G COMPLETE; 5H under validation; Phases 6–19 NOT STARTED
-- Last completed milestone: Phase 5G two-parent main merge `5c1cf932fb3457fe727c4b9551df79439b56428f`; post-merge Linux CI #39941780831 (50/50 Debug and Release) and sanitizer/fuzz #39941780912 (51/51, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
-- Exact next task: Run Phase 5H fixed-seed reference-model and bounded-sweep acceptance tests plus live RESP2 integration, full macOS regression, exact-head Linux CI and guarded direct two-parent merge without PR. Formal Phase 5 closure audit follows; do not begin Phase 6 until closure.
-- Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
-- Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
-- Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.
+- Current phase: Phase 5 — TTL and Expiration COMPLETE AND ACCEPTED on audited main baseline `479fdf46481f1d5b8e3966ae2e56483ab4560db3`.
+- Current subphase: Phase 5 formal documentation-only closure checkpoint; all implementation subphases 5A–5H are complete.
+- Status: Phases 0–2, 4, and 5 COMPLETE; Phase 3 recorded as IN PROGRESS in its historical roadmap; Phase 6–19 NOT STARTED.
+- Last completed milestone: Phase 5H two-parent main merge `479fdf46481f1d5b8e3966ae2e56483ab4560db3`; Linux Debug/Release 52/52, sanitizer/fuzz 53/53, 50 validated RESP2 seeds and 10,000 libFuzzer executions.
+- Exact next task: Independently validate and directly merge this documentation-only closure branch, verify post-closure exact-head Linux CI, then start Phase 6A type-safe value representation from clean synchronized main.
+- Implemented TTL: EXPIRE, PEXPIRE, TTL, PTTL, PERSIST, SET EX/PX, lazy expiration, bounded active sweeping and indexed deadline consistency.
+- Scope limits: Binary-safe strings only; no advanced conditional expiration flags, collection types, eviction, disk durability or crash recovery. Plain SET clears TTL, MSET remains clone-and-swap, and the existing reply/value limits remain.
+- Current-status authority: This snapshot, the Phase 5 closure record below, and the current Phase 5 section in ROADMAP. Earlier milestone checkpoint statements are retained as dated historical evidence.
+
+### Phase 5 formal closure record (2026-10-23)
+
+- **Audit verdict:** PASS; implementation baseline `479fdf46481f1d5b8e3966ae2e56483ab4560db3`, the correct two-parent merge of Phase 5G (`5c1cf93`) and Phase 5H (`d26a39d`). No PR was used for the Phase 5H merge.
+- **History:** All eight direct two-parent merges have their expected first and feature parents; each merge's tree equals its feature tree; all are ancestors of the audited baseline.
+- **Evidence:** All 16 post-merge push-triggered GitHub Actions workflows for Phases 5A–5H ended in success at their exact merge SHAs.
+
+| Subphase | Delivered | Two-parent main merge | Linux Debug/Release CI | Clang ASan+UBSan/fuzz CI |
+|---|---|---|---|---|
+| 5A | Clock abstraction | `05d0ca4` | `39920666650` PASS | `39920666241` PASS |
+| 5B | Expiration metadata | `f51d8ad` | `39923103272` PASS | `39923103331` PASS |
+| 5C | Lazy expiration | `11b1326` | `39925610242` PASS | `39925610067` PASS |
+| 5D | EXPIRE/PEXPIRE | `7169576` | `39928058802` PASS | `39928058720` PASS |
+| 5E | TTL/PTTL/PERSIST | `7782dfc` | `39931900587` PASS | `39931900483` PASS |
+| 5F | SET EX/PX | `2756f01` | `39938093896` PASS | `39938094657` PASS |
+| 5G | Bounded active expiration | `5c1cf93` | `39941780831` PASS | `39941780912` PASS |
+| 5H | Deterministic acceptance | `479fdf4` | `39945756231` PASS | `39945756252` PASS |
+
+- **Final exact-head CI:** Linux Debug 52/52 and Release 52/52 in run `39945756231`; Clang 18 ASan+UBSan 53/53 in run `39945756252`; SHA-256 manifest verified 50 immutable RESP2 corpus seeds, with 10,000 bounded libFuzzer iterations.
+- **Final macOS acceptance:** 52/52 Debug, 52/52 Release, 53/53 fuzz-enabled tests on Phase 5H feature; independent Linux tests passed again after merge.
+- **Deterministic acceptance:** fixed-seed 4,096-step reference model, 513-key backlog completed in 17 strictly 32-record sweeps, no premature deletion after backward clock jumps, and a two-client 192-reply RESP2 integration matrix.
+- **Correctness architecture:** one authoritative binary-safe hash map; wall-clock expiration deadlines; monotonic 100 ms scheduling; 32-record limit per maintenance turn; ordered deadline index updated by every deletion, overwrite, expiration change and MSET clone-and-swap; lazy expiration remains authoritative between sweeps.
+- **Deliberate exclusions:** No disk persistence or crash-recovery guarantees; no eviction, collection types, full Redis compatibility, SET NX/XX/GET/KEEPTTL or EXPIRE NX/XX/GT/LT; no remote deployment. Existing per-value 8,176-byte and per-reply 8,192-byte limits still apply; MSET still clones the keyspace before committing.
+- **Repository policy:** Documentation closure occurs on isolated feature branch and merges directly only after its own exact-head Linux CI succeeds; do not start Phase 6 until the documentation closure merge has post-merge green CI and the working tree is clean and synchronized.
 
 ### Phase 4 formal closure record (2026-10-23)
 
@@ -62,7 +86,7 @@
 
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
-- Branch: main (PR #12 merged and synchronized; Phase 3A and 3B feature branches retained)
+- Branch: main (Phase 5 audited baseline `479fdf4`; Phase 5A–5H feature branches retained)
 - Phase 2D starting baseline: 2515f7f1d10067113865f1d4e0ced9ce5d92c180
 - Phase 2C starting baseline: 1e7c726969cc437fdecfc0532785de84c24bd4be
 - Phase 2B starting baseline: b16dd382e213ae541a91d4f298f288fa80b68aa7
@@ -104,7 +128,7 @@
 - Phase 1G final PR-head CI: 39289273326 (SUCCESS).
 - Phase 1G merge: adf021060d7b758ce9224d7d4ac8fe6ed8841b75.
 - Phase 1G post-merge Linux CI: 39290777669 (SUCCESS).
-- Current development branch: main (3B.2B accepted docs baseline `cc88f88948acd96574479750eefc7ede6445c70a`; preserved Phase 3A and 3B feature branches).
+- Current development branch: main (Phase 5H audited merge `479fdf4`; historical Phase 3 branches retained).
 - Phase 2D implementation: 4f2535a97e6bf3350222896818337cfb294eae11.
 - Phase 2D documentation: cdac9f9ebb306f51ccde99380bcf80808aba9341.
 - Phase 2D PR: https://github.com/sinthetaaa/redis-compatible-in-memory-database/pull/7 (MERGED).
@@ -192,7 +216,7 @@
 | 2 | RESP2 Protocol Engine | COMPLETE |
 | 3 | Command Framework | IN PROGRESS (3A–3C complete; 3D–3F not started) |
 | 4 | Core String Database | COMPLETE |
-| 5 | TTL and Expiration | IN PROGRESS (5A feature) |
+| 5 | TTL and Expiration | COMPLETE AND ACCEPTED (5A–5H) |
 | 6 | Collection Data Types | NOT STARTED |
 | 7 | Memory Management and Eviction | NOT STARTED |
 | 8 | AOF Persistence | NOT STARTED |
@@ -242,6 +266,11 @@
 - 2E: COMPLETE — PR #8 merged; local, post-merge and post-closure Linux acceptance passed.
 - 2F: NOT STARTED — Malformed input and resource limits.
 - 2G: NOT STARTED — Parser fuzz-test foundation.
+
+### Phase 5 Detail
+
+- 5A–5H: COMPLETE AND ACCEPTED — all eight implementation and acceptance subphases merged, all exact-head post-merge Linux CI successful, formal closure record above.
+- Phase 6A: NEXT AFTER documented closure is merged and post-closure CI verified; not started.
 
 Complete subphase roadmap: `docs/ROADMAP.md`.
 
@@ -333,9 +362,16 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
   50 immutable RESP2 seeds and 10,000 libFuzzer iterations at the audited
   Phase 4H main merge SHA `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`.
 
+### Phase 5 functionality (accepted)
+
+- Injectable wall and monotonic clocks; optional wall-clock deadlines and TTL metadata.
+- Lazy expiration and RESP2 EXPIRE, PEXPIRE, TTL, PTTL and PERSIST.
+- Atomic SET EX/PX options (positive relative deadlines) and all-or-nothing timeout rejection.
+- Deadline-ordered active expiration with a bounded 32-record event-loop maintenance turn.
+- Cross-client correctness, binary keys, exact-clock fake-time tests and deterministic model-based acceptance.
+
 ### Not Yet Implemented
 
-- TTL and expiration (Phase 5).
 - Collection data types (Phase 6).
 - Memory-bounded eviction (Phase 7).
 - Append-only persistence (Phase 8).
@@ -344,12 +380,13 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 
 ## 7. Supported Commands
 
-**Implemented and validated RESP2 command subset (Phase 4 complete):**
+**Implemented and validated RESP2 command subset (Phases 4 and 5 accepted):**
 
 - Connectivity: `PING`, `ECHO`, `QUIT`.
 - Strings: `SET`, `GET`, `MSET`, `MGET`, `APPEND`, `STRLEN`.
 - Integers: `INCR`, `DECR`, `INCRBY`, `DECRBY`.
 - Keys: `DEL`, `EXISTS`, `TYPE` (string or none).
+- Expiration: `EXPIRE`, `PEXPIRE`, `TTL`, `PTTL`, `PERSIST`; `SET` also accepts EX/PX.
 
 Commands are case-insensitive; keys and string values are binary-safe.
 All live clients share the same process-local in-memory database. MSET is
@@ -365,8 +402,9 @@ accepts the implemented RESP2 command subset.
 
 **Intentional limits:** 8,176-byte stored string values and 8,192-byte
 serialized single replies. MSET copies the keyspace before committing.
-This is not a complete Redis server; TTL, eviction, persistence, collection
-commands and Redis SET options remain future work.
+This is not a complete Redis server; eviction, disk persistence,
+collection commands, conditional EXPIRE flags and advanced Redis SET
+options remain future work.
 
 ## 8. Persistence Guarantees
 
