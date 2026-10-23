@@ -21,6 +21,15 @@ inline constexpr std::size_t kExpiryFixedBytes = 48;
 [[nodiscard]] std::size_t checked_add(std::size_t lhs, std::size_t rhs);
 [[nodiscard]] std::size_t checked_multiply(std::size_t lhs, std::size_t rhs);
 
+// Pure checked database-total transitions. Validate subtraction before it is
+// performed, then add the replacement charge to the reduced total. This
+// intentionally avoids a spurious overflow from total + new - previous.
+// Throw std::logic_error for inconsistent existing charges, std::overflow_error
+// for an unrepresentable new total. Neither function modifies live state.
+[[nodiscard]] std::size_t replacement_total(std::size_t current_total, std::size_t old_entry_charge,
+                                            std::size_t new_entry_charge);
+[[nodiscard]] std::size_t removal_total(std::size_t current_total, std::size_t old_entry_charge);
+
 // Pure, no mutation and no allocation for nonoverflowing inputs.
 [[nodiscard]] std::size_t value_charge(const Value& value);
 [[nodiscard]] std::size_t entry_charge(std::string_view key, const Entry& entry);

@@ -21,6 +21,21 @@ std::size_t checked_multiply(std::size_t lhs, std::size_t rhs) {
     return lhs * rhs;
 }
 
+std::size_t replacement_total(std::size_t current_total, std::size_t old_entry_charge,
+                              std::size_t new_entry_charge) {
+    if (old_entry_charge > current_total) {
+        throw std::logic_error("memory accounting prior charge exceeds total");
+    }
+    return checked_add(current_total - old_entry_charge, new_entry_charge);
+}
+
+std::size_t removal_total(std::size_t current_total, std::size_t old_entry_charge) {
+    if (old_entry_charge > current_total) {
+        throw std::logic_error("memory accounting removal exceeds total");
+    }
+    return current_total - old_entry_charge;
+}
+
 std::size_t value_charge(const Value& value) {
     return std::visit(
         [](const auto& stored) -> std::size_t {
