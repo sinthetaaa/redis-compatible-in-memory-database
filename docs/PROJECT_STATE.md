@@ -4,13 +4,13 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 4 — Core String Database (IN PROGRESS); Phases 0–3 COMPLETE
-- Current subphase: Phase 4E — binary-safe APPEND / STRLEN
-- Status: Phases 0–3 and 4A–4D COMPLETE; 4E implemented on feature branch pending Linux CI; 4F–4H and 5–19 NOT STARTED
-- Last completed milestone: Phase 4D two-parent main merge `b457987a18bf074adaed1f4569be59678416fcd5`, post-merge Linux CI #39904620670 and sanitizer/fuzz CI #39904620682 SUCCESS
-- Exact next task: Validate and direct-merge `phase4e/append-strlen-binary-safe` after macOS/Linux checks, without PR; then begin 4F numeric string commands
-- Implementation maturity: Shared binary-safe RESP2 keyspace with SET/GET/DEL/EXISTS/TYPE/MSET/MGET plus APPEND/STRLEN on feature; 8176-byte individual value cap and 8192-byte reply cap
-- APPEND storage policy: validate length using subtraction before allocation; stage replacement before mutation; reject oversized existing and new values without creating or modifying keys
-- STRLEN semantics: byte length, not Unicode code points; missing keys return zero; no TTL, eviction, AOF, or persistence
+- Current subphase: Phase 4F — signed 64-bit integer string operations
+- Status: Phases 0–3 and 4A–4E COMPLETE; 4F implemented on feature branch pending Linux CI; 4G–4H and 5–19 NOT STARTED
+- Last completed milestone: Phase 4E two-parent main merge `18965b3e6fa60b3d37732f861069abf85d8ad4b6` with Linux CI #39907405493 and sanitizer/fuzz CI #39907405509 SUCCESS
+- Exact next task: Validate and direct-merge `phase4f/signed-integer-string-commands` after macOS/Linux tests, without PR; then begin Phase 4G numeric edge-case and overflow hardening
+- Implementation maturity: Shared binary-safe RESP2 keyspace with key/string commands, plus INCR/DECR/INCRBY/DECRBY on feature; 8176-byte individual value cap and 8192-byte single-reply cap
+- Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
+- Post-4F: Phase 4G focuses on differential numeric edge-case tests and overflow hardening; 4H focuses on multi-client correctness; no TTL, eviction, AOF or snapshots yet
 
 ## 2. Project Identity
 

@@ -148,6 +148,14 @@ if(BUILD_TESTING)
                     "$<TARGET_FILE:redisdb-server>"
         )
         set_tests_properties(integration.resp_append_strlen PROPERTIES TIMEOUT 75)
+
+        add_test(
+            NAME integration.resp_integer_commands
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${PROJECT_SOURCE_DIR}/tests/integration/resp_integer_commands_test.py"
+                    "$<TARGET_FILE:redisdb-server>"
+        )
+        set_tests_properties(integration.resp_integer_commands PROPERTIES TIMEOUT 75)
     endif()
 
     add_executable(
@@ -267,6 +275,15 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-append-strlen-tests)
     add_test(NAME unit.append_strlen COMMAND redisdb-append-strlen-tests)
     set_tests_properties(unit.append_strlen PROPERTIES TIMEOUT 15)
+
+    add_executable(
+        redisdb-integer-command-tests
+        tests/unit/integer_commands_test.cpp
+    )
+    target_link_libraries(redisdb-integer-command-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-integer-command-tests)
+    add_test(NAME unit.integer_commands COMMAND redisdb-integer-command-tests)
+    set_tests_properties(unit.integer_commands PROPERTIES TIMEOUT 15)
 
     add_executable(
         redisdb-key-command-tests

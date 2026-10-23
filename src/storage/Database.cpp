@@ -1,12 +1,32 @@
 #include "redisdb/storage/Database.hpp"
 
+#include <charconv>
+#include <limits>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <variant>
 #include <vector>
 
 namespace redisdb::storage {
+
+std::optional<std::int64_t> parse_integer64(std::string_view text) noexcept {
+    if (text.empty() || text.front() == '+') {
+        return std::nullopt;
+    }
+    // Redis-style canonical integer bytes: no leading zeroes or negative zero.
+    if ((text.size() > 1 && text.front() == '0') ||
+        (text.size() > 1 && text.front() == '-' && text[1] == '0')) {
+        return std::nullopt;
+    }
+    std::int64_t result = 0;
+    const auto parsed = std::from_chars(text.data(), text.data() + text.size(), result);
+    if (parsed.ec != std::errc{} || parsed.ptr != text.data() + text.size()) {
+        return std::nullopt;
+    }
+    return result;
+}
 
 bool Database::set(std::string key, std::string bytes) {
     auto found = entries_.find(std::string_view(key));
@@ -70,6 +90,38 @@ std::size_t Database::string_length(std::string_view key) const {
         return 0;
     }
     return std::get<StringValue>(found->second.value).bytes.size();
+}
+
+IntegerMutationResult Database::adjust_integer(std::string_view key, std::int64_t operand,
+                                               bool subtract) {
+    std::int64_t current = 0;
+    const auto found = entries_.find(key);
+    if (found != entries_.end()) {
+        const auto value = parse_integer64(std::get<StringValue>(found->second.value).bytes);
+        if (!value.has_value()) {
+            return {IntegerMutationError::InvalidInteger, 0};
+        }
+        current = *value;
+    }
+
+    constexpr auto Min = std::numeric_limits<std::int64_t>::min();
+    constexpr auto Max = std::numeric_limits<std::int64_t>::max();
+    if (subtract) {
+        // Check without computing -operand, which is UB for INT64_MIN.
+        if ((operand > 0 && current < Min + operand) || (operand < 0 && current > Max + operand)) {
+            return {IntegerMutationError::Overflow, 0};
+        }
+    } else {
+        if ((operand > 0 && current > Max - operand) || (operand < 0 && current < Min - operand)) {
+            return {IntegerMutationError::Overflow, 0};
+        }
+    }
+
+    // All arithmetic is proven representable. Construct the new key/value
+    // fully before committing, including missing-key insertion.
+    const std::int64_t next = subtract ? current - operand : current + operand;
+    (void)set(std::string(key), std::to_string(next));
+    return {IntegerMutationError::None, next};
 }
 
 std::optional<std::string> Database::get(std::string_view key) const {

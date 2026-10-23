@@ -4,6 +4,7 @@
 #include "redisdb/storage/Database.hpp"
 
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -66,6 +67,34 @@ HandlerResult strlen_command(const storage::Database& database, const Command& c
     }
     return {RespValue::integer(
         static_cast<std::int64_t>(database.string_length(command.arguments()[0])))};
+}
+
+HandlerResult integer_command(storage::Database& database, const Command& command, bool subtract,
+                              bool with_operand, const char* name) {
+    const std::size_t required = with_operand ? 2 : 1;
+    if (!validate_arity(command, ArityRule{required, required, 1}).valid()) {
+        return {RespValue::error(std::string("ERR wrong number of arguments for '") + name +
+                                 "' command")};
+    }
+    std::int64_t operand = 1;
+    if (with_operand) {
+        const auto parsed = storage::parse_integer64(command.arguments()[1]);
+        if (!parsed.has_value()) {
+            return {RespValue::error("ERR value is not an integer or out of range")};
+        }
+        operand = *parsed;
+    }
+
+    const auto result = database.adjust_integer(command.arguments()[0], operand, subtract);
+    switch (result.error) {
+    case storage::IntegerMutationError::None:
+        return {RespValue::integer(result.value)};
+    case storage::IntegerMutationError::InvalidInteger:
+        return {RespValue::error("ERR value is not an integer or out of range")};
+    case storage::IntegerMutationError::Overflow:
+        return {RespValue::error("ERR increment or decrement would overflow")};
+    }
+    throw std::logic_error("invalid integer mutation error");
 }
 
 HandlerResult mset_command(storage::Database& database, const Command& command) {
@@ -136,6 +165,22 @@ std::vector<CommandRoute> string_routes(storage::Database& database) {
          [&database](const Command& command) { return append_command(database, command); }},
         {"STRLEN",
          [&database](const Command& command) { return strlen_command(database, command); }},
+        {"INCR",
+         [&database](const Command& command) {
+             return integer_command(database, command, false, false, "incr");
+         }},
+        {"DECR",
+         [&database](const Command& command) {
+             return integer_command(database, command, true, false, "decr");
+         }},
+        {"INCRBY",
+         [&database](const Command& command) {
+             return integer_command(database, command, false, true, "incrby");
+         }},
+        {"DECRBY",
+         [&database](const Command& command) {
+             return integer_command(database, command, true, true, "decrby");
+         }},
     };
 }
 

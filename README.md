@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–3 and 4A–4D COMPLETE; Phase 4E APPEND/STRLEN implemented on feature branch pending Linux CI. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN. TTL and persistence remain future work.**
+**Project status: Phases 0–3 and 4A–4E COMPLETE; Phase 4F integer operations implemented on feature branch pending Linux CI. RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY. TTL and persistence remain future work.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -819,6 +819,21 @@ created internally above that ceiling reject APPEND (even an empty suffix).
 The limit is a temporary reply-budget compatibility constraint, not Redis's
 native string capacity. GET/MGET limits, keyspace ownership and nonpersistent
 process-local semantics remain unchanged. No TTL, AOF, or eviction is added.
+
+## Phase 4F — Signed Integer String Commands (feature implementation)
+
+`INCR`, `DECR`, `INCRBY`, and `DECRBY` treat missing keys as numeric zero,
+then store a canonical signed 64-bit decimal string and return the resulting
+RESP2 integer. Command names are case-insensitive, keys are binary-safe and
+case-sensitive. Invalid arity, noncanonical integer text, invalid deltas and
+out-of-range values receive bounded RESP2 errors without modifying storage.
+
+Arithmetic is validated before execution so no C++ signed overflow occurs,
+including when subtracting INT64_MIN. Storage changes are staged before commit.
+Four-command integration includes 8 concurrent TCP clients incrementing one
+shared counter and verifying all 240 results are unique. This is a correctness
+checkpoint, not a throughput benchmark; Phase 4G is dedicated to numeric
+edge-case hardening. There is no TTL, persistence or new SET option support.
 
 ## License
 
