@@ -284,6 +284,12 @@ if(BUILD_TESTING)
     add_test(NAME unit.expiration_metadata COMMAND redisdb-expiration-metadata-tests)
     set_tests_properties(unit.expiration_metadata PROPERTIES TIMEOUT 20)
 
+    add_executable(redisdb-lazy-expiration-tests tests/unit/lazy_expiration_test.cpp)
+    target_link_libraries(redisdb-lazy-expiration-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-lazy-expiration-tests)
+    add_test(NAME unit.lazy_expiration COMMAND redisdb-lazy-expiration-tests)
+    set_tests_properties(unit.lazy_expiration PROPERTIES TIMEOUT 20)
+
     add_executable(
         redisdb-string-command-tests
         tests/unit/string_commands_test.cpp

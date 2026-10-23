@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A injectable clock abstraction is merged and validated; Phase 5B expiration metadata is under validation on a feature branch. Expiration enforcement and TTL commands are NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A–5B are merged and validated; Phase 5C lazy expiration is on a feature branch. TTL commands remain NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -887,10 +887,10 @@ Phase 5B will add metadata; expiration semantics belong to 5C–5H.
 
 ## Phase 5B — Expiration Deadline Metadata (feature implementation)
 
-Phase 5B extends each owned in-memory entry with an optional absolute
-`WallTimePoint` deadline. The deadline is data only: reads, EXISTS and TYPE
-do not treat it as expired until Phase 5C implements lazy expiration. These
-metadata-only storage APIs do not create keys or consult the system clock:
+Phase 5B extended each owned in-memory entry with an optional absolute
+`WallTimePoint` deadline. Phase 5C subsequently makes deadline checks
+access-driven, so the earlier metadata-only behavior is superseded. These
+storage APIs never create keys; in 5C they check the injected wall clock:
 `set_expiration(key, deadline)`, `expiration(key)` and
 `clear_expiration(key)`. Callers can inject the 5A clock and supply a
 controlled `wall_now()` value. No raw `steady_clock` time points are stored.
@@ -900,7 +900,29 @@ arithmetic preserve deadlines of existing keys; DEL/clear erase metadata and
 new keys start without deadlines. Rejected commands preserve both value and
 metadata. MSET remains clone-and-swap. The 8,176-byte value and 8,192-byte
 serialized reply limits remain unchanged; no EXPIRE/TTL commands, lazy or
-active expiration, eviction or persistence are implemented in 5B.
+active expiration, eviction or persistence were implemented in 5B.
+
+## Phase 5C — Access-Driven Lazy Expiration (feature implementation)
+
+An authoritative `Database` now borrows a `const Clock&` (the default
+constructor uses a process-lifetime `SystemClock`). The database compares
+an entry's `expires_at` wall deadline against `clock.wall_now()` when that
+key is accessed. `deadline <= now` makes the key absent and physically removes
+it on that access. Const-style GET, EXISTS, TYPE and MGET still use the same
+command interfaces, with internally mutable storage for access-driven cleanup.
+
+SET, MSET, APPEND, integer commands, DEL, STRLEN, and expiration metadata
+operations all respect expired-as-absent semantics. Atomic MSET continues to
+stage a full map before committing; unrelated expired entries can remain in
+that map until individually accessed. `Database::size()` is explicitly a
+*physical* entry count, not a live-key count or active expiration sweep.
+
+Deterministic C++ tests use manual wall-clock time to verify exact deadlines,
+backward clock jumps, binary keys, duplicate arguments, write-on-expired
+behavior, metadata lifecycle, rejection semantics and no premature sweeping.
+The established 8,176-byte value cap, 8,192-byte reply cap, and full-map
+MSET staging remain unchanged. No EXPIRE, PEXPIRE, TTL, PTTL, PERSIST,
+SET EX/PX, active sweeping, AOF, eviction or persistence is added here.
 
 ## License
 
