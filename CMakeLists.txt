@@ -378,6 +378,13 @@ if(BUILD_TESTING)
     add_test(NAME unit.hash_commands COMMAND redisdb-hash-command-tests)
     set_tests_properties(unit.hash_commands PROPERTIES TIMEOUT 20)
 
+    # Phase 6F.2B: checked ledger transitions before database integration.
+    add_executable(redisdb-ledger-transition-tests tests/unit/ledger_transitions_test.cpp)
+    target_link_libraries(redisdb-ledger-transition-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-ledger-transition-tests)
+    add_test(NAME unit.ledger_transitions COMMAND redisdb-ledger-transition-tests)
+    set_tests_properties(unit.ledger_transitions PROPERTIES TIMEOUT 20)
+
     # Phase 6E.1A: cross-type WRONGTYPE matrix (four value families).
     add_executable(redisdb-wrongtype-matrix-tests tests/unit/wrongtype_matrix_test.cpp)
     target_link_libraries(redisdb-wrongtype-matrix-tests PRIVATE redisdb-core)
