@@ -8,7 +8,9 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–2, 4 and 5 COMPLETE; Phase 5A–5H TTL/expiration implementation accepted after audited two-parent merge `479fdf4` and exact-head post-merge Linux Debug/Release (52/52) and Clang 18 ASan+UBSan/fuzz (53/53) CI. Phase 3 retains its independent historical roadmap status; Phase 6 collection types and Phases 7–19 have not started. Loopback-only RESP2 supports PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, INCR/DECR/INCRBY/DECRBY, EXPIRE/PEXPIRE, TTL/PTTL/PERSIST and SET EX/PX. Eviction, collections and on-disk persistence are NOT IMPLEMENTED.**
+**Project status (2026-10-23): Phases 0–5 COMPLETE; Phase 6 IN PROGRESS. Phase 6A's owned string/list/hash/set storage value foundation is accepted at two-parent merge `5043cc7` with Linux Debug/Release and Clang 18 ASan+UBSan/fuzz exact-merge-head success. Phase 6B — List storage and commands — is NEXT. The current `docs/ROADMAP.md` marks Phase 3 complete; some older dated progress text remains historical.**
+
+The running loopback-only RESP2 server still exposes only strings, key and TTL commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, INCR/DECR/INCRBY/DECRBY, EXPIRE/PEXPIRE, TTL/PTTL/PERSIST, and SET EX/PX. List/hash/set commands and general WRONGTYPE routing are **NOT IMPLEMENTED**. Eviction, AOF, snapshots, and deployment remain future milestones.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -32,6 +34,33 @@ The project is designed to demonstrate:
 
 These are project goals, not claims that all
 features have been implemented.
+
+## Phase 6A — Typed Storage Foundation (implementation accepted)
+
+The owned `redisdb::storage::Value` variant now distinguishes `StringValue`
+(`std::string`), `ListValue` (`std::list<std::string>`), `HashValue`
+(`std::unordered_map<std::string, std::string>`), and `SetValue`
+(`std::unordered_set<std::string>`). The list retains order and duplicates;
+hash fields and set members use binary-safe byte equality. Container copies
+are independent snapshots. `Entry` still owns its value and optional
+absolute wall-clock expiry deadline.
+
+This milestone adds no public `Database` collection insertion method,
+network command, RESP2 behavior, or change to expiration semantics. Existing
+string-only `std::get<StringValue>` paths remain unreachable by collection
+entries until subsequent guarded storage and wrong-type work.
+
+**Implementation acceptance:** feature `94f7b8d626c5c470101972b3296e68dbb7f67e8f`;
+merge `5043cc7cee3124baf809434479e2812c366fba2f`; parents
+`d9bbcaa611f85a8e5e356e7a1fc8a2f44f24cc41` and the feature SHA;
+feature/merge tree `4cfbf7c0f88cefe0cf0156d0f17962da32f1b898`.
+The only three implementation files are `Value.hpp`, `storage_value_test.cpp`,
+and `CMakeLists.txt`. Local macOS Debug 53/53, Release 53/53, and fuzz-enabled
+54/54 passed. Feature Linux CI: `39953114572` / `39953114723`; post-merge
+Linux CI: `39962981311` / `39962981227` — all exact-head push success.
+The sanitizer CI verifies the 50-seed immutable RESP2 corpus and 10,000
+bounded libFuzzer executions. `std::list` node-allocation overhead remains
+a documented future performance trade-off.
 
 ## Current Functionality
 
