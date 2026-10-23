@@ -41,6 +41,7 @@ add_library(
     src/commands/SetCommands.cpp
     src/commands/CommandErrors.cpp
     src/storage/Database.cpp
+    src/storage/MemoryAccounting.cpp
     src/storage/Clock.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
@@ -334,6 +335,13 @@ if(BUILD_TESTING)
         COMMAND redisdb-command-errors-tests
     )
     set_tests_properties(unit.command_errors PROPERTIES TIMEOUT 10)
+
+    # Phase 6F.1B: pure deterministic memory-charge estimator (no Database ledger yet).
+    add_executable(redisdb-memory-accounting-tests tests/unit/memory_accounting_test.cpp)
+    target_link_libraries(redisdb-memory-accounting-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-memory-accounting-tests)
+    add_test(NAME unit.memory_accounting COMMAND redisdb-memory-accounting-tests)
+    set_tests_properties(unit.memory_accounting PROPERTIES TIMEOUT 15)
 
     # Phase 6A type-system groundwork: no collection command routes yet.
     add_executable(redisdb-storage-value-tests tests/unit/storage_value_test.cpp)
