@@ -297,35 +297,56 @@ Complete subphase roadmap: `docs/ROADMAP.md`.
 - Native kqueue/epoll pipelining and scheduler regression tests.
 - Linux Debug/Release 18-test suite and pipeline repetition CI gates.
 
+### Phase 3–4 functionality (accepted)
+
+- Production loopback RESP2 command server with shared process-local database,
+  binary-safe value ownership and serialized command execution.
+- RESP2 incremental parsing, bounded FIFO pipelining, serializer and limits,
+  with kqueue on macOS and epoll on Linux.
+- SET/GET, DEL/EXISTS/TYPE, atomic MSET/ordered MGET, APPEND/STRLEN,
+  INCR/DECR/INCRBY/DECRBY and PING/ECHO/QUIT.
+- Signed 64-bit integer parsing and overflow safety; rejected operations
+  preserve existing bytes or missing-key absence.
+- Cross-client state visibility, atomic MGET snapshots, 640 shared counter
+  increments, 360 APPEND writes, QUIT/churn/restart regressions.
+- Linux Debug/Release 39/39 tests each; Clang 18 ASan+UBSan 40/40,
+  50 immutable RESP2 seeds and 10,000 libFuzzer iterations at the audited
+  Phase 4H main merge SHA `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`.
+
 ### Not Yet Implemented
 
-- Production TCP serving with RESP2 command execution.
-- Production RESP2 parser/serializer invocation in the executable serving path.
-- Command execution.
-- In-memory key-value database.
-- Expiration.
-- Eviction.
-- Append-only persistence.
-- Snapshotting and recovery.
-- Observability.
-- Deployment.
+- TTL and expiration (Phase 5).
+- Collection data types (Phase 6).
+- Memory-bounded eviction (Phase 7).
+- Append-only persistence (Phase 8).
+- Snapshotting and recovery (Phase 9).
+- Production observability, remote Linux deployment and demo closure.
 
 ## 7. Supported Commands
 
-No Redis database commands have been implemented.
+**Implemented and validated RESP2 command subset (Phase 4 complete):**
 
-Currently available executable options:
+- Connectivity: `PING`, `ECHO`, `QUIT`.
+- Strings: `SET`, `GET`, `MSET`, `MGET`, `APPEND`, `STRLEN`.
+- Integers: `INCR`, `DECR`, `INCRBY`, `DECRBY`.
+- Keys: `DEL`, `EXISTS`, `TYPE` (string or none).
 
-- --version
-- --help
-- --smoke-echo
-- --port PORT (smoke mode)
-- --max-clients COUNT (smoke mode)
+Commands are case-insensitive; keys and string values are binary-safe.
+All live clients share the same process-local in-memory database. MSET is
+atomic and MGET preserves argument order, including repeated and missing keys.
+Integer mutations use strict signed 64-bit parsing and reject overflow without
+corrupting state. QUIT closes only the requesting connection after its reply.
 
-The smoke listener binds to 127.0.0.1.
-Port 0 selects an ephemeral listener port.
-Smoke mode echoes raw bytes and is not RESP2.
-No database commands are supported.
+**Current executable modes and options:** `--version`, `--help`,
+`--smoke-echo`, `--resp2-server`, `--port PORT`, `--max-clients COUNT`.
+Both server modes bind to loopback `127.0.0.1`; port 0 requests an ephemeral port.
+`--smoke-echo` is raw TCP echo and does not use RESP2; `--resp2-server`
+accepts the implemented RESP2 command subset.
+
+**Intentional limits:** 8,176-byte stored string values and 8,192-byte
+serialized single replies. MSET copies the keyspace before committing.
+This is not a complete Redis server; TTL, eviction, persistence, collection
+commands and Redis SET options remain future work.
 
 ## 8. Persistence Guarantees
 
@@ -1226,6 +1247,30 @@ recovery testing has been completed.
 - Update this file after meaningful milestones.
 
 ## 16. Exact Next Steps
+
+**Current handoff (2026-10-23):** Phases 0–4 are implemented and
+accepted. Phase 4A–4H are already merged into `main` at the audited
+Phase 4H checkpoint `31914ae7127b432f2fb38f3f07ac66a4ae6b435b`.
+Phase 5 is NOT STARTED; **Phase 5A — Clock abstraction is NEXT**.
+
+1. If the Phase 4 closure-documentation feature branch is not yet
+   merged, verify its exact-head Linux Debug/Release and Clang 18
+   sanitizer/fuzz CI, then merge directly into `main` without a PR.
+2. Verify the final closure merge's two parents, remote `main` equality,
+   clean working tree, and **post-merge** Linux validation at the exact
+   new main SHA. Retain the feature branch and external logs.
+3. Begin Phase 5A — Clock abstraction in a fresh feature branch from
+   the verified clean `main`. Make clocks injectable and testable;
+   do not implement expiration semantics ahead of 5B–5H.
+4. Preserve the documented 8,176-byte stored-value cap, 8,192-byte
+   single-reply cap and MSET full-map staging until explicitly redesigned.
+   Do not silently expand Redis compatibility or claim TTL/persistence.
+
+### Superseded Phase 3C continuation checkpoint (historical only)
+
+The following archived checkpoint was correct when Phase 3C was active,
+but is **not a current instruction** and does not describe the current
+RESP2 database server:
 
 Phase 3B formal closure CI #39811900890 passed.
 
