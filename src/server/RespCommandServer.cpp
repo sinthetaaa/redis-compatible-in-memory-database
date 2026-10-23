@@ -4,6 +4,7 @@
 #include "redisdb/commands/CommandDispatcher.hpp"
 #include "redisdb/commands/CommandErrors.hpp"
 #include "redisdb/commands/ConnectivityCommands.hpp"
+#include "redisdb/commands/HashCommands.hpp"
 #include "redisdb/commands/KeyCommands.hpp"
 #include "redisdb/commands/ListCommands.hpp"
 #include "redisdb/commands/StringCommands.hpp"
@@ -72,6 +73,9 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
         routes.push_back(std::move(route));
     }
     for (auto& route : commands::list_routes(database)) {
+        routes.push_back(std::move(route));
+    }
+    for (auto& route : commands::hash_routes(database)) {
         routes.push_back(std::move(route));
     }
     const commands::CommandDispatcher dispatcher(std::move(routes));
