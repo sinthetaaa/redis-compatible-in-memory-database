@@ -36,7 +36,8 @@ struct IntegerMutationResult {
 
 // Authoritative, process-local, binary-safe keyspace.
 // The caller serializes access; this class is not independently synchronized.
-// No TTL, eviction, persistence or protocol parsing is implemented here.
+// Phase 5B stores optional expiration metadata; enforcement and TTL commands
+// are not yet implemented. No eviction or persistence exists.
 class Database final {
   public:
     Database() = default;
@@ -69,6 +70,15 @@ class Database final {
     // absence. No arithmetic may overflow a signed C++ integer.
     [[nodiscard]] IntegerMutationResult adjust_integer(std::string_view key, std::int64_t operand,
                                                        bool subtract);
+
+    // Metadata-only deadline operations (5B). These methods do NOT enforce
+    // expiration or compare the deadline against the clock. A past deadline
+    // remains visible until Phase 5C introduces lazy expiration.
+    // No implicit key creation; false if a key is absent.
+    [[nodiscard]] bool set_expiration(std::string_view key, WallTimePoint deadline);
+    [[nodiscard]] std::optional<WallTimePoint> expiration(std::string_view key) const;
+    // Returns true only when an existing key had metadata to remove.
+    [[nodiscard]] bool clear_expiration(std::string_view key);
 
     // Returns an owned snapshot, independent of future mutations or rehashing.
     [[nodiscard]] std::optional<std::string> get(std::string_view key) const;

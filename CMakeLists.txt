@@ -276,6 +276,15 @@ if(BUILD_TESTING)
     set_tests_properties(unit.clock PROPERTIES TIMEOUT 15)
 
     add_executable(
+        redisdb-expiration-metadata-tests
+        tests/unit/expiration_metadata_test.cpp
+    )
+    target_link_libraries(redisdb-expiration-metadata-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-expiration-metadata-tests)
+    add_test(NAME unit.expiration_metadata COMMAND redisdb-expiration-metadata-tests)
+    set_tests_properties(unit.expiration_metadata PROPERTIES TIMEOUT 20)
+
+    add_executable(
         redisdb-string-command-tests
         tests/unit/string_commands_test.cpp
     )

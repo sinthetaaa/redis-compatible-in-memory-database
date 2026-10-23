@@ -4,10 +4,10 @@
 
 - Updated: 2026-10-23
 - Current phase: Phase 5 — TTL and Expiration (IN PROGRESS); Phases 0–4 COMPLETE
-- Current subphase: Phase 5A — injectable clock abstraction on feature branch (CI and merge pending)
-- Status: Phases 0–4 COMPLETE; Phase 5A implementation under validation; 5B–5H and Phases 6–19 NOT STARTED
-- Last completed milestone: Phase 4 formal closure two-parent main merge `188e00ca40f48273e789598f3e3a7fc86249a2ba`; post-merge Linux CI #39918403631 (39/39 Debug + Release) and sanitizer/fuzz #39918403444 (40/40, 50 corpus seeds, 10,000 fuzz runs) SUCCESS
-- Exact next task: Validate and direct-merge Phase 5A feature branch after macOS/Linux correctness gates without PR, then start Phase 5B expiration metadata; no expiration behavior until planned subphases.
+- Current subphase: Phase 5B — expiration deadline metadata feature branch (CI and merge pending)
+- Status: Phases 0–4 and 5A COMPLETE; 5B under validation; 5C–5H and Phases 6–19 NOT STARTED
+- Last completed milestone: Phase 5A two-parent main merge `05d0ca40b0f86dd85e722834e93cd39f2dbea20b`; post-merge Linux CI #39920666650 (40/40 Debug + Release) and sanitizer/fuzz #39920666241 (41/41, 50 corpus seeds, 10,000 fuzz executions) SUCCESS
+- Exact next task: Verify Phase 5B local/Linux CI and direct-merge metadata feature without PR, then Phase 5C lazy expiration. No expiration enforcement before 5C.
 - Implementation maturity: Full Phase 4 documented string/key RESP2 subset is implemented and merged; 2400-step composite model and real multi-client MSET/MGET, APPEND, counter, FIFO and lifecycle tests passed
 - Integer arithmetic: strict signed 64-bit ASCII parsing, no signed-overflow undefined behavior including DECRBY(INT64_MIN), staging before mutation, missing key starts at zero; errors leave stored values or absence unchanged
 - Phase 4H acceptance: 640 concurrent increments, 2 MSET writers + 4 snapshot readers, 360 concurrent APPENDs, 144 FIFO replies, QUIT and connection churn; tests only, no production changes.
@@ -33,6 +33,16 @@
 - **Scope:** New clock header/source and clock unit tests; no database entry mutation, TTL, EXPIRE, AOF or networking changes.
 - **Expected suite:** macOS and Linux Debug/Release 40/40; fuzz-enabled 41/41; existing 50-seed immutable parser corpus and Linux 10,000-run libFuzzer gate unchanged.
 - **Next:** Verify feature CI, direct merge, then Phase 5B expiration metadata.
+
+### Phase 5B expiration metadata checkpoint (2026-10-23)
+
+- **Starting clean main SHA:** `05d0ca40b0f86dd85e722834e93cd39f2dbea20b`.
+- **Status:** Feature implementation and local acceptance; Linux CI and direct merge pending.
+- **Scope:** `Entry` owns optional absolute wall-clock deadline from 5A. `Database` exposes setter, getter and clear operations with no implicit key creation. No lazy removal or TTL wire commands until later subphases.
+- **Lifecycle:** New keys have no expiration; SET and MSET clear previous deadline; APPEND and signed arithmetic preserve it; DEL/clear erase it. Rejected mutations never change deadline or value. Full-map MSET staging unchanged.
+- **Time domain:** Absolute wall-clock deadline for future persistence compatibility, never serialized steady time. Test-only fake clock controls wall-time observations without sleeping.
+- **Regression expected:** macOS/Linux Debug and Release 41/41; fuzz-enabled 42/42; existing immutable corpus and bounded Linux libFuzzer unchanged.
+- **Next:** Verify exact-head feature CI, merge directly, then begin Phase 5C lazy expiration.
 
 ## 2. Project Identity
 

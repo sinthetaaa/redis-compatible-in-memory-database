@@ -35,6 +35,9 @@ bool Database::set(std::string key, std::string bytes) {
         // cannot require allocation with the standard string allocator.
         Value replacement = StringValue{std::move(bytes)};
         found->second.value = std::move(replacement);
+        // Redis SET (without future KEEPTTL option) replaces any old deadline.
+        // The value is fully staged before metadata is cleared.
+        found->second.expires_at.reset();
         return false;
     }
 
@@ -117,11 +120,42 @@ IntegerMutationResult Database::adjust_integer(std::string_view key, std::int64_
         }
     }
 
-    // All arithmetic is proven representable. Construct the new key/value
-    // fully before committing, including missing-key insertion.
+    // Integer mutations preserve existing expiration metadata. SET clears
+    // deadlines, so preserve and restore the prior optional value only after
+    // its strong-exception-safe replacement has succeeded. The found iterator
+    // remains valid for an existing key because SET does not insert/rehash it.
+    const auto previous_expiration =
+        found != entries_.end() ? found->second.expires_at : std::nullopt;
     const std::int64_t next = subtract ? current - operand : current + operand;
     (void)set(std::string(key), std::to_string(next));
+    if (found != entries_.end()) {
+        found->second.expires_at = previous_expiration;
+    }
     return {IntegerMutationError::None, next};
+}
+
+bool Database::set_expiration(std::string_view key, WallTimePoint deadline) {
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return false;
+    }
+    found->second.expires_at = deadline;
+    return true;
+}
+
+std::optional<WallTimePoint> Database::expiration(std::string_view key) const {
+    const auto found = entries_.find(key);
+    return found == entries_.end() ? std::nullopt : found->second.expires_at;
+}
+
+bool Database::clear_expiration(std::string_view key) {
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return false;
+    }
+    const bool was_set = found->second.expires_at.has_value();
+    found->second.expires_at.reset();
+    return was_set;
 }
 
 std::optional<std::string> Database::get(std::string_view key) const {

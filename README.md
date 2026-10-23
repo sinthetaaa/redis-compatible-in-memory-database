@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A clock abstraction is being validated on a feature branch; TTL metadata and expiration behavior are NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
+**Project status: Phases 0–4 COMPLETE. Phase 4A–4H core string database accepted on 2026-10-23 after two-parent merge `31914ae` and successful exact-head Linux Debug/Release and Clang 18 sanitizer/fuzz CI. Phase 5A injectable clock abstraction is merged and validated; Phase 5B expiration metadata is under validation on a feature branch. Expiration enforcement and TTL commands are NOT IMPLEMENTED. Supported RESP2 commands: PING/ECHO/QUIT, SET/GET, DEL/EXISTS/TYPE, MSET/MGET, APPEND/STRLEN, and INCR/DECR/INCRBY/DECRBY.**
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The latter executes PING, ECHO, QUIT and bounded unknown-command errors.
@@ -884,6 +884,23 @@ no keyspace operations are changed, no TTL commands are added, and no value,
 RESP2 reply, or MSET staging limits are modified. Per ADR-009, future persisted
 expiration deadlines must never serialize a raw steady-clock time point.
 Phase 5B will add metadata; expiration semantics belong to 5C–5H.
+
+## Phase 5B — Expiration Deadline Metadata (feature implementation)
+
+Phase 5B extends each owned in-memory entry with an optional absolute
+`WallTimePoint` deadline. The deadline is data only: reads, EXISTS and TYPE
+do not treat it as expired until Phase 5C implements lazy expiration. These
+metadata-only storage APIs do not create keys or consult the system clock:
+`set_expiration(key, deadline)`, `expiration(key)` and
+`clear_expiration(key)`. Callers can inject the 5A clock and supply a
+controlled `wall_now()` value. No raw `steady_clock` time points are stored.
+
+SET and MSET clear existing deadlines on overwritten keys; APPEND and integer
+arithmetic preserve deadlines of existing keys; DEL/clear erase metadata and
+new keys start without deadlines. Rejected commands preserve both value and
+metadata. MSET remains clone-and-swap. The 8,176-byte value and 8,192-byte
+serialized reply limits remain unchanged; no EXPIRE/TTL commands, lazy or
+active expiration, eviction or persistence are implemented in 5B.
 
 ## License
 
