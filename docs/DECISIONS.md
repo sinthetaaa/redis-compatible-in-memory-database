@@ -16,6 +16,24 @@ impact assessment, and updated project documentation.
 
 ---
 
+## Phase 6F Formal Documentation Closure — VERIFIED PASS (2026-10-24)
+
+ADR-010 is unchanged: only V1 deterministic logical-byte estimation and
+internal cached ledger tracking are implemented; memory limits, noeviction
+admission, eviction and RSS measurement remain future work. The reviewed
+five-document feature `698b800b4e794d437f4bc6f21d7d1264283b5705` has parent
+`dabe5941e385180d49da2abfbed9b818e4e06487`, and was merged directly
+into `main` as `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` (tree `8698677050cecbe36cb1588ac02610876cc2c5a4`) with
+exactly five documentation paths and no source or CI workflow changes.
+The feature Linux workflows `40070113583` (Debug/Release) and
+`40070113584` (Clang 18 sanitizers/libFuzzer) passed. Fresh main
+workflows `40070533556` and `40070533439` passed all required jobs and steps.
+Phase 6F is formally complete; Phase 6G differential testing has NOT
+started. The following implementation record preserves its original
+pre-closure wording as dated engineering history.
+
+---
+
 ## Phase 6F Deterministic Logical-Memory Accounting Implementation Record (2026-10-24)
 
 ADR-010 remains accepted without changing its future eviction policy.

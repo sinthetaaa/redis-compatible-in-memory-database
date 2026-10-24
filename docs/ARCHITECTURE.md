@@ -6,16 +6,16 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state (2026-10-24):** Phases 0–5 and 6A–6E formally
-closed. Phase 6F deterministic logical-memory accounting has been merged
-through feature `9ff7b8eab1bdbf216346c337e911effcbfe136e8` and guarded
-two-parent main `dabe5941e385180d49da2abfbed9b818e4e06487` (tree
-`405a8f6a322e6c2ddd17e259abb2ba0e263c8c14`). Its postmerge Linux
-networking `40067532663` and Clang 18 ASan/UBSan/libFuzzer `40067532713`
-passed all jobs. Formal five-document Phase 6F closure is still pending
-separate feature and final-main CI; Phase 6G differential testing has NOT
-started. Accounting is deterministic logical policy units, not RSS or a
-memory cap. Eviction, AOF, snapshots and deployment remain future work.
+**Architecture state (2026-10-24):** Phases 0–5 and 6A–6F are
+formally complete. The Phase 6F V1 cached logical-byte ledger was merged in
+implementation `dabe5941e385180d49da2abfbed9b818e4e06487` and reviewed
+five-document closure `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` (tree `8698677050cecbe36cb1588ac02610876cc2c5a4`).
+The docs feature `698b800b4e794d437f4bc6f21d7d1264283b5705` passed its exact-head Linux CI;
+final main networking `40070533556` (Debug/Release) and
+Clang 18 ASan/UBSan/libFuzzer `40070533439` passed all required jobs and steps.
+The accounting estimate is not RSS, a memory cap, or an eviction policy.
+Phase 6G Redis differential testing is next and NOT STARTED; memory-limit
+enforcement, eviction, persistence, recovery and deployment remain planned.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -1410,7 +1410,8 @@ merge `dabe5941e385180d49da2abfbed9b818e4e06487` passed exact-head
 Linux Debug/Release and Clang18 ASan/UBSan/libFuzzer at main runs
 `40067532663` / `40067532713`. This policy is not actual allocated
 capacity/RSS, admission control, eviction, durability or persistence.
-Formal five-document closure is pending; Phase 6G has not started.
+Formal five-document closure was accepted at `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` with final main
+CI `40070533556` and `40070533439` green; Phase 6G has not started.
 
 ## Initial Policy
 
