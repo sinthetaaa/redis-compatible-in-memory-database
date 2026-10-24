@@ -1,0 +1,41 @@
+family,command,shared_form_status,normal_case_required,notes
+connectivity,PING,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+connectivity,ECHO,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+connectivity,QUIT,ELIGIBLE_CONSTRAINED,YES,connection-termination test; not midstream
+string_integer,SET,ELIGIBLE_CONSTRAINED,YES,key value; or EX/PX positive integer; other options excluded
+string_integer,GET,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,MSET,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,MGET,ELIGIBLE_CONSTRAINED,YES,ordered result including null for non-string
+string_integer,APPEND,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,STRLEN,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,INCR,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,DECR,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,INCRBY,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+string_integer,DECRBY,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+key_ttl,DEL,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+key_ttl,EXISTS,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+key_ttl,TYPE,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+key_ttl,EXPIRE,ELIGIBLE_CONSTRAINED,YES,basic relative integer; no NX/XX/GT/LT
+key_ttl,PEXPIRE,ELIGIBLE_CONSTRAINED,YES,basic relative integer; no NX/XX/GT/LT
+key_ttl,TTL,ELIGIBLE_CONSTRAINED,YES,-2/-1 strict; positive bounded-time invariant
+key_ttl,PTTL,ELIGIBLE_CONSTRAINED,YES,-2/-1 strict; positive bounded-time invariant
+key_ttl,PERSIST,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+list,LPUSH,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+list,RPUSH,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+list,LLEN,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+list,LPOP,ELIGIBLE_CONSTRAINED,YES,one element only; count option excluded
+list,RPOP,ELIGIBLE_CONSTRAINED,YES,one element only; count option excluded
+list,LRANGE,ELIGIBLE_CONSTRAINED,YES,ordered list reply
+hash,HSET,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+hash,HGET,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+hash,HEXISTS,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+hash,HLEN,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+hash,HDEL,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+hash,HMGET,ELIGIBLE_CONSTRAINED,YES,ordered per-field results
+hash,HGETALL,ELIGIBLE_CONSTRAINED,YES,unordered unique binary field/value mapping
+set,SADD,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+set,SREM,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+set,SISMEMBER,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+set,SCARD,ELIGIBLE_CONSTRAINED,YES,normal implemented shared form; bounded binary input and reply
+set,SMEMBERS,ELIGIBLE_CONSTRAINED,YES,unordered unique binary bulk set
+set,SMISMEMBER,ELIGIBLE_CONSTRAINED,YES,ordered per-member integer replies
