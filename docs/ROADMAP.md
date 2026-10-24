@@ -689,20 +689,36 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — Phases 6A–6E formally COMPLETE; Phase 6F
-logical-memory accounting IMPLEMENTATION accepted on main merge `dabe5941e385180d49da2abfbed9b818e4e06487`.
-Exact postmerge networking Linux `40067532663` and Clang 18 ASan/UBSan/
-libFuzzer `40067532713` passed. Phase 6F formal five-document closure
-remains open pending reviewed docs publication, doc-feature CI, guarded docs
-merge and exact-head post-closure CI. Phase 6G has NOT STARTED.
+**Status:** IN PROGRESS — Phases 6A–6F formally COMPLETE.
+Phase 6F implementation was merged at `dabe5941e385180d49da2abfbed9b818e4e06487`;
+reviewed five-document closure `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` has tree `8698677050cecbe36cb1588ac02610876cc2c5a4`.
+Docs feature Linux CI `40070113583` / `40070113584` and final exact-main
+networking `40070533556` (Debug/Release) and Clang 18 ASan/UBSan/
+libFuzzer `40070533439` passed all required jobs/steps.
+Phase 6G differential testing is NEXT and NOT STARTED.
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
 - [x] 6C — Hash storage and commands (formal docs closure `201c3f1`; final networking `39987655559` and fuzz `39987655669` PASS)
 - [x] 6D — Set storage and commands (formal docs closure `281d044`; final Linux networking `39999397205` / fuzz `39999397202` PASS)
 - [x] 6E — Wrong-type errors (formal closure `d2dc17d`; final Linux `40007963691` / `40007963507` PASS)
-- [ ] 6F — Collection memory accounting hooks (implementation accepted; formal documentation closure pending)
+- [x] 6F — Collection memory accounting hooks (formal closure `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f`; final Linux `40070533556` / `40070533439` PASS)
 - [ ] 6G — Differential tests
+
+### Phase 6F formal closure — VERIFIED PASS (2026-10-24)
+
+The reviewed docs feature `698b800b4e794d437f4bc6f21d7d1264283b5705` contains exactly the five
+authoritative documentation changes and is the second parent of guarded
+two-parent non-fast-forward main merge `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f`; the first
+parent is implementation merge `dabe5941e385180d49da2abfbed9b818e4e06487`.
+The common documentation tree is `8698677050cecbe36cb1588ac02610876cc2c5a4`. The documentation
+merge introduced no production source, test, CMake or workflow changes.
+Feature networking Linux `40070113583` and Clang 18 sanitizer/fuzz
+`40070113584` passed; exact-main post-closure networking `40070533556`
+and Clang 18 ASan/UBSan/libFuzzer `40070533439` completed successfully
+with every required job/step. Phases 6A–6F are formally complete.
+Phase 6G is not started. The implementation acceptance paragraph below
+retains its historical, pre-closure gate wording.
 
 ### Phase 6F implementation acceptance — VERIFIED PASS; formal docs closure pending (2026-10-24)
 

@@ -8,22 +8,21 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-24):** Phases 0–5 and 6A–6E are formally
-COMPLETE. Phase 6F deterministic V1 logical-memory accounting is IMPLEMENTED,
-merged into `main` at `dabe5941e385180d49da2abfbed9b818e4e06487`, and
-validated by exact-head post-merge Linux Debug/Release `40067532663` and
-Clang 18 ASan/UBSan/libFuzzer `40067532713`. The reviewed implementation
-feature is `9ff7b8eab1bdbf216346c337e911effcbfe136e8`; the merge/feature
-tree is `405a8f6a322e6c2ddd17e259abb2ba0e263c8c14`.
-Mac Debug/Release completed 67/67 each, fuzz-enabled 68/68; an external
-failure-path harness exercised 27 scenarios, reporting 142 injected
-allocation failures (not 142 distinct internal allocation sites).
-**Formal Phase 6F documentation closure remains PENDING** until a separately
-reviewed docs-only commit, exact-head feature CI, direct two-parent docs merge,
-and post-closure main CI pass. Phase 6G has NOT STARTED. This ledger is an
-internal deterministic logical-byte estimate, not RSS or `maxmemory`.
-Eviction, durability, snapshots, benchmarks and deployment remain future work.
-Historical milestone notes below retain their original dated context.
+**Project status (2026-10-24):** Phases 0–5 and 6A–6F are formally
+COMPLETE. Phase 6F deterministic V1 logical-memory accounting was merged
+through source commit `9ff7b8eab1bdbf216346c337e911effcbfe136e8`
+and implementation main merge `dabe5941e385180d49da2abfbed9b818e4e06487`.
+The reviewed five-document feature `698b800b4e794d437f4bc6f21d7d1264283b5705` was merged through
+non-fast-forward main commit `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` (tree `8698677050cecbe36cb1588ac02610876cc2c5a4`).
+Feature-head docs CI `40070113583`/`40070113584` and post-closure
+main Linux Debug/Release `40070533556` and Clang 18 ASan/UBSan/libFuzzer
+`40070533439` passed every required job/step. Local macOS Debug/Release each
+passed 67/67 and fuzz-enabled passed 68/68; the 27-case external failure
+harness caught 142 injected allocation failures (not 142 distinct internal
+allocation sites). The V1 ledger estimates logical policy units, not RSS.
+Phase 6G differential testing is NEXT, NOT STARTED. Memory-limit enforcement,
+eviction, durability, snapshots, benchmarks and deployment remain future work.
+Older acceptance records below retain their dated, historical context.
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
 integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
@@ -56,7 +55,7 @@ The project is designed to demonstrate:
 These are project goals, not claims that all
 features have been implemented.
 
-## Phase 6F — Deterministic Logical-Memory Ledger (implementation accepted; docs closure pending)
+## Phase 6F — Deterministic Logical-Memory Ledger (formally complete)
 
 The Phase 6F.1 pure estimator uses a frozen V1 policy: key fixed charge 64;
 list element 48; hash field 80; set member 56; expiry record 48, plus actual
@@ -71,8 +70,8 @@ Reviewed source: `CMakeLists.txt`, `Entry.hpp`, `Database.hpp`, `Database.cpp`,
 and `tests/unit/live_memory_ledger_test.cpp`. Feature `9ff7b8e`, guarded
 non-fast-forward merge `dabe594`, feature-head Linux networking/fuzz
 `40067133805`/`40067133793` PASS, and postmerge Linux networking/fuzz
-`40067532663`/`40067532713` PASS. Formal docs-only closure and its CI are
-still required before marking Phase 6F formally complete.
+`40067532663`/`40067532713` PASS. Formal documentation closure is accepted at `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f`;
+post-closure main CI `40070533556` and `40070533439` passed.
 
 ## Phase 6A — Typed Storage Foundation (implementation accepted)
 
