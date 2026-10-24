@@ -385,6 +385,13 @@ if(BUILD_TESTING)
     add_test(NAME unit.ledger_transitions COMMAND redisdb-ledger-transition-tests)
     set_tests_properties(unit.ledger_transitions PROPERTIES TIMEOUT 20)
 
+    # Phase 6F.2C.1: live ledger across all Database mutation and expiry paths.
+    add_executable(redisdb-live-ledger-tests tests/unit/live_memory_ledger_test.cpp)
+    target_link_libraries(redisdb-live-ledger-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-live-ledger-tests)
+    add_test(NAME unit.live_memory_ledger COMMAND redisdb-live-ledger-tests)
+    set_tests_properties(unit.live_memory_ledger PROPERTIES TIMEOUT 30)
+
     # Phase 6E.1A: cross-type WRONGTYPE matrix (four value families).
     add_executable(redisdb-wrongtype-matrix-tests tests/unit/wrongtype_matrix_test.cpp)
     target_link_libraries(redisdb-wrongtype-matrix-tests PRIVATE redisdb-core)
