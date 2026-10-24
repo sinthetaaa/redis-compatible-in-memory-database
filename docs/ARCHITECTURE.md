@@ -7,16 +7,15 @@
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
 **Architecture state (2026-10-24):** Phases 0–5 and 6A–6E formally
-closed. Phase 6E 78-case cross-type WRONGTYPE unit and live TCP acceptance
-was merged through implementation `37aaad4`, reviewed documentation
-`46a20ad` and final two-parent main closure
-`d2dc17de7b046ed8cf007189a698d7b61e4344f3` (tree
-`aff0976dbffd7e479a63f11b50019f1eabdbb1a7`). Final exact-head Linux
-networking `40007963691` and Clang 18 sanitizer/fuzz `40007963507` passed.
-No runtime architecture was altered in Phase 6E. Phase 6F memory accounting
-and Phase 6G differential tests are NOT STARTED, and Phases 7–19 remain
-future work. Phase 6F.0B only synchronizes documentation; its memory
-accounting design and implementation require separate review.
+closed. Phase 6F deterministic logical-memory accounting has been merged
+through feature `9ff7b8eab1bdbf216346c337e911effcbfe136e8` and guarded
+two-parent main `dabe5941e385180d49da2abfbed9b818e4e06487` (tree
+`405a8f6a322e6c2ddd17e259abb2ba0e263c8c14`). Its postmerge Linux
+networking `40067532663` and Clang 18 ASan/UBSan/libFuzzer `40067532713`
+passed all jobs. Formal five-document Phase 6F closure is still pending
+separate feature and final-main CI; Phase 6G differential testing has NOT
+started. Accounting is deterministic logical policy units, not RSS or a
+memory cap. Eviction, AOF, snapshots and deployment remain future work.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -31,8 +30,9 @@ are hidden by lazy checks, while a deadline-ordered index supports at most
 32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
 Connection admission, parser framing, replies and work are bounded.
 
-Collection memory accounting, differential testing, eviction, AOF,
-snapshots, restart recovery and deployment remain future milestones.
+Phase 6F deterministic logical memory accounting is implemented;
+differential testing, memory-limit enforcement, eviction, AOF, snapshots,
+restart recovery and deployment remain future milestones.
 
 ---
 
@@ -1386,6 +1386,31 @@ Account for:
 - Container overhead estimates.
 
 Estimated logical memory differs from process RSS.
+
+## Phase 6F Implemented Logical-Byte Accounting
+
+The internal C++20 `Database::accounted_bytes() const noexcept` accessor
+reads a cached total in O(1), without allocation or clock access; it is not
+an RESP2/INFO command. Each physically stored `Entry` caches its charge.
+The deterministic V1 policy charges 64 plus key length; string payload
+length, 48 per list element, 80 per hash field, 56 per set member, and
+48 plus key length for expiration metadata, with stored binary byte lengths.
+Checked add/multiply and replacement/removal transitions prevent wrapping.
+
+`set`, `set_with_expiration`, atomic clone-and-swap `set_many`, append,
+integer, list, hash and set mutations maintain the cached total. Expiration
+mutations update metadata charges; lazy expiration, TTL-time deletion,
+bounded sweep and explicit erase debit only upon physical removal. Expired
+but not yet physically removed keys remain charged. `clear()` resets the
+total. The command executor still serializes access; `Database` itself is
+not a synchronized multiwriter structure.
+
+Feature SHA `9ff7b8eab1bdbf216346c337e911effcbfe136e8` and direct
+merge `dabe5941e385180d49da2abfbed9b818e4e06487` passed exact-head
+Linux Debug/Release and Clang18 ASan/UBSan/libFuzzer at main runs
+`40067532663` / `40067532713`. This policy is not actual allocated
+capacity/RSS, admission control, eviction, durability or persistence.
+Formal five-document closure is pending; Phase 6G has not started.
 
 ## Initial Policy
 
