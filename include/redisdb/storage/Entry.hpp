@@ -3,6 +3,7 @@
 #include "redisdb/storage/Clock.hpp"
 #include "redisdb/storage/Value.hpp"
 
+#include <cstddef>
 #include <optional>
 
 namespace redisdb::storage {
@@ -15,6 +16,8 @@ namespace redisdb::storage {
 struct Entry {
     Value value;
     std::optional<WallTimePoint> expires_at{};
+    // V1 logical charge, not allocator usage; refreshed on every physical mutation.
+    std::size_t accounted_charge = 0;
 };
 
 } // namespace redisdb::storage

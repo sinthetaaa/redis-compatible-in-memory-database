@@ -187,9 +187,12 @@ class Database final {
     // Physical entry count. With lazy-only expiration, untouched expired
     // entries can remain until accessed (5G adds active sweeping).
     [[nodiscard]] std::size_t size() const noexcept { return entries_.size(); }
+    // O(1) deterministic logical charged bytes. Physically present stale keys count.
+    [[nodiscard]] std::size_t accounted_bytes() const noexcept { return accounted_bytes_; }
     void clear() noexcept {
         entries_.clear();
         expiry_index_.clear();
+        accounted_bytes_ = 0;
     }
 
   private:
@@ -197,7 +200,12 @@ class Database final {
     // const but removes stale physical entries; no background sweep occurs.
     [[nodiscard]] bool expire_if_needed(std::string_view key) const;
     const Clock& clock_;
-    mutable std::unordered_map<std::string, Entry, TransparentStringHash, std::equal_to<>> entries_;
+    using EntryMap = std::unordered_map<std::string, Entry, TransparentStringHash, std::equal_to<>>;
+    void insert_new(std::string key, Entry staged);
+    void replace_value(EntryMap::iterator found, Value staged);
+    void erase_entry(EntryMap::iterator found) const;
+    mutable EntryMap entries_;
+    mutable std::size_t accounted_bytes_ = 0;
     // Ordered index contains exactly one (deadline, binary key) per volatile
     // entry. All mutation paths maintain it; scans never depend on hash
     // iterators surviving a rehash, erase or MSET clone-and-swap.
