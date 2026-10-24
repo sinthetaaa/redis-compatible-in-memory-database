@@ -16,6 +16,33 @@ impact assessment, and updated project documentation.
 
 ---
 
+## Phase 6F Deterministic Logical-Memory Accounting Implementation Record (2026-10-24)
+
+ADR-010 remains accepted without changing its future eviction policy.
+The Phase 6F V1 logical-byte estimator and checked-total transitions have
+been implemented as a cached, O(1) database ledger; only these accounting
+portions of ADR-010 are implemented. The V1 policy constants are key 64,
+list node 48, hash field 80, set member 56 and expiry 48, plus actual
+binary string/key/field/member bytes. An expired but physically present
+entry is still charged. This is an internal C++ API, not RSS or RESP2.
+
+Feature `9ff7b8eab1bdbf216346c337e911effcbfe136e8` was directly merged
+into main as `dabe5941e385180d49da2abfbed9b818e4e06487`, tree
+`405a8f6a322e6c2ddd17e259abb2ba0e263c8c14`. macOS CTests passed
+67/67 Debug, 67/67 Release, 68/68 fuzz-enabled; the separate 27-case
+fault harness reported 142 injected allocation failures. Exact feature
+Linux networking `40067133805` and fuzz `40067133793` passed; exact
+postmerge Linux networking `40067532663` and Clang18 sanitizer/fuzz
+`40067532713` passed all required jobs/steps. A distinct reviewed
+five-document formal closure, its feature CI, two-parent merge and final
+main CI remain required. Phase 6G has not started.
+
+`maxmemory`, noeviction admission/rejection, LRU and actual memory/RSS
+measurement are future Phase 7 work; AOF, snapshots and recovery are later
+phases. No new eviction or durability decision is being claimed here.
+
+---
+
 ## Verified Phase 6E Formal Closure (2026-10-24)
 
 The previously accepted ADR-002, ADR-004 and ADR-005 remain unchanged.
@@ -414,7 +441,9 @@ AOF/snapshot/recovery phases; no disk durability is implied by this ADR.
 ## ADR-010 — Memory Accounting and Eviction
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** V1 deterministic logical estimator and cached ledger
+implemented (Phase 6F). Limit configuration, noeviction enforcement and
+LRU are NOT implemented; deferred to Phase 7.
 
 ### Decision
 

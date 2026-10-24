@@ -689,19 +689,44 @@ formal closure record and deliberate compatibility limitations.
 
 # Phase 6 — Collection Data Types
 
-**Status:** IN PROGRESS — 6A–6E formally COMPLETE with independent final
-Linux CI. Phase 6E closed through final docs-only main merge `d2dc17d` and
-Networking/fuzz workflows `40007963691` / `40007963507` PASS. Phase 6F
-collection memory accounting and Phase 6G differential testing NOT STARTED.
-Phase 6F.0B is a documentation-only preparatory status synchronization.
+**Status:** IN PROGRESS — Phases 6A–6E formally COMPLETE; Phase 6F
+logical-memory accounting IMPLEMENTATION accepted on main merge `dabe5941e385180d49da2abfbed9b818e4e06487`.
+Exact postmerge networking Linux `40067532663` and Clang 18 ASan/UBSan/
+libFuzzer `40067532713` passed. Phase 6F formal five-document closure
+remains open pending reviewed docs publication, doc-feature CI, guarded docs
+merge and exact-head post-closure CI. Phase 6G has NOT STARTED.
 
 - [x] 6A — Type-safe value representation (merge `5043cc7`; exact-head Linux CI `39962981311` and `39962981227` PASS)
 - [x] 6B — List storage and commands (implementation `7df2e08`; formal closure `8179872`; post-closure Linux `39975274770` / `39975274694` PASS)
 - [x] 6C — Hash storage and commands (formal docs closure `201c3f1`; final networking `39987655559` and fuzz `39987655669` PASS)
 - [x] 6D — Set storage and commands (formal docs closure `281d044`; final Linux networking `39999397205` / fuzz `39999397202` PASS)
 - [x] 6E — Wrong-type errors (formal closure `d2dc17d`; final Linux `40007963691` / `40007963507` PASS)
-- [ ] 6F — Collection memory accounting hooks
+- [ ] 6F — Collection memory accounting hooks (implementation accepted; formal documentation closure pending)
 - [ ] 6G — Differential tests
+
+### Phase 6F implementation acceptance — VERIFIED PASS; formal docs closure pending (2026-10-24)
+
+The V1 deterministic logical-byte estimator, checked transitions, and live
+O(1) cached database ledger are implemented. Policy constants: key 64,
+list element 48, hash field 80, set member 56, expiry 48 plus binary lengths.
+Expired entries still physically resident remain charged. This is not RSS,
+`maxmemory`, noeviction enforcement or LRU and adds no RESP2 command.
+
+Five-file source feature `9ff7b8eab1bdbf216346c337e911effcbfe136e8`
+was merged via exact two-parent main commit
+`dabe5941e385180d49da2abfbed9b818e4e06487`, common tree
+`405a8f6a322e6c2ddd17e259abb2ba0e263c8c14`. macOS Debug and
+Release each passed 67/67 CTests; fuzz-enabled passed 68/68. Independent
+fault-path harness exercised 27 scenarios with 142 injected allocation
+failures, not 142 different internal allocation sites. Feature Linux
+networking/fuzz `40067133805`/`40067133793` and postmerge-main Linux
+networking/fuzz `40067532663`/`40067532713` passed all required jobs.
+
+**Remaining formal 6F gates:** independent five-document draft review;
+docs-only feature commit and exact-head Linux CI; direct guarded non-FF
+five-document merge; final exact-head main CI and status acceptance. Keep
+6F unchecked here until these gates pass. 6G differential tests have not
+started. Phase 7 memory-limit/eviction and Phase 8+ persistence remain future.
 
 ### Phase 6E formal closure — VERIFIED PASS (2026-10-24)
 

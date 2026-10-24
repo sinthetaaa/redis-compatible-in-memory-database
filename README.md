@@ -8,28 +8,31 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-24): Phases 0–5 and 6A–6E are formally
-COMPLETE; overall Phase 6 remains IN PROGRESS. The Phase 6E cross-type
-WRONGTYPE matrix was implemented through feature `a66128b`, two-parent
-implementation merge `37aaad4`, documentation feature `46a20ad`, and
-formal two-parent documentation merge `d2dc17de7b046ed8cf007189a698d7b61e4344f3`.
-The final reviewed tree is `aff0976dbffd7e479a63f11b50019f1eabdbb1a7`;
-exact-head final Linux networking `40007963691` and Clang 18 ASan/UBSan/fuzz
-`40007963507` passed every job and step. Two permanent matrix CTests cover
-26 commands x 3 incompatible stored types = 78 WRONGTYPE cases per suite;
-macOS Debug/Release 64/64 and fuzz-enabled 65/65 passed in the Phase 6F.0A
-audit. Phase 6F collection memory accounting and Phase 6G differential
-tests are NOT STARTED; Phase 6F.0B is documentation-only preparation.
-Eviction, persistence, recovery, benchmarking and deployment remain future
-work. Historical milestone notes below are not current instructions.**
+**Project status (2026-10-24):** Phases 0–5 and 6A–6E are formally
+COMPLETE. Phase 6F deterministic V1 logical-memory accounting is IMPLEMENTED,
+merged into `main` at `dabe5941e385180d49da2abfbed9b818e4e06487`, and
+validated by exact-head post-merge Linux Debug/Release `40067532663` and
+Clang 18 ASan/UBSan/libFuzzer `40067532713`. The reviewed implementation
+feature is `9ff7b8eab1bdbf216346c337e911effcbfe136e8`; the merge/feature
+tree is `405a8f6a322e6c2ddd17e259abb2ba0e263c8c14`.
+Mac Debug/Release completed 67/67 each, fuzz-enabled 68/68; an external
+failure-path harness exercised 27 scenarios, reporting 142 injected
+allocation failures (not 142 distinct internal allocation sites).
+**Formal Phase 6F documentation closure remains PENDING** until a separately
+reviewed docs-only commit, exact-head feature CI, direct two-parent docs merge,
+and post-closure main CI pass. Phase 6G has NOT STARTED. This ledger is an
+internal deterministic logical-byte estimate, not RSS or `maxmemory`.
+Eviction, durability, snapshots, benchmarks and deployment remain future work.
+Historical milestone notes below retain their original dated context.
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
 integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
 and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
 accesses return WRONGTYPE; MGET returns nil for non-string keys. The
-comprehensive Phase 6E wrong-type acceptance matrix is complete; collection
-memory accounting, differential tests, eviction, persistence, full Redis
-compatibility and deployment remain future milestones.
+comprehensive Phase 6E wrong-type acceptance matrix and the Phase 6F internal
+logical-byte ledger implementation are complete. Redis differential testing,
+memory-limit enforcement, eviction, persistence, full Redis compatibility and
+deployment remain future milestones.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The RESP2 mode now executes the documented string/key/TTL/list/hash/set subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
@@ -52,6 +55,24 @@ The project is designed to demonstrate:
 
 These are project goals, not claims that all
 features have been implemented.
+
+## Phase 6F — Deterministic Logical-Memory Ledger (implementation accepted; docs closure pending)
+
+The Phase 6F.1 pure estimator uses a frozen V1 policy: key fixed charge 64;
+list element 48; hash field 80; set member 56; expiry record 48, plus actual
+binary byte lengths. Phase 6F.2 adds `Entry::accounted_charge`, an O(1)
+`Database::accounted_bytes() const noexcept` internal C++ accessor, and
+checked total transitions for string/list/hash/set/TTL/expiry mutations.
+Physical expired entries remain charged until erased. `MSET` stages a
+clone-and-swap including the accounting total; no new RESP2 command is exposed.
+The implementation is not a memory-cap/eviction policy and is not RSS.
+
+Reviewed source: `CMakeLists.txt`, `Entry.hpp`, `Database.hpp`, `Database.cpp`,
+and `tests/unit/live_memory_ledger_test.cpp`. Feature `9ff7b8e`, guarded
+non-fast-forward merge `dabe594`, feature-head Linux networking/fuzz
+`40067133805`/`40067133793` PASS, and postmerge Linux networking/fuzz
+`40067532663`/`40067532713` PASS. Formal docs-only closure and its CI are
+still required before marking Phase 6F formally complete.
 
 ## Phase 6A — Typed Storage Foundation (implementation accepted)
 
