@@ -43,6 +43,7 @@ add_library(
     src/storage/Database.cpp
     src/storage/MemoryAccounting.cpp
     src/storage/Clock.cpp
+    src/persistence/AofLog.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -106,6 +107,12 @@ if(BUILD_TESTING)
                          "${PROJECT_SOURCE_DIR}/tests/integration/resp_memory_limits_test.py"
                          "$<TARGET_FILE:redisdb-server>")
         set_tests_properties(integration.resp_memory_limits PROPERTIES TIMEOUT 60)
+
+        add_test(NAME integration.resp_aof
+                 COMMAND "${Python3_EXECUTABLE}"
+                         "${PROJECT_SOURCE_DIR}/tests/integration/resp_aof_test.py"
+                         "$<TARGET_FILE:redisdb-server>")
+        set_tests_properties(integration.resp_aof PROPERTIES TIMEOUT 90)
 
         add_test(
             NAME integration.server_smoke
@@ -403,6 +410,12 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-memory-limits-tests)
     add_test(NAME unit.memory_limits COMMAND redisdb-memory-limits-tests)
     set_tests_properties(unit.memory_limits PROPERTIES TIMEOUT 30)
+
+    add_executable(redisdb-aof-tests tests/unit/aof_test.cpp)
+    target_link_libraries(redisdb-aof-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-aof-tests)
+    add_test(NAME unit.aof COMMAND redisdb-aof-tests)
+    set_tests_properties(unit.aof PROPERTIES TIMEOUT 60)
 
     # Phase 6E.1A: cross-type WRONGTYPE matrix (four value families).
     add_executable(redisdb-wrongtype-matrix-tests tests/unit/wrongtype_matrix_test.cpp)
