@@ -77,8 +77,11 @@ jobs:
           core = [e for e in commands if '/redisdb-core.dir/' in e.get('command', '')]
           memory_tests = [e for e in commands if '/redisdb-memory-limits-tests.dir/' in e.get('command', '')]
           assert any(e['file'].endswith('/src/storage/Database.cpp') for e in core)
+          assert any(e['file'].endswith('/src/persistence/AofLog.cpp') for e in core)
+          aof_tests = [e for e in commands if '/redisdb-aof-tests.dir/' in e.get('command', '')]
+          assert len(aof_tests) == 1, 'AOF persistence tests missing'
           assert len(memory_tests) == 1, 'Memory-limit allocation-failure tests missing'
-          assert all('-fsanitize=address,undefined' in e['command'] for e in core + memory_tests), (
+          assert all('-fsanitize=address,undefined' in e['command'] for e in core + memory_tests + aof_tests), (
               'Full-program storage/test sanitizer instrumentation missing'
           )
           ninja = Path('build/fuzz-linux/build.ninja').read_text()
@@ -114,6 +117,7 @@ jobs:
               f'Expected >=20 discovered CTests, got {counts}'
           )
           for name in ('unit.command', 'unit.memory_limits', 'integration.resp_memory_limits',
+                       'unit.aof', 'integration.resp_aof',
                        'fuzz.resp_parser_corpus_smoke'):
               pattern = rf'(?m)^\s*Test\s+#\d+:\s+{re.escape(name)}\s*$'
               assert len(re.findall(pattern, discovery)) == 1, (

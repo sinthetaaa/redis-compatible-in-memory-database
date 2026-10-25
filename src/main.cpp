@@ -23,6 +23,7 @@ void print_usage() {
               << "  redisdb-server --resp2-server [--port PORT]"
                  " [--max-clients COUNT] [--maxmemory BYTES]"
                  " [--maxmemory-policy noeviction|allkeys-lru]\n"
+              << "    [--appendonly yes] [--aof-file PATH] [--appendfsync always|everysec|no]\n"
               << "  maxmemory: logical data charge, 0 = unlimited (default); not RSS.\n"
               << "\n"
               << "Smoke mode is for transport validation only.\n"
@@ -86,6 +87,10 @@ int main(int argc, char* argv[]) {
     bool memory_seen = false;
     bool policy_seen = false;
     redisdb::storage::MemoryOptions memory;
+    redisdb::persistence::AofOptions aof;
+    bool append_seen = false;
+    bool file_seen = false;
+    bool sync_seen = false;
 
     for (int index = 2; index < argc; index += 2) {
         if (index + 1 >= argc) {
@@ -142,12 +147,45 @@ int main(int argc, char* argv[]) {
             policy_seen = true;
             continue;
         }
+        if (mode == "--resp2-server" && option == "--appendonly" && !append_seen) {
+            if (value != "yes" && value != "no") {
+                return invalid_arguments();
+            }
+            aof.enabled = value == "yes";
+            append_seen = true;
+            continue;
+        }
+        if (mode == "--resp2-server" && option == "--aof-file" && !file_seen) {
+            if (value.empty()) {
+                return invalid_arguments();
+            }
+            aof.file = value;
+            file_seen = true;
+            continue;
+        }
+        if (mode == "--resp2-server" && option == "--appendfsync" && !sync_seen) {
+            if (value == "always") {
+                aof.sync = redisdb::persistence::SyncPolicy::Always;
+            } else if (value == "everysec") {
+                aof.sync = redisdb::persistence::SyncPolicy::EverySecond;
+            } else if (value == "no") {
+                aof.sync = redisdb::persistence::SyncPolicy::No;
+            } else {
+                return invalid_arguments();
+            }
+            sync_seen = true;
+            continue;
+        }
+        return invalid_arguments();
+    }
+
+    if (!aof.enabled && (file_seen || sync_seen)) {
         return invalid_arguments();
     }
 
     try {
         if (mode == "--resp2-server") {
-            redisdb::server::run_resp2_server(port, max_clients, memory);
+            redisdb::server::run_resp2_server(port, max_clients, memory, aof);
         } else {
             redisdb::server::run_smoke_echo(port, max_clients);
         }

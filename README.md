@@ -11,9 +11,10 @@ snapshotting and crash recovery.
 **Project status (2026-10-25):** Phases 0–5 and 6A–6F are complete.
 Fast-track Phase 6G is integrated at `7c5a70592d0843261048bd5b9a51d2745eeb6cf6`;
 its Linux-native differential campaign remains deferred to the Docker milestone.
-Fast-track Stage 2 adds optional logical-memory limits and exact all-keys LRU
-on the local `fasttrack/memory-limits-eviction` branch. Publication is pending.
-Durability, snapshots, benchmarks and deployment remain future work.
+Fast-track Stage 2 memory limits and exact all-keys LRU are integrated at
+`226dd4bf03797da27a6e6aa3b7b3827038e7f13d`. Stage 3A adds opt-in AOF persistence
+and restart recovery on local branch `fasttrack/aof-persistence`; publication is pending.
+Snapshots, compaction, benchmarks and deployment remain future work.
 Older acceptance records below retain their dated, historical context.
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
@@ -22,10 +23,19 @@ and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
 accesses return WRONGTYPE; MGET returns nil for non-string keys. The
 comprehensive Phase 6E wrong-type acceptance matrix and the Phase 6F internal
 logical-byte ledger implementation are complete. Default memory capacity remains
-unlimited; persistence, full Redis compatibility and deployment remain future work.
+unlimited; full Redis compatibility and deployment remain future work.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The RESP2 mode now executes the documented string/key/TTL/list/hash/set subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
+
+## AOF persistence and recovery
+
+Persistence remains disabled by default. Enable it with `--appendonly yes`, choose
+`--aof-file PATH` (parent directory must exist), and select
+`--appendfsync always|everysec|no` (`always` by default). The journal and adjacent `.commit`
+watermark must be retained together. See [AOF format and guarantees](docs/AOF.md)
+for commit ordering, expiry/eviction recovery, strict corruption handling and
+explicit performance/durability limitations. No snapshots or AOF compaction are included.
 
 ## Memory limits and eviction
 

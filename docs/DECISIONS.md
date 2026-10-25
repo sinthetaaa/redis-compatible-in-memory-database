@@ -297,7 +297,7 @@ are included in the project.
 ## ADR-006 — Explicit Persistence Durability
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** Stage 3A AOF implemented locally; snapshots remain deferred
 
 ### Decision
 
@@ -348,6 +348,20 @@ expiration or eviction require deterministic logging.
 
 Do not claim transaction-level crash atomicity
 before testing the actual design.
+
+---
+
+### Stage 3A lifecycle selection (2026-10-25)
+
+Tentative command execution and reply preparation precede a versioned binary
+journal of committed key postimages/tombstones, including eviction. Required
+synchronization precedes allocation-free memory publication and successful reply
+queueing. An atomic checksummed commit watermark detects loss of synchronized
+records. Persistence failures stop serving; startup fails closed on corruption
+or partial tails. Recovery restores absolute deadlines and the existing ledger.
+This implements ADR-006's AOF boundary and adopts ADR-011's portable framing and
+publication principles without implementing snapshots. See [AOF.md](AOF.md) for
+format, ordering, syscall guarantees, failure ambiguity and staging costs.
 
 ---
 

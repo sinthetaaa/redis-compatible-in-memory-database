@@ -25,7 +25,9 @@
 
 #include <chrono>
 #include <csignal>
+#include <exception>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -49,9 +51,39 @@ void install_command_signals() {
     }
 }
 
+// AOF's read fast path must use the same instant for the due-expiry check
+// and execution. Otherwise a read can cross a deadline and remove a key
+// outside a persistence transaction. Nonpersistent behavior stays unchanged.
+class CommandClock final : public storage::Clock {
+  public:
+    explicit CommandClock(const storage::Clock& source) : source_(source) {}
+    storage::MonotonicTimePoint monotonic_now() const noexcept override {
+        return source_.monotonic_now();
+    }
+    storage::WallTimePoint wall_now() const noexcept override {
+        return sample_ ? *sample_ : source_.wall_now();
+    }
+    class Scope {
+      public:
+        Scope(CommandClock& clock, bool enabled) : clock_(clock) {
+            if (enabled)
+                clock_.sample_ = clock_.source_.wall_now();
+        }
+        ~Scope() { clock_.sample_.reset(); }
+
+      private:
+        CommandClock& clock_;
+    };
+
+  private:
+    const storage::Clock& source_;
+    std::optional<storage::WallTimePoint> sample_;
+};
+
 } // namespace
 
-void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::MemoryOptions memory) {
+void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::MemoryOptions memory,
+                      persistence::AofOptions aof) {
     if (max_clients == 0) {
         throw std::invalid_argument("max_clients must be positive");
     }
@@ -65,7 +97,14 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     // One database for all TCP connections; the single event-loop thread
     // serializes each command. It must outlive dispatcher route closures.
     storage::SystemClock server_clock;
-    storage::Database database(server_clock, memory);
+    CommandClock command_clock(server_clock);
+    storage::Database database(command_clock, memory);
+    std::unique_ptr<persistence::AofLog> journal;
+    if (aof.enabled) {
+        journal = std::make_unique<persistence::AofLog>(aof, server_clock);
+        journal->recover(database); // no readiness/command execution before complete validation
+    }
+    std::exception_ptr persistence_failure;
     auto routes = commands::connectivity_routes();
     for (auto& route : commands::string_routes(database)) {
         routes.push_back(std::move(route));
@@ -89,17 +128,44 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
         // RESP2 input is framed and decoded through the existing bounded pipeline.
         // QUIT requests a graceful close only after its +OK reply has been sent.
         const auto outcome = pipeline.drain(connection, [&](const protocol::RespValue& request) {
+            if (persistence_failure) {
+                std::rethrow_exception(persistence_failure);
+            }
+            CommandClock::Scope command_time(command_clock, journal != nullptr);
             auto decoded = commands::decode_command(request);
             if (!decoded.command) {
                 return protocol::RespValue::error("ERR expected RESP2 array of bulk strings");
             }
 
+            const auto& name = decoded.command->name();
+            const bool mutating =
+                name == "SET" || name == "MSET" || name == "APPEND" || name == "INCR" ||
+                name == "DECR" || name == "INCRBY" || name == "DECRBY" || name == "DEL" ||
+                name == "EXPIRE" || name == "PEXPIRE" || name == "PERSIST" || name == "LPUSH" ||
+                name == "RPUSH" || name == "LPOP" || name == "RPOP" || name == "HSET" ||
+                name == "HDEL" || name == "SADD" || name == "SREM";
+            std::unique_ptr<storage::Database::Transaction> transaction;
+            if (journal && (mutating || database.has_due_expiration())) {
+                transaction = std::make_unique<storage::Database::Transaction>(database);
+            }
             auto dispatched = dispatcher.dispatch(*decoded.command);
             if (!dispatched.handled) {
                 if (dispatched.error != commands::DispatchError::UnknownCommand) {
                     throw std::logic_error("unexpected dispatcher outcome");
                 }
                 return commands::unknown_command_reply(*decoded.command);
+            }
+
+            if (transaction &&
+                !std::holds_alternative<protocol::Error>(dispatched.handled->reply.storage())) {
+                const auto effects = transaction->effects();
+                try {
+                    journal->append(effects); // always policy syncs here, before publication/reply
+                } catch (...) {
+                    persistence_failure = std::current_exception();
+                    throw;
+                }
+                transaction->commit(); // allocation-free publication; errors roll back by RAII
             }
 
             if (dispatched.handled->disposition ==
@@ -132,13 +198,31 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     auto next_sweep = server_clock.monotonic_now();
     while (command_stop_requested == 0) {
         (void)manager.poll_once(PollInterval);
+        // ConnectionManager isolates ordinary client exceptions. A journal
+        // failure is process-fatal, including other callbacks in this poll turn.
+        if (persistence_failure) {
+            std::rethrow_exception(persistence_failure);
+        }
         // Maintenance is outside each individual command but serialized on
         // the same event-loop thread: bounded work, no data races or timers.
         const auto current = server_clock.monotonic_now();
         if (current >= next_sweep) {
-            (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+            if (journal && database.has_due_expiration()) {
+                storage::Database::Transaction transaction(database);
+                (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+                journal->append(transaction.effects());
+                transaction.commit();
+            } else if (!journal) {
+                (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+            }
             next_sweep = current + PollInterval;
         }
+        if (journal) {
+            journal->tick();
+        }
+    }
+    if (journal) {
+        journal->finish();
     }
     std::cout << "RESP_STOPPED\n" << std::flush;
 }

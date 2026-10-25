@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -60,6 +61,17 @@ struct MemoryOptions {
     EvictionPolicy policy = EvictionPolicy::NoEviction;
 };
 
+// Owned command effects, never incoming commands or process-local object layouts.
+struct EntryEffect {
+    std::string key;
+    std::optional<Entry> replacement; // nullopt is a tombstone
+};
+struct CommittedEffects {
+    std::vector<EntryEffect> entries;
+    bool has_lru = false;
+    std::vector<std::string> lru_order; // oldest first, at this data commit
+};
+
 class MemoryLimitError final : public std::runtime_error {
   public:
     MemoryLimitError()
@@ -74,6 +86,7 @@ class MemoryLimitError final : public std::runtime_error {
 // expiry. Optional limits use the logical ledger, never physical RSS.
 class Database final {
   public:
+    class Transaction;
     // The default database uses a process-lifetime production SystemClock.
     // An injected clock must outlive this Database (borrowed const reference).
     Database() noexcept;
@@ -202,6 +215,11 @@ class Database final {
     [[nodiscard]] std::size_t size() const noexcept { return entries_.size(); }
     // O(1) deterministic logical charged bytes. Physically present stale keys count.
     [[nodiscard]] std::size_t accounted_bytes() const noexcept { return accounted_bytes_; }
+    [[nodiscard]] bool has_due_expiration() const noexcept;
+    // Startup only: replay effects without re-running commands or eviction.
+    // A replay failure requires discarding the startup database.
+    void replay_effects(const CommittedEffects& effects);
+    void finish_recovery(); // purge due deadlines, then enforce configured capacity
     void clear() noexcept {
         entries_.clear();
         expiry_index_.clear();
@@ -220,6 +238,9 @@ class Database final {
     void commit_entries(EntryMap staged);
     void touch(EntryMap::const_iterator found) const noexcept;
     void erase_entry(EntryMap::iterator found) const;
+    void swap_state(Database& other) noexcept;
+    [[nodiscard]] std::unique_ptr<Database> clone_state() const;
+    bool transaction_active_ = false;
     MemoryOptions memory_options_;
     mutable std::list<std::string> lru_; // oldest at front, newest at back
     mutable EntryMap entries_;
@@ -236,6 +257,24 @@ class Database final {
         }
     };
     mutable std::set<ExpiryKey, ExpiryLess> expiry_index_;
+};
+
+// Persistence-only tentative command execution. Cloning and effect construction
+// can throw; rollback and publication cannot. Serialized callers must not expose
+// the tentative database until commit. Read-only normal traffic need not clone.
+class Database::Transaction final {
+  public:
+    explicit Transaction(Database& database);
+    ~Transaction() noexcept;
+    Transaction(const Transaction&) = delete;
+    Transaction& operator=(const Transaction&) = delete;
+    [[nodiscard]] CommittedEffects effects() const;
+    void commit() noexcept;
+
+  private:
+    Database& database_;
+    std::unique_ptr<Database> original_;
+    bool committed_ = false;
 };
 
 } // namespace redisdb::storage

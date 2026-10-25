@@ -4,6 +4,9 @@
 
 # Runtime database storage
 /data/
+/appendonly.aof
+/appendonly.aof.commit
+/appendonly.aof.commit.tmp.*
 
 # Generated benchmark outputs
 /benchmark-results/

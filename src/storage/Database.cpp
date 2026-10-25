@@ -1,6 +1,7 @@
 #include "redisdb/storage/Database.hpp"
 #include "redisdb/storage/MemoryAccounting.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <iterator>
 #include <limits>
@@ -29,6 +30,127 @@ Database::Database(MemoryOptions options) noexcept
     : clock_(production_clock()), memory_options_(options) {}
 Database::Database(const Clock& clock, MemoryOptions options) noexcept
     : clock_(clock), memory_options_(options) {}
+
+void Database::swap_state(Database& other) noexcept {
+    entries_.swap(other.entries_);
+    expiry_index_.swap(other.expiry_index_);
+    lru_.swap(other.lru_);
+    std::swap(accounted_bytes_, other.accounted_bytes_);
+}
+
+std::unique_ptr<Database> Database::clone_state() const {
+    auto clone = std::make_unique<Database>(clock_, memory_options_);
+    clone->entries_ = entries_;
+    clone->expiry_index_ = expiry_index_;
+    clone->lru_ = lru_;
+    for (auto it = clone->lru_.begin(); it != clone->lru_.end(); ++it) {
+        clone->entries_.at(*it).lru_position = it;
+    }
+    clone->accounted_bytes_ = accounted_bytes_;
+    return clone;
+}
+
+Database::Transaction::Transaction(Database& database) : database_(database) {
+    if (database_.transaction_active_) {
+        throw std::logic_error("nested database transaction");
+    }
+    original_ = database_.clone_state();
+    database_.swap_state(*original_);
+    database_.transaction_active_ = true;
+}
+
+Database::Transaction::~Transaction() noexcept {
+    if (!committed_) {
+        database_.swap_state(*original_);
+    }
+    database_.transaction_active_ = false;
+}
+
+void Database::Transaction::commit() noexcept { committed_ = true; }
+
+CommittedEffects Database::Transaction::effects() const {
+    CommittedEffects result;
+    for (const auto& [key, entry] : original_->entries_) {
+        (void)entry;
+        if (!database_.entries_.contains(key)) {
+            result.entries.push_back({key, std::nullopt});
+        }
+    }
+    for (const auto& [key, entry] : database_.entries_) {
+        const auto old = original_->entries_.find(key);
+        if (old == original_->entries_.end() || old->second.value != entry.value ||
+            old->second.expires_at != entry.expires_at) {
+            result.entries.push_back({key, entry});
+        }
+    }
+    std::sort(result.entries.begin(), result.entries.end(),
+              [](const auto& a, const auto& b) { return a.key < b.key; });
+    result.has_lru = database_.memory_options_.policy == EvictionPolicy::AllKeysLru;
+    if (result.has_lru && !result.entries.empty()) {
+        result.lru_order.assign(database_.lru_.begin(), database_.lru_.end());
+    }
+    return result;
+}
+
+bool Database::has_due_expiration() const noexcept {
+    return !expiry_index_.empty() && expiry_index_.begin()->first <= clock_.wall_now();
+}
+
+void Database::replay_effects(const CommittedEffects& effects) {
+    const auto saved_limit = memory_options_.max_bytes;
+    memory_options_.max_bytes.reset();
+    try {
+        EntryMap replacements;
+        for (const auto& effect : effects.entries) {
+            if (effect.replacement) {
+                Entry entry{effect.replacement->value, effect.replacement->expires_at};
+                replacements.emplace(effect.key, std::move(entry));
+            } else {
+                const auto found = entries_.find(effect.key);
+                if (found != entries_.end()) {
+                    erase_entry(found);
+                }
+            }
+        }
+        commit_entries(std::move(replacements));
+        if (memory_options_.policy == EvictionPolicy::AllKeysLru) {
+            std::list<std::string> order;
+            if (effects.has_lru) {
+                if (effects.lru_order.size() != entries_.size()) {
+                    throw std::runtime_error("AOF LRU key count mismatch");
+                }
+                std::set<std::string_view> unique;
+                for (const auto& key : effects.lru_order) {
+                    if (!entries_.contains(key) || !unique.insert(key).second) {
+                        throw std::runtime_error("AOF invalid LRU key");
+                    }
+                    order.push_back(key);
+                }
+            } else {
+                for (const auto& [key, entry] : entries_) {
+                    (void)entry;
+                    order.push_back(key);
+                }
+                order.sort(); // policy changed from noeviction: deterministic cold start
+            }
+            lru_.swap(order);
+            for (auto it = lru_.begin(); it != lru_.end(); ++it) {
+                entries_.at(*it).lru_position = it;
+            }
+        }
+    } catch (...) {
+        memory_options_.max_bytes = saved_limit;
+        throw;
+    }
+    memory_options_.max_bytes = saved_limit;
+}
+
+void Database::finish_recovery() {
+    (void)sweep_expired(std::numeric_limits<std::size_t>::max());
+    if (memory_options_.max_bytes && accounted_bytes_ > *memory_options_.max_bytes) {
+        throw MemoryLimitError{}; // never silently evict committed state at startup
+    }
+}
 
 void Database::touch(EntryMap::const_iterator found) const noexcept {
     if (memory_options_.policy == EvictionPolicy::AllKeysLru) {
