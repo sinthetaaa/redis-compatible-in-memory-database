@@ -6,6 +6,7 @@ on:
       - main
       - phase2g/resp2-parser-fuzz-foundation
       - 'phase*/**'
+      - 'fasttrack/**'
   pull_request:
     branches:
       - main
@@ -46,6 +47,7 @@ jobs:
           cmake -S . -B build/fuzz-linux -G Ninja \
             -DCMAKE_CXX_COMPILER="$(command -v clang++-18)" \
             -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer" \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DREDISDB_ENABLE_FUZZ_TARGETS=ON \
             -DBUILD_TESTING=ON
@@ -72,6 +74,13 @@ jobs:
           assert len(seed) == 4, f'Expected 4 instrumented seed TUs, got {len(seed)}'
           assert all('-fsanitize=fuzzer-no-link,address,undefined' in e['command'] for e in fuzzer)
           assert all('-fsanitize=address,undefined' in e['command'] for e in seed)
+          core = [e for e in commands if '/redisdb-core.dir/' in e.get('command', '')]
+          memory_tests = [e for e in commands if '/redisdb-memory-limits-tests.dir/' in e.get('command', '')]
+          assert any(e['file'].endswith('/src/storage/Database.cpp') for e in core)
+          assert len(memory_tests) == 1, 'Memory-limit allocation-failure tests missing'
+          assert all('-fsanitize=address,undefined' in e['command'] for e in core + memory_tests), (
+              'Full-program storage/test sanitizer instrumentation missing'
+          )
           ninja = Path('build/fuzz-linux/build.ninja').read_text()
           assert '-fsanitize=fuzzer,address,undefined' in ninja, 'Fuzzer link flags missing'
           manifest = Path('build/fuzz-linux/fuzz-corpus.sha256')
@@ -104,7 +113,8 @@ jobs:
           assert len(counts) == 1 and int(counts[0]) >= 20, (
               f'Expected >=20 discovered CTests, got {counts}'
           )
-          for name in ('unit.command', 'fuzz.resp_parser_corpus_smoke'):
+          for name in ('unit.command', 'unit.memory_limits', 'integration.resp_memory_limits',
+                       'fuzz.resp_parser_corpus_smoke'):
               pattern = rf'(?m)^\s*Test\s+#\d+:\s+{re.escape(name)}\s*$'
               assert len(re.findall(pattern, discovery)) == 1, (
                   f'Expected exactly one discovered {name}'

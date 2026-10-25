@@ -54,18 +54,32 @@ enum class ExpireResult { Missing, Set, Deleted, OutOfRange };
 // nothing. An invalid positive deadline must not modify the old key.
 enum class SetWithExpiryResult { Set, OutOfRange };
 
+enum class EvictionPolicy { NoEviction, AllKeysLru };
+struct MemoryOptions {
+    std::optional<std::size_t> max_bytes{}; // nullopt: unlimited; zero: no data capacity
+    EvictionPolicy policy = EvictionPolicy::NoEviction;
+};
+
+class MemoryLimitError final : public std::runtime_error {
+  public:
+    MemoryLimitError()
+        : std::runtime_error("OOM command not allowed when used memory > 'maxmemory'.") {}
+};
+
 // Authoritative, process-local, binary-safe keyspace.
 // The caller serializes access; this class is not independently synchronized.
 // Phase 5C enforces deadlines on demand, using an injectable wall clock.
 // Logically const reads can remove expired entries; callers serialize access.
 // TTL/PTTL/PERSIST are introduced in 5E; Phase 5G adds bounded active
-// expiry. Eviction and durability/persistence to disk are not implemented.
+// expiry. Optional limits use the logical ledger, never physical RSS.
 class Database final {
   public:
     // The default database uses a process-lifetime production SystemClock.
     // An injected clock must outlive this Database (borrowed const reference).
     Database() noexcept;
     explicit Database(const Clock& clock) noexcept;
+    explicit Database(MemoryOptions options) noexcept;
+    Database(const Clock& clock, MemoryOptions options) noexcept;
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
     Database(Database&&) = delete;
@@ -82,8 +96,7 @@ class Database final {
                                                           std::int64_t amount, bool milliseconds);
 
     // Atomic multi-key replacement, with last-wins semantics for repeated keys.
-    // Clone and swap provides strong exception safety; optimized delta
-    // staging is deferred to a separate measured performance milestone.
+    // All destination nodes and indexes are staged before an allocation-free commit.
     void set_many(const std::vector<std::pair<std::string, std::string>>& pairs);
 
     // Atomically append binary bytes to a string, creating a missing key.
@@ -192,6 +205,7 @@ class Database final {
     void clear() noexcept {
         entries_.clear();
         expiry_index_.clear();
+        lru_.clear();
         accounted_bytes_ = 0;
     }
 
@@ -203,14 +217,25 @@ class Database final {
     using EntryMap = std::unordered_map<std::string, Entry, TransparentStringHash, std::equal_to<>>;
     void insert_new(std::string key, Entry staged);
     void replace_value(EntryMap::iterator found, Value staged);
+    void commit_entries(EntryMap staged);
+    void touch(EntryMap::const_iterator found) const noexcept;
     void erase_entry(EntryMap::iterator found) const;
+    MemoryOptions memory_options_;
+    mutable std::list<std::string> lru_; // oldest at front, newest at back
     mutable EntryMap entries_;
     mutable std::size_t accounted_bytes_ = 0;
     // Ordered index contains exactly one (deadline, binary key) per volatile
     // entry. All mutation paths maintain it; scans never depend on hash
-    // iterators surviving a rehash, erase or MSET clone-and-swap.
+    // iterators surviving a rehash, erase or atomic MSET replacement.
     using ExpiryKey = std::pair<WallTimePoint, std::string>;
-    mutable std::set<ExpiryKey> expiry_index_;
+    struct ExpiryLess {
+        using is_transparent = void;
+        template <class A, class B> bool operator()(const A& a, const B& b) const noexcept {
+            return a.first < b.first ||
+                   (a.first == b.first && std::string_view(a.second) < std::string_view(b.second));
+        }
+    };
+    mutable std::set<ExpiryKey, ExpiryLess> expiry_index_;
 };
 
 } // namespace redisdb::storage

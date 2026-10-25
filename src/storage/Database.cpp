@@ -25,39 +25,130 @@ const Clock& production_clock() noexcept {
 Database::Database() noexcept : clock_(production_clock()) {}
 Database::Database(const Clock& clock) noexcept : clock_(clock) {}
 
-void Database::insert_new(std::string key, Entry staged) {
-    namespace ma = memory_accounting;
-    const auto charge = ma::entry_charge(key, staged);
-    const auto next_total = ma::replacement_total(accounted_bytes_, 0, charge);
-    staged.accounted_charge = charge;
-    const auto [it, inserted] = entries_.try_emplace(std::move(key), std::move(staged));
-    (void)it;
-    if (!inserted) {
-        throw std::logic_error("ledger insertion expected an absent key");
+Database::Database(MemoryOptions options) noexcept
+    : clock_(production_clock()), memory_options_(options) {}
+Database::Database(const Clock& clock, MemoryOptions options) noexcept
+    : clock_(clock), memory_options_(options) {}
+
+void Database::touch(EntryMap::const_iterator found) const noexcept {
+    if (memory_options_.policy == EvictionPolicy::AllKeysLru) {
+        lru_.splice(lru_.end(), lru_, found->second.lru_position);
     }
+}
+
+void Database::commit_entries(EntryMap staged) {
+    namespace ma = memory_accounting;
+    static_assert(std::is_nothrow_move_assignable_v<Entry>);
+    auto next_total = accounted_bytes_;
+    auto required_entries = entries_.size();
+    std::size_t incoming = 0;
+    std::set<ExpiryKey, ExpiryLess> staged_expiry;
+    std::list<std::string> staged_lru;
+    for (auto& [key, entry] : staged) {
+        const auto old = entries_.find(key);
+        if (old != entries_.end()) {
+            next_total = ma::removal_total(next_total, old->second.accounted_charge);
+        } else {
+            required_entries = ma::checked_add(required_entries, 1);
+        }
+        entry.accounted_charge = ma::entry_charge(key, entry);
+        incoming = ma::checked_add(incoming, entry.accounted_charge);
+        if (entry.expires_at) {
+            staged_expiry.emplace(*entry.expires_at, key);
+        }
+        if (memory_options_.policy == EvictionPolicy::AllKeysLru) {
+            staged_lru.push_back(key);
+            entry.lru_position = std::prev(staged_lru.end());
+        }
+    }
+    // Stable ordering for the simultaneous MSET access: binary-key ascending.
+    staged_lru.sort();
+    next_total = ma::checked_add(next_total, incoming);
+    std::vector<EntryMap::iterator> victims;
+    // Reserve before retaining iterators or touching live data. Node transfer
+    // below cannot rehash or allocate (identical standard allocators/hash).
+    // The private map keeps its default max_load_factor of 1. Avoid reserve
+    // on every replacement: reserve may otherwise shrink/rehash the table.
+    if (required_entries > entries_.bucket_count()) {
+        entries_.reserve(required_entries);
+    }
+    if (memory_options_.max_bytes && next_total > *memory_options_.max_bytes) {
+        const auto limit = *memory_options_.max_bytes;
+        if (incoming > limit) {
+            throw MemoryLimitError{}; // destinations alone cannot fit
+        }
+        const auto now = clock_.wall_now();
+        for (auto it = expiry_index_.begin();
+             it != expiry_index_.end() && it->first <= now && next_total > limit; ++it) {
+            if (!staged.contains(it->second)) {
+                auto found = entries_.find(it->second);
+                victims.push_back(found);
+                next_total = ma::removal_total(next_total, found->second.accounted_charge);
+            }
+        }
+        if (next_total > limit && memory_options_.policy == EvictionPolicy::AllKeysLru) {
+            for (const auto& key : lru_) {
+                if (staged.contains(key)) {
+                    continue;
+                }
+                auto found = entries_.find(key);
+                // All eligible expired entries were selected above before live LRU.
+                if (found->second.expires_at && *found->second.expires_at <= now) {
+                    continue;
+                }
+                victims.push_back(found);
+                next_total = ma::removal_total(next_total, found->second.accounted_charge);
+                if (next_total <= limit) {
+                    break;
+                }
+            }
+        }
+        if (next_total > limit) {
+            throw MemoryLimitError{};
+        }
+    }
+    // Commit boundary: all potentially throwing allocation/validation is done.
+    // Heterogeneous index erasure avoids allocating key copies during teardown.
+    for (auto victim : victims) {
+        erase_entry(victim);
+    }
+    for (const auto& [key, entry] : staged) {
+        (void)entry;
+        const auto old = entries_.find(key);
+        if (old != entries_.end()) {
+            erase_entry(old);
+        }
+    }
+    while (!staged.empty()) {
+        (void)entries_.insert(staged.extract(staged.begin()));
+    }
+    expiry_index_.merge(staged_expiry);
+    lru_.splice(lru_.end(), staged_lru);
     accounted_bytes_ = next_total;
+}
+
+void Database::insert_new(std::string key, Entry staged) {
+    EntryMap replacements;
+    replacements.emplace(std::move(key), std::move(staged));
+    commit_entries(std::move(replacements));
 }
 
 void Database::replace_value(EntryMap::iterator found, Value staged) {
-    namespace ma = memory_accounting;
-    Entry proposed{std::move(staged), found->second.expires_at};
-    const auto charge = ma::entry_charge(found->first, proposed);
-    const auto next_total =
-        ma::replacement_total(accounted_bytes_, found->second.accounted_charge, charge);
-    found->second.value = std::move(proposed.value);
-    found->second.accounted_charge = charge;
-    accounted_bytes_ = next_total;
+    insert_new(found->first, Entry{std::move(staged), found->second.expires_at});
 }
 
 void Database::erase_entry(EntryMap::iterator found) const {
-    namespace ma = memory_accounting;
-    std::optional<ExpiryKey> indexed;
-    if (found->second.expires_at.has_value()) {
-        indexed.emplace(*found->second.expires_at, found->first);
+    const auto next_total =
+        memory_accounting::removal_total(accounted_bytes_, found->second.accounted_charge);
+    if (found->second.expires_at) {
+        const auto indexed = expiry_index_.find(
+            std::pair{*found->second.expires_at, std::string_view(found->first)});
+        if (indexed != expiry_index_.end()) {
+            expiry_index_.erase(indexed);
+        }
     }
-    const auto next_total = ma::removal_total(accounted_bytes_, found->second.accounted_charge);
-    if (indexed.has_value()) {
-        expiry_index_.erase(*indexed);
+    if (memory_options_.policy == EvictionPolicy::AllKeysLru) {
+        lru_.erase(found->second.lru_position);
     }
     entries_.erase(found);
     accounted_bytes_ = next_total;
@@ -92,26 +183,9 @@ std::optional<std::int64_t> parse_integer64(std::string_view text) noexcept {
 
 bool Database::set(std::string key, std::string bytes) {
     (void)expire_if_needed(key);
-    auto found = entries_.find(std::string_view(key));
-    if (found != entries_.end()) {
-        Value replacement = StringValue{std::move(bytes)};
-        const Entry staged_charge_source{replacement}; // plain SET clears the old TTL
-        const auto new_charge = memory_accounting::entry_charge(found->first, staged_charge_source);
-        const auto next_total = memory_accounting::replacement_total(
-            accounted_bytes_, found->second.accounted_charge, new_charge);
-        if (found->second.expires_at.has_value()) {
-            // Index removal precedes the no-throw value move. Any key-copy
-            // allocation failure leaves the old entry completely untouched.
-            expiry_index_.erase(ExpiryKey{*found->second.expires_at, found->first});
-        }
-        found->second.value = std::move(replacement);
-        found->second.expires_at.reset();
-        found->second.accounted_charge = new_charge;
-        accounted_bytes_ = next_total;
-        return false;
-    }
+    const bool created = !entries_.contains(key);
     insert_new(std::move(key), Entry{Value{StringValue{std::move(bytes)}}});
-    return true;
+    return created;
 }
 
 SetWithExpiryResult Database::set_with_expiration(std::string key, std::string bytes,
@@ -141,61 +215,16 @@ SetWithExpiryResult Database::set_with_expiration(std::string key, std::string b
     const WallTimePoint deadline{NativeDuration{now_ticks + delta}};
     Entry replacement{Value{StringValue{std::move(bytes)}}, deadline};
 
-    // Stage index allocation before touching the authoritative entry.
-    // Roll back the new index record if insertion of a new entry throws.
-    const auto found = entries_.find(std::string_view(key));
-    std::optional<ExpiryKey> previous_record;
-    if (found != entries_.end() && found->second.expires_at.has_value() &&
-        *found->second.expires_at != deadline) {
-        previous_record.emplace(*found->second.expires_at, found->first);
-    }
-    const auto charge = memory_accounting::entry_charge(key, replacement);
-    const auto old_charge = found == entries_.end() ? 0 : found->second.accounted_charge;
-    const auto next_total =
-        memory_accounting::replacement_total(accounted_bytes_, old_charge, charge);
-    replacement.accounted_charge = charge;
-    const auto indexed = expiry_index_.emplace(deadline, key);
-    if (found != entries_.end()) {
-        found->second = std::move(replacement);
-        if (previous_record.has_value()) {
-            expiry_index_.erase(*previous_record);
-        }
-    } else {
-        try {
-            (void)entries_.try_emplace(std::move(key), std::move(replacement));
-        } catch (...) {
-            if (indexed.second) {
-                expiry_index_.erase(indexed.first);
-            }
-            throw;
-        }
-    }
-    accounted_bytes_ = next_total;
+    insert_new(std::move(key), std::move(replacement));
     return SetWithExpiryResult::Set;
 }
 
 void Database::set_many(const std::vector<std::pair<std::string, std::string>>& pairs) {
-    // Both authoritative structures are fully staged before commit.
-    // Duplicate MSET keys are last-wins, while prior TTL metadata is cleared.
-    auto next = entries_;
-    auto next_expiry = expiry_index_;
-    auto next_total = accounted_bytes_;
+    EntryMap staged;
     for (const auto& [key, bytes] : pairs) {
-        const auto existing = next.find(key);
-        Entry staged{Value{StringValue{bytes}}};
-        const auto charge = memory_accounting::entry_charge(key, staged);
-        const auto old_charge = existing == next.end() ? 0 : existing->second.accounted_charge;
-        const auto candidate = memory_accounting::replacement_total(next_total, old_charge, charge);
-        staged.accounted_charge = charge;
-        if (existing != next.end() && existing->second.expires_at.has_value()) {
-            next_expiry.erase(ExpiryKey{*existing->second.expires_at, existing->first});
-        }
-        next.insert_or_assign(key, std::move(staged));
-        next_total = candidate;
+        staged.insert_or_assign(key, Entry{Value{StringValue{bytes}}});
     }
-    entries_.swap(next);
-    expiry_index_.swap(next_expiry);
-    accounted_bytes_ = next_total;
+    commit_entries(std::move(staged));
 }
 
 std::optional<std::size_t> Database::append(std::string_view key, std::string_view suffix,
@@ -239,6 +268,7 @@ std::size_t Database::string_length(std::string_view key) const {
     if (found == entries_.end()) {
         return 0;
     }
+    touch(found);
     const auto* string_value = std::get_if<StringValue>(&found->second.value);
     if (string_value == nullptr) {
         throw WrongTypeError{};
@@ -295,32 +325,18 @@ bool Database::set_expiration(std::string_view key, WallTimePoint deadline) {
     if (found == entries_.end()) {
         return false;
     }
-    const auto previous = found->second.expires_at;
-    std::optional<ExpiryKey> previous_record;
-    if (previous.has_value() && *previous != deadline) {
-        previous_record.emplace(*previous, found->first);
-    }
-    const auto delta =
-        memory_accounting::checked_add(memory_accounting::kExpiryFixedBytes, found->first.size());
-    const auto charge = previous.has_value()
-                            ? found->second.accounted_charge
-                            : memory_accounting::checked_add(found->second.accounted_charge, delta);
-    const auto candidate = memory_accounting::replacement_total(
-        accounted_bytes_, found->second.accounted_charge, charge);
-    (void)expiry_index_.emplace(deadline, found->first);
-    found->second.expires_at = deadline;
-    if (previous_record.has_value()) {
-        expiry_index_.erase(*previous_record);
-    }
-    found->second.accounted_charge = charge;
-    accounted_bytes_ = candidate;
+    insert_new(found->first, Entry{found->second.value, deadline});
     return true;
 }
 
 std::optional<WallTimePoint> Database::expiration(std::string_view key) const {
     (void)expire_if_needed(key);
     const auto found = entries_.find(key);
-    return found == entries_.end() ? std::nullopt : found->second.expires_at;
+    if (found == entries_.end()) {
+        return std::nullopt;
+    }
+    touch(found);
+    return found->second.expires_at;
 }
 
 bool Database::clear_expiration(std::string_view key) {
@@ -340,10 +356,12 @@ bool Database::clear_expiration(std::string_view key) {
     const auto charge = found->second.accounted_charge - delta;
     const auto candidate = memory_accounting::replacement_total(
         accounted_bytes_, found->second.accounted_charge, charge);
-    expiry_index_.erase(ExpiryKey{*found->second.expires_at, found->first});
+    expiry_index_.erase(
+        expiry_index_.find(std::pair{*found->second.expires_at, std::string_view(found->first)}));
     found->second.expires_at.reset();
     found->second.accounted_charge = charge;
     accounted_bytes_ = candidate;
+    touch(found);
     return true;
 }
 
@@ -381,25 +399,7 @@ ExpireResult Database::expire_after(std::string_view key, std::int64_t amount, b
         return ExpireResult::OutOfRange;
     }
     const WallTimePoint deadline{NativeDuration{now_ticks + delta}};
-    std::optional<ExpiryKey> previous_record;
-    if (previous.has_value() && *previous != deadline) {
-        previous_record.emplace(*previous, found->first);
-    }
-    const auto ledger_charge_delta =
-        memory_accounting::checked_add(memory_accounting::kExpiryFixedBytes, found->first.size());
-    const auto charge =
-        previous.has_value()
-            ? found->second.accounted_charge
-            : memory_accounting::checked_add(found->second.accounted_charge, ledger_charge_delta);
-    const auto candidate = memory_accounting::replacement_total(
-        accounted_bytes_, found->second.accounted_charge, charge);
-    (void)expiry_index_.emplace(deadline, found->first);
-    found->second.expires_at = deadline;
-    if (previous_record.has_value()) {
-        expiry_index_.erase(*previous_record);
-    }
-    found->second.accounted_charge = charge;
-    accounted_bytes_ = candidate;
+    insert_new(found->first, Entry{found->second.value, deadline});
     return ExpireResult::Set;
 }
 
@@ -411,6 +411,7 @@ std::int64_t Database::remaining_ttl(std::string_view key, bool milliseconds) co
         return -2;
     }
     if (!found->second.expires_at.has_value()) {
+        touch(found);
         return -1;
     }
     const auto now = clock_.wall_now();
@@ -420,6 +421,7 @@ std::int64_t Database::remaining_ttl(std::string_view key, bool milliseconds) co
         return -2;
     }
 
+    touch(found);
     using Duration = WallTimePoint::duration;
     using Rep = Duration::rep;
     using Period = Duration::period;
@@ -454,6 +456,7 @@ StoredType Database::type_of(std::string_view key) const {
     if (found == entries_.end()) {
         return StoredType::None;
     }
+    touch(found);
     switch (found->second.value.index()) {
     case 0:
         return StoredType::String;
@@ -507,6 +510,7 @@ std::size_t Database::list_length(std::string_view key) const {
     if (found == entries_.end()) {
         return 0;
     }
+    touch(found);
     const auto* list = std::get_if<ListValue>(&found->second.value);
     if (list == nullptr) {
         throw WrongTypeError{};
@@ -548,6 +552,7 @@ std::optional<std::string> Database::list_pop(std::string_view key, bool left) {
         }
         found->second.accounted_charge = charge;
         accounted_bytes_ = candidate;
+        touch(found);
     }
     return result;
 }
@@ -560,6 +565,7 @@ std::optional<std::vector<std::string>> Database::list_range(std::string_view ke
     if (found == entries_.end()) {
         return std::vector<std::string>{};
     }
+    touch(found);
     const auto* list = std::get_if<ListValue>(&found->second.value);
     if (list == nullptr) {
         throw WrongTypeError{};
@@ -662,6 +668,7 @@ std::optional<std::string> Database::hash_get(std::string_view key, std::string_
     if (found == entries_.end()) {
         return std::nullopt;
     }
+    touch(found);
     const auto* hash = std::get_if<HashValue>(&found->second.value);
     if (hash == nullptr) {
         throw WrongTypeError{};
@@ -679,6 +686,7 @@ bool Database::hash_exists(std::string_view key, std::string_view field) const {
     if (found == entries_.end()) {
         return false;
     }
+    touch(found);
     const auto* hash = std::get_if<HashValue>(&found->second.value);
     if (hash == nullptr) {
         throw WrongTypeError{};
@@ -692,6 +700,7 @@ std::size_t Database::hash_length(std::string_view key) const {
     if (found == entries_.end()) {
         return 0;
     }
+    touch(found);
     const auto* hash = std::get_if<HashValue>(&found->second.value);
     if (hash == nullptr) {
         throw WrongTypeError{};
@@ -718,6 +727,7 @@ std::size_t Database::hash_delete(std::string_view key, const std::vector<std::s
         removed += next.fields.erase(field);
     }
     if (removed == 0) {
+        touch(found);
         return 0;
     }
     if (next.fields.empty()) {
@@ -739,6 +749,7 @@ Database::hash_items(std::string_view key, std::size_t max_reply_bytes) const {
     if (found == entries_.end()) {
         return std::vector<std::pair<std::string, std::string>>{};
     }
+    touch(found);
     const auto* hash = std::get_if<HashValue>(&found->second.value);
     if (hash == nullptr) {
         throw WrongTypeError{};
@@ -791,6 +802,7 @@ std::size_t Database::set_add(std::string key, const std::vector<std::string>& m
         }
     }
     if (inserted == 0) {
+        touch(found);
         return 0;
     }
     Value staged = SetValue{std::move(next)};
@@ -821,6 +833,7 @@ std::size_t Database::set_remove(std::string_view key, const std::vector<std::st
         removed += next.members.erase(member);
     }
     if (removed == 0) {
+        touch(found);
         return 0;
     }
     if (next.members.empty()) {
@@ -837,6 +850,7 @@ bool Database::set_contains(std::string_view key, std::string_view member) const
     if (found == entries_.end()) {
         return false;
     }
+    touch(found);
     const auto* set = std::get_if<SetValue>(&found->second.value);
     if (set == nullptr) {
         throw WrongTypeError{};
@@ -850,6 +864,7 @@ std::size_t Database::set_cardinality(std::string_view key) const {
     if (found == entries_.end()) {
         return 0;
     }
+    touch(found);
     const auto* set = std::get_if<SetValue>(&found->second.value);
     if (set == nullptr) {
         throw WrongTypeError{};
@@ -868,6 +883,7 @@ std::optional<std::vector<std::string>> Database::set_members(std::string_view k
     if (found == entries_.end()) {
         return std::vector<std::string>{};
     }
+    touch(found);
     const auto* set = std::get_if<SetValue>(&found->second.value);
     if (set == nullptr) {
         throw WrongTypeError{};
@@ -903,6 +919,7 @@ std::optional<std::string> Database::get(std::string_view key) const {
     if (found == entries_.end()) {
         return std::nullopt;
     }
+    touch(found);
     const auto* string_value = std::get_if<StringValue>(&found->second.value);
     if (string_value == nullptr) {
         throw WrongTypeError{};
@@ -912,7 +929,12 @@ std::optional<std::string> Database::get(std::string_view key) const {
 
 bool Database::exists(std::string_view key) const {
     (void)expire_if_needed(key);
-    return entries_.find(key) != entries_.end();
+    const auto found = entries_.find(key);
+    if (found == entries_.end()) {
+        return false;
+    }
+    touch(found);
+    return true;
 }
 
 bool Database::erase(std::string_view key) {
@@ -941,11 +963,10 @@ Database::SweepResult Database::sweep_expired(std::size_t budget) {
         // Protect against stale index records if a future writer is buggy.
         const auto found = entries_.find(earliest->second);
         if (found != entries_.end() && found->second.expires_at == earliest->first) {
-            const auto candidate =
-                memory_accounting::removal_total(accounted_bytes_, found->second.accounted_charge);
-            entries_.erase(found);
-            accounted_bytes_ = candidate;
+            erase_entry(found);
             ++result.deleted;
+            ++result.inspected;
+            continue;
         }
         expiry_index_.erase(earliest);
         ++result.inspected;

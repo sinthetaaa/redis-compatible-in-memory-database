@@ -21,7 +21,9 @@ void print_usage() {
               << "  redisdb-server --smoke-echo [--port PORT]"
                  " [--max-clients COUNT]\n"
               << "  redisdb-server --resp2-server [--port PORT]"
-                 " [--max-clients COUNT]\n"
+                 " [--max-clients COUNT] [--maxmemory BYTES]"
+                 " [--maxmemory-policy noeviction|allkeys-lru]\n"
+              << "  maxmemory: logical data charge, 0 = unlimited (default); not RSS.\n"
               << "\n"
               << "Smoke mode is for transport validation only.\n"
               << "It is NOT a Redis-compatible command server.\n"
@@ -81,6 +83,9 @@ int main(int argc, char* argv[]) {
 
     bool port_seen = false;
     bool clients_seen = false;
+    bool memory_seen = false;
+    bool policy_seen = false;
+    redisdb::storage::MemoryOptions memory;
 
     for (int index = 2; index < argc; index += 2) {
         if (index + 1 >= argc) {
@@ -115,12 +120,34 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        if (mode == "--resp2-server" && option == "--maxmemory" && !memory_seen) {
+            std::size_t parsed = 0;
+            if (!parse_unsigned(value, parsed)) {
+                return invalid_arguments();
+            }
+            if (parsed != 0) {
+                memory.max_bytes = parsed;
+            }
+            memory_seen = true;
+            continue;
+        }
+        if (mode == "--resp2-server" && option == "--maxmemory-policy" && !policy_seen) {
+            if (value == "noeviction") {
+                memory.policy = redisdb::storage::EvictionPolicy::NoEviction;
+            } else if (value == "allkeys-lru") {
+                memory.policy = redisdb::storage::EvictionPolicy::AllKeysLru;
+            } else {
+                return invalid_arguments();
+            }
+            policy_seen = true;
+            continue;
+        }
         return invalid_arguments();
     }
 
     try {
         if (mode == "--resp2-server") {
-            redisdb::server::run_resp2_server(port, max_clients);
+            redisdb::server::run_resp2_server(port, max_clients, memory);
         } else {
             redisdb::server::run_smoke_echo(port, max_clients);
         }

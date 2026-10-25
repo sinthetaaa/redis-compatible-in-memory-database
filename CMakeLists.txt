@@ -101,6 +101,12 @@ if(BUILD_TESTING)
     if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+        add_test(NAME integration.resp_memory_limits
+                 COMMAND "${Python3_EXECUTABLE}"
+                         "${PROJECT_SOURCE_DIR}/tests/integration/resp_memory_limits_test.py"
+                         "$<TARGET_FILE:redisdb-server>")
+        set_tests_properties(integration.resp_memory_limits PROPERTIES TIMEOUT 60)
+
         add_test(
             NAME integration.server_smoke
             COMMAND
@@ -391,6 +397,12 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-live-ledger-tests)
     add_test(NAME unit.live_memory_ledger COMMAND redisdb-live-ledger-tests)
     set_tests_properties(unit.live_memory_ledger PROPERTIES TIMEOUT 30)
+
+    add_executable(redisdb-memory-limits-tests tests/unit/memory_limits_test.cpp)
+    target_link_libraries(redisdb-memory-limits-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-memory-limits-tests)
+    add_test(NAME unit.memory_limits COMMAND redisdb-memory-limits-tests)
+    set_tests_properties(unit.memory_limits PROPERTIES TIMEOUT 30)
 
     # Phase 6E.1A: cross-type WRONGTYPE matrix (four value families).
     add_executable(redisdb-wrongtype-matrix-tests tests/unit/wrongtype_matrix_test.cpp)

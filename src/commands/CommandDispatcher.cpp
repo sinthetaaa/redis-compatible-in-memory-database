@@ -1,4 +1,5 @@
 #include "redisdb/commands/CommandDispatcher.hpp"
+#include "redisdb/storage/Database.hpp"
 
 #include <stdexcept>
 #include <string>
@@ -44,7 +45,11 @@ DispatchResult CommandDispatcher::dispatch(const Command& command) const {
     if (match == registry_.end()) {
         return {std::nullopt, DispatchError::UnknownCommand};
     }
-    return {std::optional<HandlerResult>{match->second(command)}, DispatchError::None};
+    try {
+        return {std::optional<HandlerResult>{match->second(command)}, DispatchError::None};
+    } catch (const storage::MemoryLimitError& error) {
+        return {HandlerResult{protocol::RespValue::error(error.what())}, DispatchError::None};
+    }
 }
 
 } // namespace redisdb::commands
