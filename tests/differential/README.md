@@ -34,3 +34,34 @@ Native smoke after a verified Debug build:
 long randomized traces, TTL races, Linux, or mismatch replay; those remain
 Phase 6G follow-on milestones. All files are kept local and uncommitted at
 6G.1A until the independent evidence review.
+
+## Bounded mixed-command campaign (native macOS)
+
+`mixed_campaign.py` reuses the owned-process runner, pinned Redis and exact
+RESP2 replay format. Generator `phase6g-mixed-v1` runs seeds
+`0, 1, 7, 42, 99, 123, 256, 1024, 2026, 65535`, each with exactly 100 commands:
+8 setup, 60 mixed operations and 32 complete final-content probes. Two clients
+alternate sequentially; each seed covers all 39 midstream command names.
+Binary input, duplicate arguments, wrong types and type replacement are included.
+Requests and worst-case replies stay below 4096 bytes.
+
+Run with a fresh output directory outside the repository:
+
+```sh
+python3 tests/differential/mixed_campaign.py --custom build/debug/redisdb-server --reference /opt/homebrew/Cellar/redis/8.10.2_1/bin/redis-server --report-dir /tmp/redisdb-mixed-run
+python3 tests/differential/mixed_campaign.py --custom build/debug/redisdb-server --reference /opt/homebrew/Cellar/redis/8.10.2_1/bin/redis-server --report-dir /tmp/redisdb-mixed-replay --replay /tmp/redisdb-mixed-run/seed-42.json
+python3 -m unittest discover -s tests/differential -p 'test_*.py' -v
+```
+
+Each seed report preserves the full raw trace on success or failure, seed,
+generator version, trace digest, Git HEAD, platform, reference fingerprint,
+raw replies, first failing index and owned-child cleanup. Replay reads stored
+request bytes without calling the generator; existing reports are never replaced.
+Failure exits nonzero and stops the campaign without reducing its planned budget.
+
+Exclusions are recorded separately in every seed report: `QUIT` belongs to the
+curated termination suite; positive TTLs and natural expiry use `negative_ttl.py`
+clock policies. Mixed traces use plain `SET` and zero/negative expiry only, so
+`TTL`/`PTTL` state codes compare exactly. Redis-only routes, advanced options,
+unapproved numeric error cases, oversized data and protocol fuzzing are excluded.
+This campaign does not establish Linux/CI or full Phase 6G acceptance.
