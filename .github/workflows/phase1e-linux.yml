@@ -6,6 +6,7 @@ on:
       - main
       - phase1e/linux-epoll
       - 'phase*/**'
+      - 'fasttrack/**'
   pull_request:
     branches:
       - main

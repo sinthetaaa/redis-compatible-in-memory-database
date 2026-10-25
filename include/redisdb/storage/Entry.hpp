@@ -4,7 +4,9 @@
 #include "redisdb/storage/Value.hpp"
 
 #include <cstddef>
+#include <list>
 #include <optional>
+#include <string>
 
 namespace redisdb::storage {
 
@@ -18,6 +20,8 @@ struct Entry {
     std::optional<WallTimePoint> expires_at{};
     // V1 logical charge, not allocator usage; refreshed on every physical mutation.
     std::size_t accounted_charge = 0;
+    // Database-owned exact LRU index; valid only under AllKeysLru.
+    std::list<std::string>::iterator lru_position{};
 };
 
 } // namespace redisdb::storage

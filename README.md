@@ -8,20 +8,12 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-24):** Phases 0–5 and 6A–6F are formally
-COMPLETE. Phase 6F deterministic V1 logical-memory accounting was merged
-through source commit `9ff7b8eab1bdbf216346c337e911effcbfe136e8`
-and implementation main merge `dabe5941e385180d49da2abfbed9b818e4e06487`.
-The reviewed five-document feature `698b800b4e794d437f4bc6f21d7d1264283b5705` was merged through
-non-fast-forward main commit `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` (tree `8698677050cecbe36cb1588ac02610876cc2c5a4`).
-Feature-head docs CI `40070113583`/`40070113584` and post-closure
-main Linux Debug/Release `40070533556` and Clang 18 ASan/UBSan/libFuzzer
-`40070533439` passed every required job/step. Local macOS Debug/Release each
-passed 67/67 and fuzz-enabled passed 68/68; the 27-case external failure
-harness caught 142 injected allocation failures (not 142 distinct internal
-allocation sites). The V1 ledger estimates logical policy units, not RSS.
-Phase 6G differential testing is NEXT, NOT STARTED. Memory-limit enforcement,
-eviction, durability, snapshots, benchmarks and deployment remain future work.
+**Project status (2026-10-25):** Phases 0–5 and 6A–6F are complete.
+Fast-track Phase 6G is integrated at `7c5a70592d0843261048bd5b9a51d2745eeb6cf6`;
+its Linux-native differential campaign remains deferred to the Docker milestone.
+Fast-track Stage 2 adds optional logical-memory limits and exact all-keys LRU
+on the local `fasttrack/memory-limits-eviction` branch. Publication is pending.
+Durability, snapshots, benchmarks and deployment remain future work.
 Older acceptance records below retain their dated, historical context.
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
@@ -29,12 +21,41 @@ integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
 and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
 accesses return WRONGTYPE; MGET returns nil for non-string keys. The
 comprehensive Phase 6E wrong-type acceptance matrix and the Phase 6F internal
-logical-byte ledger implementation are complete. Redis differential testing,
-memory-limit enforcement, eviction, persistence, full Redis compatibility and
-deployment remain future milestones.
+logical-byte ledger implementation are complete. Default memory capacity remains
+unlimited; persistence, full Redis compatibility and deployment remain future work.
 
 The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
 The RESP2 mode now executes the documented string/key/TTL/list/hash/set subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
+
+## Memory limits and eviction
+
+```sh
+./build/debug/redisdb-server --resp2-server --maxmemory 1048576 --maxmemory-policy noeviction
+./build/debug/redisdb-server --resp2-server --maxmemory 1048576 --maxmemory-policy allkeys-lru
+```
+
+`--maxmemory` is an unsigned byte count in the unchanged Phase 6F V1 logical
+ledger, **not physical RSS**. Omitted/zero means unlimited. The default policy
+is `noeviction`; the C++ `MemoryOptions` API uses `nullopt` for unlimited and
+permits an explicit zero-capacity database. Configuration is startup-only.
+
+`allkeys-lru` is exact LRU over persistent and volatile live keys. Key reads
+(including existence/type/TTL probes and wrong-type probes) refresh recency;
+successful writes also refresh it. Maintenance does not. MSET's simultaneous
+destinations are refreshed in ascending binary-key order. Recency updates are
+O(1); pressure planning visits expired records first, then oldest eligible
+keys, skipping every destination of the current write. Victims are removed
+only once the complete write can commit. Oversized destinations are rejected
+without evicting unrelated keys. RESP2 capacity errors use the `OOM` category.
+
+All replacement data, index nodes, hash-table capacity and the victim plan are
+prepared before an allocation-free node-transfer commit. MSET stages only its
+final distinct destinations, with last occurrence winning; it no longer clones
+the entire database. Collection mutations and TTL attachment/renewal stage the
+complete affected value. Temporary staging allocations, network buffers and
+recency/index allocator overhead are outside the logical data budget; this is
+not a process-memory ceiling. Host allocation failures preserve live storage
+and propagate through the existing connection failure handling.
 
 ## Project Goals
 
@@ -62,9 +83,9 @@ list element 48; hash field 80; set member 56; expiry record 48, plus actual
 binary byte lengths. Phase 6F.2 adds `Entry::accounted_charge`, an O(1)
 `Database::accounted_bytes() const noexcept` internal C++ accessor, and
 checked total transitions for string/list/hash/set/TTL/expiry mutations.
-Physical expired entries remain charged until erased. `MSET` stages a
-clone-and-swap including the accounting total; no new RESP2 command is exposed.
-The implementation is not a memory-cap/eviction policy and is not RSS.
+Physical expired entries remain charged until erased. Phase 6F originally used
+clone-and-swap for MSET; Stage 2 replaces it with staged destination nodes.
+The ledger itself remains unchanged and is not RSS.
 
 Reviewed source: `CMakeLists.txt`, `Entry.hpp`, `Database.hpp`, `Database.cpp`,
 and `tests/unit/live_memory_ledger_test.cpp`. Feature `9ff7b8e`, guarded

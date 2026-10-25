@@ -10,7 +10,7 @@ namespace redisdb::storage::memory_accounting {
 // Version-1 deterministic accounting *policy units*: NOT RSS or measured
 // allocations. These uncalibrated coefficients are independent of platform,
 // std::string capacity, allocator, hash bucket count and temporary clones.
-// Revisit/calibrate before Phase 7 memory-limit enforcement.
+// Memory limits enforce these same policy units without claiming an RSS bound.
 inline constexpr std::size_t kKeyFixedBytes = 64;
 inline constexpr std::size_t kListElementFixedBytes = 48;
 inline constexpr std::size_t kHashFieldFixedBytes = 80;

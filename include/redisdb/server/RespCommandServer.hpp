@@ -1,12 +1,15 @@
 #pragma once
 
+#include "redisdb/storage/Database.hpp"
+
 #include <cstddef>
 #include <cstdint>
 
 namespace redisdb::server {
 
 // Limited RESP2 command-serving mode, bound only to 127.0.0.1.
-// Preserves --smoke-echo and does not implement a database keyspace.
-void run_resp2_server(std::uint16_t port, std::size_t max_clients);
+// The optional logical data budget is unlimited by default.
+void run_resp2_server(std::uint16_t port, std::size_t max_clients,
+                      storage::MemoryOptions memory = {});
 
 } // namespace redisdb::server

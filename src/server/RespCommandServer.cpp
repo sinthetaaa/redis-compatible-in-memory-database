@@ -51,7 +51,7 @@ void install_command_signals() {
 
 } // namespace
 
-void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
+void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::MemoryOptions memory) {
     if (max_clients == 0) {
         throw std::invalid_argument("max_clients must be positive");
     }
@@ -65,7 +65,7 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients) {
     // One database for all TCP connections; the single event-loop thread
     // serializes each command. It must outlive dispatcher route closures.
     storage::SystemClock server_clock;
-    storage::Database database(server_clock);
+    storage::Database database(server_clock, memory);
     auto routes = commands::connectivity_routes();
     for (auto& route : commands::string_routes(database)) {
         routes.push_back(std::move(route));
