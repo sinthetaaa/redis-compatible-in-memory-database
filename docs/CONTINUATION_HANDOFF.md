@@ -207,7 +207,8 @@ Network tests: new soak is 32 workers, 8 bounded turns each, 16 commands/turn,
 5-second socket limits and 60-second CTest ceiling. Server maxclients 40;
 RSS before/after sampled growth envelope 32 MiB native, 512 MiB when actual ASan
 instrumentation is detected by CMake; these samples are not peak RSS. Slow pipeline
-checks use 256 replies; shutdown exhaustion uses 4096 requests/potential 16 MiB
+checks use 1024 replies with a 64 KiB receive buffer; successful shutdown uses a
+separate normal-window client and 128 replies; shutdown exhaustion uses 4096 requests/potential 16 MiB
 stream with 64 KiB server application output, verifies a warning and bounded exit.
 Existing persistent soak now also has a 64-round hard cap per policy in addition
 to its time bound, connection bound, 512-reconnect cap and RSS/FD checks.
@@ -231,6 +232,28 @@ off and 10/10 with always; existing differential harness unit suite 41/41;
 changed C++ format checks and diff integrity passed. Python AST checks passed;
 PyYAML is unavailable locally, so workflow YAML parsing used Ruby Psych and passed. Prior full suites above remain
 applicable: this review changes test/CI code and documentation only.
+
+First publication CI on `208df581a8eaacf02faa9f74608092e4697e6289`:
+networking [40370462196](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40370462196)
+failed with 78/79 in each build; sanitizer
+[40370462216](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40370462216)
+failed with 79/80. Only integration.resp_operations failed: it demanded complete
+shutdown delivery through an artificially tiny receive window, exceeding the
+specified one-second network drain. Later networking repeats and coverage-guided
+fuzz executions were skipped, not passed. No sanitizer defect was reported.
+Docker [40370462235](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40370462235)
+passed, including 54/40 command parity, ten operational cases, private Compose and
+24-profile/48-run baselines; this does not substitute for corrected-head CI.
+
+Focused correction: retain slow-reader idle/backpressure coverage with a bounded
+1024-reply stream and 64 KiB receive buffer, use a separate normal-window client
+for successful shutdown draining, and retain the separate non-reader test that
+requires shutdown_drain_timeout. Do not require slow-reader completion beyond the
+server's documented deadline. Production behavior and durability are unchanged.
+Corrected local operations checks passed 2/2 each in Debug, Release and UBSan;
+Python syntax and git diff integrity passed. Follow-up exact-head CI is PENDING
+at this correction checkpoint; inspect all
+three new runs and their execution logs after the normal follow-up push.
 
 CI at feature publication: PENDING; no feature run is claimed passed in this commit.
 The Docker workflow now requires real execution of all ten operational cases,

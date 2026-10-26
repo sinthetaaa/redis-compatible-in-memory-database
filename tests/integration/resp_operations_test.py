@@ -184,20 +184,24 @@ def slow_pipeline_shutdown():
     with server('--idle-timeout-ms', '100') as running, running.connect() as slow, running.connect() as healthy:
         sr, hr = RespReader(slow), RespReader(healthy)
         assert command(healthy, hr, b'SET', b'large', b'x' * 4096) == OK
-        slow.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
-        slow.sendall(encode_command((b'GET', b'large')) * 256)
+        slow.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 64 * 1024)
+        slow.sendall(encode_command((b'GET', b'large')) * 1024)
         for _ in range(6):
             assert command(healthy, hr, b'PING') == PONG
             time.sleep(.03)
         # Active output/backpressured buffered requests survive the idle deadline.
-        for _ in range(256):
+        for _ in range(1024):
             assert sr.read_reply()[0] == RespValue('bulk', b'x' * 4096)
-        # Wait until output exists before signaling; no promise for unread kernel input.
-        slow.sendall(encode_command((b'GET', b'large')) * 128)
-        assert sr.read_reply()[0] == RespValue('bulk', b'x' * 4096)
-        running.proc.send_signal(signal.SIGTERM)
-        for _ in range(127):
-            assert sr.read_reply()[0] == RespValue('bulk', b'x' * 4096)
+        # Verify successful shutdown draining with a normal receive window.
+        # A deliberately slow reader is allowed to exceed the one-second drain;
+        # shutdown_deadline separately verifies that bounded truncation path.
+        with running.connect() as draining:
+            dr = RespReader(draining)
+            draining.sendall(encode_command((b'GET', b'large')) * 128)
+            assert dr.read_reply()[0] == RespValue('bulk', b'x' * 4096)
+            running.proc.send_signal(signal.SIGTERM)
+            for _ in range(127):
+                assert dr.read_reply()[0] == RespValue('bulk', b'x' * 4096)
 
 
 def shutdown_deadline():
