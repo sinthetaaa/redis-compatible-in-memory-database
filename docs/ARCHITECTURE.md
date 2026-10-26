@@ -6,12 +6,26 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state (2026-10-26):** Fast-track Stages 1–5A accepted at
-`832631ecec6afb55869514d2f3fa6fdd8155dc77`. Stage 6A operational/network
-changes are reviewed for feature publication; acceptance and Linux CI pending.
-[Handoff](CONTINUATION_HANDOFF.md) records scope, audit and exact validation.
-Original Phase 16 actual remote deployment is excluded, not claimed complete;
-Docker/Linux validation remains mandatory.
+**Architecture state (2026-10-27):** Stage 6A engineering, original Phases 11
+and 12, is COMPLETE AND ACCEPTED on main `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`.
+Feature `6f11ff21eeb5725e6b23cb5e45ecb57aaebe5059` was merged with exact feature-tree identity.
+Post-merge Networking 40375036254 (79/79 Debug and Release), sanitizer/fuzz
+40375036340 (80/80 plus 10,000 fuzz executions) and Docker 40375036503 (15
+container, 10 Compose, 54/40 command and 10 operational parity cases, 24 benchmark
+profiles/48 runs) all passed. [Handoff](CONTINUATION_HANDOFF.md) records exact
+parents/tree, evidence links, prior failures and bounded acceptance limits.
+
+The documentation-only closure on `fasttrack/stage6a-closure` was prepared
+uncommitted/unpublished. Review, normal feature commit/push and exact-head CI are
+now authorized; merge is not. No source, tests, CI or persistence behavior changes.
+Original Phase 16 is excluded by approved scope revision, not complete. No remote
+host was provisioned or deployed; Docker/Linux CI validation remains mandatory.
+
+Remaining engineering: **6B** safe AOF compaction (Phase 10); **6C** correctness
+and performance gates (Phases 13–14); **6D** roadmap reconciliation, final docs and
+demo (Phases 6–9, 15, 17); **6E** final engineering audit and portfolio closure
+(Phases 18–19). Stage 6B starts with detailed architecture and crash-safety design
+review before any persistence-code modification; no Stage 6B work has begun.
 
 Stage 6A keeps one event loop and accepted storage/persistence formats. INFO and
 CONFIG GET are intercepted after structural command decoding and before the
@@ -32,7 +46,21 @@ Lifecycle/error diagnostics use JSON lines on stderr with severity/event/detail,
 only static safe categories; readiness, snapshot and shutdown stdout markers remain.
 No per-request logging, thread, lock, telemetry queue or filesystem metric scan is
 added. Failed diagnostic write/flush exits 74; serious persistence errors remain
-fatal and receive no successful acknowledgment. [README operational contract](../README.md#operational-subset-stage-6a-local-checkpoint).
+fatal and receive no successful acknowledgment. [README operational contract](../README.md#operational-subset-stage-6a-accepted).
+
+Accepted INFO supports server, clients, stats, memory and persistence sections;
+no argument/default/all selects those sections, unknown sections return an empty
+RESP2 bulk string, and more than one section is rejected. CONFIG GET returns
+alternating bulk name/value arrays for nine safe startup settings, with exact or
+single trailing-star matching and canonical lowercase names. No CONFIG SET or
+private path reporting. Counters reset at restart and saturate at UINT64_MAX;
+logical charge is not RSS, and written AOF sequence is not weaker-policy durability.
+
+No storage or persistence invariant changed: command execution/maintenance remain
+serialized; noeviction preimage staging and exact-LRU clone fallback retain their
+rollback boundaries; required append/synchronization precedes successful mutation
+publication/reply. Snapshots remain serialized and coordinated with validated
+CURRENT/AOF prefixes. AOF/snapshot/watermark V1 formats remain unchanged.
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -482,6 +510,8 @@ Required behaviors:
 - Bounded client resource usage.
 
 ## 4.4 Backpressure
+
+Historical planning note (superseded by the accepted Stage 6A checkpoint above):
 
 Planned policies include:
 

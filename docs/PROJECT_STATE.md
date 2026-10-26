@@ -1,6 +1,53 @@
 # PROJECT STATE — Redis-Compatible In-Memory Database Server
 
-## 1. Current snapshot (2026-10-26)
+## 1. Current snapshot (2026-10-27)
+
+- **Stage 6A engineering: COMPLETE AND ACCEPTED.** All original Phase 11 tasks
+  11A–11H and Phase 12 tasks 12A–12G are complete to the documented subset and
+  bounded-soak scope. No full Redis compatibility or indefinite soak is claimed.
+- Accepted main: `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`. Feature
+  `6f11ff21eeb5725e6b23cb5e45ecb57aaebe5059` is preserved on `fasttrack/network-observability`.
+  Merge parents, in order: `832631ecec6afb55869514d2f3fa6fdd8155dc77` and
+  `6f11ff21eeb5725e6b23cb5e45ecb57aaebe5059`. Merge/feature tree:
+  `48b95456f18df6f35938c68e3f0177881277d3a0`. Normal non-fast-forward merge, exact tree equality.
+- Exact-main Networking [40375036254](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40375036254):
+  Debug 79/79 and Release 79/79; ASan/UBSan/fuzz
+  [40375036340](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40375036340):
+  80/80 and 10,000 bounded fuzz executions; Docker
+  [40375036503](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40375036503):
+  15 container tests, 10 private Compose checks, Redis 8.10.2 parity 54 cases/40
+  routes plus 10 operational cases, and 24 benchmark profiles/48 timed runs passed.
+  Both operations CTests executed in each Linux native configuration. Existing
+  networking, command, TTL, LRU, AOF, snapshot, recovery and rollback regressions passed.
+- Current task: separate **documentation-only closure**, prepared uncommitted/unpublished
+  on `fasttrack/stage6a-closure` from the clean accepted main. Only the six documentation paths listed in the
+  [handoff manifest](CONTINUATION_HANDOFF.md#current-accepted-baseline-and-documentation-closure)
+  are authorized. A normal closure commit/push is now authorized after review,
+  followed by exact-feature-head CI; merging is not authorized. No source/test/build/
+  CI/Docker changes. Main remains unchanged; no future closure SHA is claimed.
+- [Durable handoff](CONTINUATION_HANDOFF.md) retains the complete Phase 11/12 audit,
+  historical local and failed/corrected CI records, accepted operational contracts,
+  invariants and exact continuation. Accepted capabilities include startup-only
+  idle timeout, protected idle reaping, bounded shutdown drain, JSON diagnostics,
+  saturating counters and read-only INFO/CONFIG GET. AOF/snapshot V1 is unchanged.
+- **Original Phase 16: EXCLUDED BY APPROVED SCOPE REVISION**, not complete. No VPS
+  or remote deployment occurred; no card, SSH host or public server is required.
+  Docker/Linux validation remains mandatory and passed in GitHub-hosted CI;
+  no local Docker execution is claimed. All other original phases remain in scope.
+- Publication workflow: guarded review, one normal documentation commit/push and
+  exact-feature-head CI, then STOP for separate merge authorization. Preparation-time
+  uncommitted status is historical once published; inspect Git/CI for current state.
+
+Remaining engineering: **6B** safe AOF compaction (Phase 10); **6C** correctness
+and performance gates (Phases 13–14); **6D** roadmap reconciliation, final docs and
+demo (Phases 6–9, 15, 17); **6E** final engineering audit and portfolio closure
+(Phases 18–19). Stage 6B starts with detailed architecture and crash-safety design
+review before any persistence-code modification; no Stage 6B work has begun.
+
+The current snapshot and Section 16 control continuation; older engineering records
+below are retained as historical evidence and do not override them.
+
+## Historical Stage 6A pre-closure snapshot (2026-10-26; superseded)
 
 - Last verified accepted main: `832631ecec6afb55869514d2f3fa6fdd8155dc77`. Local main,
   fetched origin/main and remote main match; GitHub identity `sinthetaaa` verified.
@@ -203,6 +250,9 @@
 
 ## 3. Repository
 
+Historical repository lineage follows; current accepted main and documentation
+branch are recorded in Section 1. Older branch labels are not the current checkout.
+
 - Local path: /Users/sinthetaaa/Desktop/Projects/SDE-Projects/RedisCompatibleDB
 - Remote: https://github.com/sinthetaaa/redis-compatible-in-memory-database
 - Branch: main (Phase 5 audited baseline `479fdf4`; Phase 5A–5H feature branches retained)
@@ -327,6 +377,15 @@
 - Disk utilization during 0A: 98 percent
 
 ## 5. Roadmap Status
+
+Current Stage 6A closure: Phase 11 (11A–11H, bounded 11H scope) and Phase 12
+(12A–12G) are COMPLETE AND ACCEPTED. Phase 10 remains pending for Stage 6B;
+Phase 16 is excluded, not complete. Other original-phase checkbox reconciliation
+is deferred to Stage 6D; see Section 1 and [ROADMAP.md](ROADMAP.md).
+
+### Historical roadmap table (superseded)
+
+The following early table is preserved unchanged as history, not current status.
 
 | Phase | Description | Status |
 |---|---|---|
@@ -1327,12 +1386,19 @@ command routing, Redis command execution, keyspace or persistence.
 
 ## 11. Benchmarks
 
+Historical pre-benchmark note follows; accepted execution evidence is in Section 1
+and measured results/qualifications remain in [BENCHMARKS.md](BENCHMARKS.md).
+
 NOT STARTED.
 
 No operations-per-second, latency or memory
 performance claims are currently supported.
 
 ## 12. Deployment State
+
+Current scope: Docker/Linux CI validated; actual Phase 16 remote deployment is
+excluded and did not occur. The following pre-packaging record is historical,
+not a current requirement or deployment claim.
 
 - Linux build: VALIDATED on Ubuntu 24.04 x86-64 in Debug and Release; deployment not started
 - Docker packaging: NOT IMPLEMENTED
@@ -1424,6 +1490,24 @@ recovery testing has been completed.
 - Update this file after meaningful milestones.
 
 ## 16. Exact Next Steps
+
+**Current handoff (2026-10-27):** accepted main is
+`bf1f19f2961544b6524a3e31b4250ce4e9ff0952`; Stage 6A engineering and original
+Phases 11/12 are COMPLETE AND ACCEPTED. Review the six-document
+`fasttrack/stage6a-closure` branch, then perform its authorized normal commit/push
+and exact-head CI validation. STOP before merge; separate merge authorization
+is required. The closure was uncommitted at preparation; no Stage 6B work is authorized.
+
+Next engineering task: Stage 6B planning, Phase 10A/10B AOF growth analysis and
+rewrite design. Begin with detailed architecture and crash-safety review of
+sequence/offset coordination, safe replacement and interrupted recovery before
+modifying persistence code. Phase 10C–10G remain pending; preserve durability,
+transaction rollback and snapshot/AOF associations. See the
+[continuation handoff](CONTINUATION_HANDOFF.md#remaining-milestones-and-exact-next-step).
+
+### Superseded Phase 4 continuation checkpoint (historical only)
+
+The following dated instructions are preserved as history and are not current:
 
 **Current handoff (2026-10-23):** Phases 0–4 are implemented and
 accepted. Phase 4A–4H are already merged into `main` at the audited
