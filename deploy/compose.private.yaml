@@ -1,0 +1,78 @@
+name: redisdb-private
+services:
+  redisdb:
+    # Local immutable image ID, obtained after an explicitly reviewed build.
+    image: ${REDISDB_IMAGE_ID:?Set the immutable local sha256 image ID}
+    pull_policy: never
+    user: "10001:10001"
+    entrypoint: [/usr/local/bin/redisdb-server]
+    command:
+      - --resp2-server
+      - --bind
+      - 0.0.0.0
+      - --port
+      - "6380"
+      - --max-clients
+      - "64"
+      - --maxmemory
+      - "67108864"
+      - --maxmemory-policy
+      - noeviction
+      - --appendonly
+      - "yes"
+      - --aof-file
+      - /data/appendonly.aof
+      - --appendfsync
+      - always
+      - --snapshot-dir
+      - /data/snapshots
+    ports:
+      # Port zero is reserved for isolated acceptance/restore projects.
+      - "127.0.0.1:${REDISDB_HOST_PORT:-6380}:6380"
+    volumes:
+      - data:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 1.0
+    mem_limit: 512m
+    pids_limit: 64
+    stop_signal: SIGTERM
+    stop_grace_period: 60s
+    restart: unless-stopped
+    healthcheck:
+      # Existing Bash/head/cmp only. Octal avoids Compose dollar interpolation.
+      test:
+        - CMD
+        - /bin/bash
+        - -ec
+        - |
+          exec 3<>/dev/tcp/127.0.0.1/6380
+          set -o pipefail
+          printf '%b%s\r\n' '\052' 1 '\044' 4 '' PING >&3
+          head -c7 <&3 | cmp - <(printf '+PONG\r\n')
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
+    labels:
+      io.redisdb.deployment.revision: ${REDISDB_REVISION:?Set the full source Git SHA}
+      io.redisdb.stage4a.owner: ${REDISDB_OWNER_TOKEN:-operator-managed}
+volumes:
+  data:
+    # Never silently allocate a new database on a misspelled/missing volume.
+    external: true
+    name: ${REDISDB_DATA_VOLUME:?Set the existing named data volume}
+networks:
+  default:
+    driver: bridge
+    enable_ipv6: false
+    driver_opts:
+      com.docker.network.bridge.gateway_mode_ipv4: nat
+    labels:
+      io.redisdb.stage4a.owner: ${REDISDB_OWNER_TOKEN:-operator-managed}

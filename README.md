@@ -17,9 +17,12 @@ Fast-track Stage 2 memory limits and exact all-keys LRU are integrated at
 are merged at `798010ff34ec0c094aa37f7821524277edbb75dd`. Stage 4A Docker packaging,
 Linux persistence/recovery, Redis differential validation and container benchmarks
 are merged and validated at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`.
-Stage 4B performance hardening is local on `fasttrack/performance-hardening`;
-see [measured findings and transaction guarantees](docs/BENCHMARKS.md).
-Compaction and private remote deployment remain future work.
+Stage 4B performance hardening is merged and Linux-validated at
+`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; see
+[measured findings and transaction guarantees](docs/BENCHMARKS.md).
+Stage 5A private-deployment preparation is local on `fasttrack/private-deployment`:
+[runbook, pinned configuration and isolated acceptance](docs/PRIVATE_DEPLOYMENT.md).
+The mandatory real-host and SSH-tunnel acceptance remains pending. Compaction remains future work.
 Older acceptance records below retain their dated, historical context.
 
 The RESP2 server defaults to loopback and implements PING/ECHO/QUIT, strings,

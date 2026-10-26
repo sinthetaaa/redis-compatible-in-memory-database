@@ -1,7 +1,9 @@
 # Snapshots and crash recovery (Fast-Track Stage 3B)
 
-Local implementation on `fasttrack/snapshots-recovery`, based on accepted main
-`010e09a0fbec09c313a20c9449a6013b330ddea2`. No AOF rotation or compaction.
+Stage 3B is merged at `798010ff34ec0c094aa37f7821524277edbb75dd`; V1 is unchanged
+through accepted Stage 4B main `d69b3ede7405b4fe843ffb1c3bbfe4d957810615`.
+See [private deployment and stopped backups](PRIVATE_DEPLOYMENT.md) for Stage 5A
+preparation; actual remote acceptance remains pending. No AOF rotation or compaction.
 
 ## Configuration and operator trigger
 
@@ -186,7 +188,8 @@ one entry at a time; temporary memory is outside the logical-memory budget.
 Restore consumes the live database plus bounded frames and O(K) LRU/validation
 metadata. Full historical AOF validation still reads/decodes O(journal bytes),
 so no bounded startup time or snapshot speedup is claimed. CRC tracking adds
-work to journal append. AOF transaction staging still copies the whole database.
+work to journal append. Stage 4B uses affected-key undo under noeviction; exact
+LRU retains the full-database staging fallback.
 All generations, abandoned candidates and the complete AOF continue growing;
 there is no retention worker, automatic cleanup, rotation, compaction or salvage.
 Synchronization relies on the same POSIX filesystem/device assumptions as AOF;

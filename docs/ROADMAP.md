@@ -11,6 +11,13 @@
 This document preserves the approved 20-phase implementation
 roadmap, including all 169 subphases.
 
+**Current fast-track checkpoint (2026-10-26):** Stages 1–4B are accepted on main
+`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`, including Linux Docker and sanitizer
+validation. Stage 5A prepares the [private deployment runbook](PRIVATE_DEPLOYMENT.md).
+Phase 16's real-host/persistent-storage/SSH gate is mandatory and **not passed**.
+Dated phase records retain their historical context; fast-track acceptance does
+not automatically close every item in the original 20-phase roadmap.
+
 ## Execution Policy
 
 1. Complete subphases in order.
@@ -1072,20 +1079,20 @@ measurements with methodology and limitations.
 
 # Phase 15 — Linux, Docker and CI
 
-**Status:** NOT STARTED
+**Status:** Linux/Docker core accepted through Fast-track 4A/4B; Stage 5A health/Compose additions pending validation
 **Deployment Milestone A: MANDATORY**
 
-- [ ] 15A — Linux build validation
-- [ ] 15B — Multi-stage Dockerfile
-- [ ] 15C — Minimal runtime image
-- [ ] 15D — Non-root container execution
-- [ ] 15E — Persistent data volume
+- [x] 15A — Linux build validation
+- [x] 15B — Multi-stage Dockerfile
+- [x] 15C — Minimal runtime image
+- [x] 15D — Non-root container execution
+- [x] 15E — Persistent data volume
 - [ ] 15F — Container health checks
-- [ ] 15G — Graceful container shutdown
-- [ ] 15H — Container restart recovery
-- [ ] 15I — GitHub Actions CI
-- [ ] 15J — Fresh-clone reproducibility
-- [ ] 15K — Docker-based demo script
+- [x] 15G — Graceful container shutdown
+- [x] 15H — Container restart recovery
+- [x] 15I — GitHub Actions CI
+- [x] 15J — Fresh-clone reproducibility (clean CI checkout/build)
+- [x] 15K — Docker-based demo script (Stage 4A owned container harness)
 
 ### Acceptance Gate
 
@@ -1094,8 +1101,8 @@ shutdown, persistence recovery and demonstration.
 
 # Phase 16 — Private Remote Linux Deployment
 
-**Status:** NOT STARTED
-**Deployment Milestone B: PLANNED FINAL MILESTONE**
+**Status:** Stage 5A preparation IN PROGRESS; actual host validation NOT STARTED
+**Deployment Milestone B: MANDATORY FINAL MILESTONE — NOT COMPLETE**
 
 - [ ] 16A — Provider evaluation
 - [ ] 16B — Server provisioning
