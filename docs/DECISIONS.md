@@ -14,12 +14,29 @@ the corresponding functionality has been implemented.
 Decision changes require a documented technical reason,
 impact assessment, and updated project documentation.
 
-**Current checkpoint (2026-10-26):** Stages 1–5A accepted through
-`832631ecec6afb55869514d2f3fa6fdd8155dc77`. Stage 6A is reviewed for feature publication,
-awaiting Linux CI and merge acceptance. Approved scope revision excludes actual
-private remote deployment (Phase 16); ADR-012's existing private Docker/network
-safety constraints remain. No remote deployment claimed. Historical notes retain
-their original context. See [continuation handoff](CONTINUATION_HANDOFF.md).
+**Current accepted checkpoint (2026-10-27):** Stage 6A engineering and original
+Phases 11/12 are COMPLETE AND ACCEPTED at main `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`,
+feature `6f11ff21eeb5725e6b23cb5e45ecb57aaebe5059`. Exact-main Networking 40375036254
+(79/79 Debug and Release), ASan/UBSan/fuzz 40375036340 (80/80; 10,000 fuzz
+executions), and Docker 40375036503 (15 container, 10 Compose, 54/40 command
+plus 10 operational parity cases, 24 benchmark profiles/48 runs) passed.
+[Handoff](CONTINUATION_HANDOFF.md) records the verified parents/tree and CI links.
+Architectural acceptance and implemented/tested evidence are distinct; ADR-016
+now has both. This six-document closure on `fasttrack/stage6a-closure` is separate,
+prepared uncommitted and unpublished. Review, normal feature commit/push and
+exact-head CI are now authorized; merge is not. No ADR meaning or implementation
+changes.
+
+Original Phase 16 is excluded by approved scope revision, not complete. No remote
+deployment occurred. ADR-012's private Docker/network safety remains applicable;
+its original remote-host clauses are historical planning, not current requirements.
+Historical notes and failed attempts remain preserved below.
+
+Remaining engineering: **6B** safe AOF compaction (Phase 10); **6C** correctness
+and performance gates (Phases 13–14); **6D** roadmap reconciliation, final docs and
+demo (Phases 6–9, 15, 17); **6E** final engineering audit and portfolio closure
+(Phases 18–19). Stage 6B starts with detailed architecture and crash-safety design
+review before any persistence-code modification; no Stage 6B work has begun.
 
 ---
 
@@ -567,7 +584,11 @@ power-loss testing.
 ## ADR-012 — Conservative Private Deployment
 
 **Status:** Accepted
-**Implementation:** Stage 5A preparation in progress; real remote deployment/SSH acceptance pending
+**Historical implementation note:** Stage 5A preparation in progress; real remote deployment/SSH acceptance pending.
+**Current scope note (2026-10-27):** the original remote deployment/SSH clauses
+below are preserved historical planning. Phase 16 is excluded by approved scope
+revision; no remote deployment happened or is required. Docker/private networking
+safety remains applicable. This scope annotation does not rewrite the original ADR.
 
 ### Decision
 
@@ -861,6 +882,10 @@ CI #39739519389. Phase 2F formally COMPLETE; Phase 2G NOT STARTED.
 
 ## Phases 11–12
 
+Historical planning questions below are preserved; accepted ADR-016 and the current
+checkpoint resolve the Stage 6A startup CLI, counter and operational subset scope.
+A configuration file or additional buffer flags are not implied requirements.
+
 - Configurable buffer thresholds.
 - Connection limit defaults.
 - Configuration file format.
@@ -1144,8 +1169,12 @@ Do not silently alter previously accepted decisions.
 
 ## ADR-016 — Minimal event-loop operational observability (Stage 6A)
 
-**Date:** 2026-10-26. **Status:** Local implementation/validation passed;
-publication/Linux CI and merge acceptance remain pending.
+**Decision date:** 2026-10-26. **Status:** Accepted architectural decision;
+implementation merged and independently validated on exact main
+`bf1f19f2961544b6524a3e31b4250ce4e9ff0952`; Stage 6A engineering COMPLETE AND ACCEPTED.
+Post-merge execution evidence: Networking 40375036254, ASan/UBSan/fuzz 40375036340,
+Docker 40375036503. The separate documentation closure does not create or
+change this decision. The prior local-only status is superseded by that evidence.
 **Previous:** no public INFO/CONFIG route, plain error diagnostics; idle manager
 infrastructure existed but was disabled by the public server.
 

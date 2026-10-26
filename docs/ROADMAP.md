@@ -11,22 +11,34 @@
 This document preserves the approved 20-phase implementation
 roadmap, including all 169 subphases.
 
-**Current fast-track checkpoint (2026-10-26):** Stages 1–5A accepted at
-`832631ecec6afb55869514d2f3fa6fdd8155dc77`. Stage 6A local implementation is on
-`fasttrack/network-observability`, reviewed for feature publication, NOT accepted.
-See [per-subphase audit and durable continuation](CONTINUATION_HANDOFF.md).
-Original Phase 11 features largely pre-existed; 6A supplies idle configuration,
-shutdown draining and focused stress checks. Phase 12 adds operational logging,
-counters and read-only command subsets. Local Debug/Release 79/79 each, UBSan
-80/80 and final focused CLI gates 5/5 each passed; Linux CI remains pending.
+**Current fast-track checkpoint (2026-10-27):** Stages 1–5A and Stage 6A
+engineering are accepted on main `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`.
+Original **Phase 11 (11A–11H) and Phase 12 (12A–12G): COMPLETE AND ACCEPTED**;
+11H is limited to its documented bounded workload/resource acceptance.
+Feature `6f11ff21eeb5725e6b23cb5e45ecb57aaebe5059`, exact merge parents/tree and post-merge
+CI are recorded in the [durable handoff](CONTINUATION_HANDOFF.md).
+Networking 40375036254 passed Debug/Release 79/79 each; sanitizer/fuzz 40375036340
+passed 80/80 plus 10,000 fuzz executions; Docker 40375036503 passed 15 container
+and 10 private Compose cases, 54 command cases/40 routes plus 10 operational cases,
+and 24 benchmark profiles/48 runs. Both operations tests actually executed.
 
-**Approved scope revision:** original Phase 16 actual private remote Linux
-deployment is EXCLUDED from revised completion scope, not completed. No provisioned
-host or SSH demonstration is claimed. Linux Docker packaging/CI remain mandatory.
-All other phases remain in scope. After 6A: 6B Phase 10; 6C Phases 13–14;
-6D documentation/reconciliation/demo (6–9, 15, 17); 6E Phases 18–19.
-Dated phase records are retained; comprehensive unrelated checkbox reconciliation
-is deferred to Stage 6D.
+The six-document closure on `fasttrack/stage6a-closure` was uncommitted/unpublished
+at preparation. Its normal commit/push and exact-head CI are now authorized after
+review; merge requires separate authorization. This publication is separate from
+accepted engineering. Main remains unchanged; Stage 6B is not authorized.
+
+**Original Phase 16: EXCLUDED BY APPROVED SCOPE REVISION**, not completed.
+No VPS or remote deployment occurred; no card, SSH host or public server is
+required. Docker/Linux packaging and CI remain mandatory. All other original
+phases remain in scope. The full 20-phase/169-subphase plan is preserved below.
+Historical statuses outside Phases 11/12 await comprehensive Stage 6D
+reconciliation; they do not override the accepted fast-track capabilities above.
+
+Remaining engineering: **6B** safe AOF compaction (Phase 10); **6C** correctness
+and performance gates (Phases 13–14); **6D** roadmap reconciliation, final docs and
+demo (Phases 6–9, 15, 17); **6E** final engineering audit and portfolio closure
+(Phases 18–19). Stage 6B starts with detailed architecture and crash-safety design
+review before any persistence-code modification; no Stage 6B work has begun.
 
 ## Execution Policy
 
@@ -997,7 +1009,10 @@ safe handling of incomplete or corrupted files.
 
 # Phase 10 — Log Compaction and Persistence Lifecycle
 
-**Status:** NOT STARTED
+**Status:** NOT STARTED — pending Stage 6B
+
+Begin with detailed architecture and crash-safety design review (10A/10B) before
+modifying persistence code. All seven original tasks remain pending.
 
 - [ ] 10A — AOF growth analysis
 - [ ] 10B — Rewrite/compaction design
@@ -1014,22 +1029,36 @@ including interruption and recovery tests.
 
 # Phase 11 — Network Robustness and Backpressure
 
-**Status:** Stage 6A local audit/implementation; acceptance PENDING
+**Status:** COMPLETE AND ACCEPTED through Stage 6A exact-main CI.
 
-Previously implemented: 11A–11D, core 11F–11G and bounded 11H foundations.
-New branch: public 11E timeout with active-work protection, 11F drain deadline,
-11H bounded 32-client correctness stress. Source/test evidence, local results and
-Linux CI state for every row: [handoff audit](CONTINUATION_HANDOFF.md#stage-6a-implementation-and-audit).
-Checkboxes remain open until publication/CI/merge acceptance.
+11A–11D, core 11F–11G and bounded 11H foundations pre-existed. Stage 6A supplied
+public 11E timeout with active-work protection, 11F drain deadline and additional
+11H bounded 32-client correctness stress. Every original item is implemented and
+validated; 11H acceptance is explicitly bounded, not an indefinite soak guarantee.
+The [accepted audit](CONTINUATION_HANDOFF.md#stage-6a-implementation-and-audit)
+retains reused/new scope and failed/corrected historical evidence.
 
-- [ ] 11A — Input-buffer limits
-- [ ] 11B — Output-buffer limits
-- [ ] 11C — Slow-reader handling
-- [ ] 11D — Connection limits
-- [ ] 11E — Idle connection cleanup
-- [ ] 11F — Graceful shutdown
-- [ ] 11G — Partial-write and disconnect tests
-- [ ] 11H — High-concurrency soak tests
+- [x] 11A — Input-buffer limits
+- [x] 11B — Output-buffer limits
+- [x] 11C — Slow-reader handling
+- [x] 11D — Connection limits
+- [x] 11E — Idle connection cleanup
+- [x] 11F — Graceful shutdown
+- [x] 11G — Partial-write and disconnect tests
+- [x] 11H — High-concurrency soak tests
+
+### Historical Stage 6A pre-acceptance checkpoint (superseded)
+
+The following publication-time wording is retained as history; accepted status
+above supersedes it:
+
+> **Status:** Stage 6A local audit/implementation; acceptance PENDING
+>
+> Previously implemented: 11A–11D, core 11F–11G and bounded 11H foundations.
+> New branch: public 11E timeout with active-work protection, 11F drain deadline,
+> 11H bounded 32-client correctness stress. Source/test evidence, local results and
+> Linux CI state for every row: [handoff audit](CONTINUATION_HANDOFF.md#stage-6a-implementation-and-audit).
+> Checkboxes remain open until publication/CI/merge acceptance.
 
 ### Acceptance Gate
 
@@ -1038,20 +1067,33 @@ trivially exhaust server resources.
 
 # Phase 12 — Configuration and Observability
 
-**Status:** Stage 6A local implementation; acceptance PENDING
+**Status:** COMPLETE AND ACCEPTED through Stage 6A exact-main CI.
 
-12A–12B startup flags/validation and core 12G client/persistence failure behavior
-pre-existed. This branch extends idle validation and adds 12C–12F and structured
-12G diagnostics. [Handoff](CONTINUATION_HANDOFF.md) distinguishes reused/new work,
-local validation and pending Linux CI; no formal completion claimed.
+12A–12B startup configuration/validation and core 12G failure isolation pre-existed.
+Stage 6A extended idle validation and implemented 12C–12F plus structured 12G
+diagnostics. INFO/CONFIG GET retain their documented subsets and read-only
+behavior. Exact-main execution and the accepted audit are in the
+[handoff](CONTINUATION_HANDOFF.md); historical publication failures remain recorded.
 
-- [ ] 12A — Configuration parser
-- [ ] 12B — Startup validation
-- [ ] 12C — Structured logging
-- [ ] 12D — Runtime counters
-- [ ] 12E — INFO subset
-- [ ] 12F — Selected CONFIG GET
-- [ ] 12G — Operational error reporting
+- [x] 12A — Configuration parser
+- [x] 12B — Startup validation
+- [x] 12C — Structured logging
+- [x] 12D — Runtime counters
+- [x] 12E — INFO subset
+- [x] 12F — Selected CONFIG GET
+- [x] 12G — Operational error reporting
+
+### Historical Stage 6A pre-acceptance checkpoint (superseded)
+
+The following publication-time wording is retained as history; accepted status
+above supersedes it:
+
+> **Status:** Stage 6A local implementation; acceptance PENDING
+>
+> 12A–12B startup flags/validation and core 12G client/persistence failure behavior
+> pre-existed. This branch extends idle validation and adds 12C–12F and structured
+> 12G diagnostics. [Handoff](CONTINUATION_HANDOFF.md) distinguishes reused/new work,
+> local validation and pending Linux CI; no formal completion claimed.
 
 ### Acceptance Gate
 
@@ -1122,7 +1164,7 @@ shutdown, persistence recovery and demonstration.
 
 # Phase 16 — Private Remote Linux Deployment
 
-**Status:** EXCLUDED from revised completion scope by approved 2026-10-26 decision.
+**Status:** EXCLUDED BY APPROVED SCOPE REVISION (2026-10-26); not complete.
 **Not completed; no actual remote deployment claimed.**
 
 The following original plan is preserved for historical context. Stage 5A

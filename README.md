@@ -8,7 +8,7 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-26):** Phases 0–5 and 6A–6F are complete.
+**Project status (2026-10-27):** Phases 0–5 and 6A–6F are complete.
 Fast-track Phase 6G is integrated at `7c5a70592d0843261048bd5b9a51d2745eeb6cf6`;
 its macOS and pinned Linux Redis 8.10.2 differential checks are accepted.
 Fast-track Stage 2 memory limits and exact all-keys LRU are integrated at
@@ -21,11 +21,25 @@ Stage 4B performance hardening is merged and Linux-validated at
 `d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; see
 [measured findings and transaction guarantees](docs/BENCHMARKS.md).
 Stage 5A preparation is accepted at `832631ecec6afb55869514d2f3fa6fdd8155dc77`.
-Stage 6A is a reviewed feature-publication network/observability checkpoint;
-Linux CI and merge acceptance are pending. See [handoff](docs/CONTINUATION_HANDOFF.md).
+**Stage 6A engineering is COMPLETE AND ACCEPTED**, including original Phases 11
+and 12, at main `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`. Exact-main
+[Networking 40375036254](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40375036254)
+passed Debug/Release 79/79 each;
+[ASan/UBSan/fuzz 40375036340](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40375036340)
+passed 80/80 plus 10,000 fuzz executions;
+[Docker 40375036503](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40375036503)
+passed 15 container and 10 private Compose tests, 54 command cases/40 routes plus
+ten operational comparisons, and 24 benchmark profiles/48 timed runs. Both
+operations tests executed in the Linux native suites; 11H acceptance is bounded.
+The six-document closure on `fasttrack/stage6a-closure` was prepared uncommitted;
+normal feature publication and exact-head CI are now authorized after review.
+Closure merge requires separate authorization. See [handoff](docs/CONTINUATION_HANDOFF.md).
 Original Phase 16 actual remote Linux deployment is excluded by approved scope
 revision; no remote deployment is claimed. Linux Docker validation remains mandatory.
-Compaction remains Stage 6B.
+Remaining: Stage 6B safe AOF compaction (Phase 10), 6C correctness/performance
+(13–14), 6D roadmap reconciliation/docs/demo (6–9, 15, 17), and 6E audit/portfolio
+closure (18–19). Stage 6B is not started and must begin with architecture and
+crash-safety design review before persistence-code changes.
 Older acceptance records below retain their dated, historical context.
 
 The RESP2 server defaults to loopback and implements PING/ECHO/QUIT, strings,
@@ -34,7 +48,8 @@ and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
 accesses return WRONGTYPE; MGET returns nil for non-string keys. The
 comprehensive Phase 6E wrong-type acceptance matrix and the Phase 6F internal
 logical-byte ledger implementation are complete. Default memory capacity remains
-unlimited; full Redis compatibility and deployment remain future work.
+unlimited; full Redis compatibility is not claimed. Docker/Linux CI validation
+is complete; actual remote deployment is excluded from the revised scope.
 
 The executable supports separate TCP echo and RESP2 modes. Echo stays loopback-only;
 RESP2 defaults to `127.0.0.1` and accepts explicit `--bind 0.0.0.0` for isolated containers.
@@ -1278,7 +1293,7 @@ The formal Phase 5 closure verdict and per-subphase evidence appear in
 `docs/PROJECT_STATE.md`. Older subsection descriptions above capture their
 individual milestones and are historical, not current feature-status claims.
 
-## Operational subset (Stage 6A local checkpoint)
+## Operational subset (Stage 6A accepted)
 
 ```sh
 ./build/debug/redisdb-server --resp2-server --idle-timeout-ms 30000
@@ -1336,4 +1351,5 @@ per-request logging or background telemetry. Persistence remains fail-closed.
 
 The [durable handoff](docs/CONTINUATION_HANDOFF.md) records the complete Phase 11/12
 audit, bounded stress envelopes, compatibility differences and local versus CI
-verification. Stage 6A is not accepted until authorized publication and Linux CI.
+verification. Stage 6A engineering and original Phases 11/12 are accepted; the
+documentation-only closure and its separately authorized merge remain separate.
