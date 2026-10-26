@@ -46,6 +46,13 @@ TcpListener::TcpListener(UniqueFd socket, std::uint16_t port) noexcept
     : socket_(std::move(socket)), port_(port) {}
 
 TcpListener TcpListener::bind_loopback(std::uint16_t port, int backlog) {
+    return bind_ipv4("127.0.0.1", port, backlog);
+}
+
+TcpListener TcpListener::bind_ipv4(std::string_view bind_address, std::uint16_t port, int backlog) {
+    if (bind_address != "127.0.0.1" && bind_address != "0.0.0.0") {
+        throw std::invalid_argument("TCP bind address must be 127.0.0.1 or 0.0.0.0");
+    }
     if (backlog <= 0) {
         throw std::invalid_argument("TCP listen backlog must be positive");
     }
@@ -70,11 +77,11 @@ TcpListener TcpListener::bind_loopback(std::uint16_t port, int backlog) {
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_addr.s_addr = htonl(bind_address == "127.0.0.1" ? INADDR_LOOPBACK : INADDR_ANY);
 
     if (::bind(socket.get(), reinterpret_cast<const sockaddr*>(&address),
                static_cast<socklen_t>(sizeof(address))) == -1) {
-        throw_errno("bind(127.0.0.1)");
+        throw_errno("bind(IPv4)");
     }
 
     if (::listen(socket.get(), backlog) == -1) {

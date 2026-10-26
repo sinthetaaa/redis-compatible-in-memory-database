@@ -20,7 +20,7 @@ void print_usage() {
               << "  redisdb-server --help\n"
               << "  redisdb-server --smoke-echo [--port PORT]"
                  " [--max-clients COUNT]\n"
-              << "  redisdb-server --resp2-server [--port PORT]"
+              << "  redisdb-server --resp2-server [--port PORT] [--bind 127.0.0.1|0.0.0.0]"
                  " [--max-clients COUNT] [--maxmemory BYTES]"
                  " [--maxmemory-policy noeviction|allkeys-lru]\n"
               << "    [--appendonly yes] [--aof-file PATH] [--appendfsync always|everysec|no]\n"
@@ -84,6 +84,8 @@ int main(int argc, char* argv[]) {
     std::size_t max_clients = 1024;
 
     bool port_seen = false;
+    bool bind_seen = false;
+    std::string_view bind_address = "127.0.0.1";
     bool clients_seen = false;
     bool memory_seen = false;
     bool policy_seen = false;
@@ -103,6 +105,14 @@ int main(int argc, char* argv[]) {
         const std::string_view option{argv[index]};
         const std::string_view value{argv[index + 1]};
 
+        if (mode == "--resp2-server" && option == "--bind" && !bind_seen) {
+            if (value != "127.0.0.1" && value != "0.0.0.0") {
+                return invalid_arguments();
+            }
+            bind_address = value;
+            bind_seen = true;
+            continue;
+        }
         if (option == "--port" && !port_seen) {
             unsigned int parsed = 0;
 
@@ -196,7 +206,8 @@ int main(int argc, char* argv[]) {
 
     try {
         if (mode == "--resp2-server") {
-            redisdb::server::run_resp2_server(port, max_clients, memory, aof, snapshot);
+            redisdb::server::run_resp2_server(port, max_clients, memory, aof, snapshot,
+                                              bind_address);
         } else {
             redisdb::server::run_smoke_echo(port, max_clients);
         }

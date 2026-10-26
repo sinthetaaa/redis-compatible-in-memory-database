@@ -10,15 +10,17 @@ snapshotting and crash recovery.
 
 **Project status (2026-10-26):** Phases 0–5 and 6A–6F are complete.
 Fast-track Phase 6G is integrated at `7c5a70592d0843261048bd5b9a51d2745eeb6cf6`;
-its Linux-native differential campaign remains deferred to the Docker milestone.
+its macOS differential checks are accepted; the new Linux container adapter awaits CI execution.
 Fast-track Stage 2 memory limits and exact all-keys LRU are integrated at
 `226dd4bf03797da27a6e6aa3b7b3827038e7f13d`. Stage 3A AOF persistence is merged at
 `010e09a0fbec09c313a20c9449a6013b330ddea2`. Stage 3B snapshots and crash recovery
-are implemented locally on `fasttrack/snapshots-recovery`, pending publication.
-Compaction, benchmarks and deployment remain future work.
+are merged at `798010ff34ec0c094aa37f7821524277edbb75dd`. Stage 4A Docker packaging,
+explicit bind configuration and native performance baselines are implemented locally
+on `fasttrack/docker-benchmarks`; actual container/Linux validation awaits Docker CI.
+Compaction and private remote deployment remain future work.
 Older acceptance records below retain their dated, historical context.
 
-The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
+The RESP2 server defaults to loopback and implements PING/ECHO/QUIT, strings,
 integers, keys, TTL, lists, HSET/HGET/HEXISTS/HLEN/HDEL/HMGET/HGETALL,
 and SADD/SREM/SISMEMBER/SCARD/SMEMBERS/SMISMEMBER. Invalid collection
 accesses return WRONGTYPE; MGET returns nil for non-string keys. The
@@ -26,8 +28,17 @@ comprehensive Phase 6E wrong-type acceptance matrix and the Phase 6F internal
 logical-byte ledger implementation are complete. Default memory capacity remains
 unlimited; full Redis compatibility and deployment remain future work.
 
-The executable supports separate loopback-only TCP echo and RESP2 command-server modes.
+The executable supports separate TCP echo and RESP2 modes. Echo stays loopback-only;
+RESP2 defaults to `127.0.0.1` and accepts explicit `--bind 0.0.0.0` for isolated containers.
 The RESP2 mode now executes the documented string/key/TTL/list/hash/set subset with bounded replies. Phase 4A originally added binary-safe storage and Phase 4B introduced process-shared SET/GET.
+
+## Docker and measured baselines
+
+See [Docker build, localhost demo and persistence](docs/DOCKER.md) and
+[benchmark method and measured native results](docs/BENCHMARKS.md). Compose publishes
+only `127.0.0.1:6380`; the service has no authentication or TLS and must remain private.
+The runtime runs as UID 10001 with persistent `/data`, AOF `always` and opt-in
+signal-triggered snapshots. Native listening defaults and persistence formats are unchanged.
 
 ## AOF persistence and recovery
 

@@ -4,18 +4,23 @@
 
 #include <cstdint>
 #include <optional>
+#include <string_view>
 
 namespace redisdb::net {
 
 // Owns a non-blocking IPv4 TCP listening socket.
 //
-// Phase 1B restricts binding to 127.0.0.1.
+// Native default is loopback; wildcard IPv4 requires an explicit choice.
 // Port 0 requests an ephemeral OS-assigned port.
 //
 // This class does not run an accept loop or event loop.
 class TcpListener {
   public:
     [[nodiscard]] static TcpListener bind_loopback(std::uint16_t port = 6380, int backlog = 128);
+
+    // Only the exact literals 127.0.0.1 and 0.0.0.0 are accepted; no DNS.
+    [[nodiscard]] static TcpListener bind_ipv4(std::string_view address, std::uint16_t port,
+                                               int backlog = 128);
 
     TcpListener(const TcpListener&) = delete;
     TcpListener& operator=(const TcpListener&) = delete;
