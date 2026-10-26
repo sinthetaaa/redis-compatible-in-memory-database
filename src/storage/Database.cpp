@@ -145,6 +145,47 @@ void Database::replay_effects(const CommittedEffects& effects) {
     memory_options_.max_bytes = saved_limit;
 }
 
+void Database::visit_snapshot(
+    const std::function<void(const std::string&, const Entry&)>& visitor) const {
+    std::vector<std::string_view> keys;
+    keys.reserve(entries_.size());
+    for (const auto& [key, entry] : entries_) {
+        (void)entry;
+        keys.push_back(key);
+    }
+    std::sort(keys.begin(), keys.end());
+    for (const auto key : keys) {
+        const auto found = entries_.find(key);
+        visitor(found->first, found->second);
+    }
+}
+
+CommittedEffects Database::snapshot_order() const {
+    CommittedEffects result;
+    result.has_lru = memory_options_.policy == EvictionPolicy::AllKeysLru;
+    if (result.has_lru) {
+        result.lru_order.assign(lru_.begin(), lru_.end());
+    }
+    return result;
+}
+
+void Database::restore_snapshot_entry(EntryEffect effect) {
+    if (!effect.replacement || entries_.contains(effect.key)) {
+        throw std::runtime_error("snapshot duplicate key or tombstone");
+    }
+    EntryMap staged;
+    staged.emplace(std::move(effect.key), std::move(*effect.replacement));
+    const auto limit = memory_options_.max_bytes;
+    memory_options_.max_bytes.reset();
+    try {
+        commit_entries(std::move(staged));
+    } catch (...) {
+        memory_options_.max_bytes = limit;
+        throw;
+    }
+    memory_options_.max_bytes = limit;
+}
+
 void Database::finish_recovery() {
     (void)sweep_expired(std::numeric_limits<std::size_t>::max());
     if (memory_options_.max_bytes && accounted_bytes_ > *memory_options_.max_bytes) {

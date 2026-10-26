@@ -131,7 +131,7 @@ std::string read_at(int fd, std::size_t length, off_t offset) {
 }
 } // namespace
 
-std::uint32_t crc32c(std::string_view bytes) noexcept {
+std::uint32_t extend_crc32c(std::uint32_t prefix, std::string_view bytes) noexcept {
     static const auto table = [] {
         std::array<std::uint32_t, 256> values{};
         for (std::uint32_t i = 0; i < 256; ++i) {
@@ -143,13 +143,15 @@ std::uint32_t crc32c(std::string_view bytes) noexcept {
         }
         return values;
     }();
-    std::uint32_t crc = 0xffffffffU;
+    std::uint32_t crc = ~prefix;
     for (const char raw : bytes) {
         const auto byte = static_cast<unsigned char>(raw);
         crc = table[(crc ^ byte) & 255U] ^ (crc >> 8);
     }
     return ~crc;
 }
+
+std::uint32_t crc32c(std::string_view bytes) noexcept { return extend_crc32c(0, bytes); }
 
 std::string encode_effects(const storage::CommittedEffects& effects) {
     Writer out;
@@ -313,7 +315,8 @@ storage::CommittedEffects decode_effects(std::string_view bytes) {
     return effects;
 }
 
-AofLog::AofLog(const AofOptions& options, const storage::Clock& clock, AofIo io)
+AofLog::AofLog(const AofOptions& options, const storage::Clock& clock, AofIo io,
+               bool require_existing)
     : clock_(clock), policy_(options.sync), io_(std::move(io)),
       next_sync_(clock.monotonic_now() + std::chrono::seconds{1}) {
     const auto path = options.file;
@@ -324,6 +327,12 @@ AofLog::AofLog(const AofOptions& options, const storage::Clock& clock, AofIo io)
     directory_.reset(::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC));
     if (!directory_) {
         io_error("open parent directory");
+    }
+    if (require_existing) {
+        struct stat existing{};
+        if (::lstat(path.c_str(), &existing) != 0 || !S_ISREG(existing.st_mode)) {
+            invalid("snapshot requires its existing regular journal");
+        }
     }
     bool created = true;
     fd_.reset(
@@ -457,10 +466,10 @@ void AofLog::require_healthy() const {
     }
 }
 
-void AofLog::recover(storage::Database& database) {
+void AofLog::recover(storage::Database& database, std::optional<AofCheckpoint> checkpoint) {
     require_healthy();
     try {
-        if (recovered_ || database.size() != 0) {
+        if (recovered_ || (!checkpoint && database.size() != 0)) {
             invalid("replay requires a fresh database and journal handle");
         }
         struct stat info{};
@@ -471,6 +480,21 @@ void AofLog::recover(storage::Database& database) {
             durable_offset_ > static_cast<std::uint64_t>(info.st_size)) {
             invalid("journal shortened before replay; files left unchanged");
         }
+        if (checkpoint &&
+            (checkpoint->sequence > durable_sequence_ || checkpoint->offset > durable_offset_)) {
+            invalid("snapshot checkpoint exceeds synchronized journal watermark");
+        }
+        prefix_crc_ = crc32c(read_at(fd_.get(), FileHeaderBytes, 0));
+        bool matched = !checkpoint;
+        auto match_checkpoint = [&](std::uint64_t offset) {
+            if (checkpoint && sequence_ == checkpoint->sequence) {
+                if (*checkpoint != AofCheckpoint{sequence_, offset, last_crc_, prefix_crc_}) {
+                    invalid("snapshot checkpoint disagrees with journal history");
+                }
+                matched = true;
+            }
+        };
+        match_checkpoint(FileHeaderBytes);
         off_t position = FileHeaderBytes;
         while (position < info.st_size) {
             const auto remaining = info.st_size - position;
@@ -498,16 +522,24 @@ void AofLog::recover(storage::Database& database) {
                 record.substr(payload_end + 4) != "END!") {
                 invalid("record checksum or commit trailer mismatch; file left unchanged");
             }
-            database.replay_effects(decode_effects(std::string_view(record).substr(
-                RecordHeaderBytes, static_cast<std::size_t>(length))));
+            const auto effects = decode_effects(std::string_view(record).substr(
+                RecordHeaderBytes, static_cast<std::size_t>(length)));
+            if (!checkpoint || sequence > checkpoint->sequence) {
+                database.replay_effects(effects);
+            }
+            prefix_crc_ = extend_crc32c(prefix_crc_, record);
             sequence_ = sequence;
             position += static_cast<off_t>(total);
             last_crc_ = record_crc;
+            match_checkpoint(static_cast<std::uint64_t>(position));
             if (sequence_ == durable_sequence_ &&
                 (static_cast<std::uint64_t>(position) != durable_offset_ ||
                  last_crc_ != durable_crc_)) {
                 invalid("durable record disagrees with commit watermark");
             }
+        }
+        if (!matched) {
+            invalid("snapshot checkpoint is missing from journal");
         }
         if (sequence_ < durable_sequence_) {
             invalid("committed records are missing");
@@ -565,6 +597,7 @@ void AofLog::append(const storage::CommittedEffects& effects) {
             invalid("journal file offset exhausted");
         }
         write_all(frame);
+        prefix_crc_ = extend_crc32c(prefix_crc_, frame);
         ++sequence_;
         end_offset_ += frame.size();
         last_crc_ = checksum;
@@ -595,6 +628,15 @@ void AofLog::tick() {
         failed_ = true;
         throw;
     }
+}
+
+AofCheckpoint AofLog::checkpoint() {
+    require_healthy();
+    if (!recovered_) {
+        invalid("checkpoint before recovery");
+    }
+    finish();
+    return {sequence_, end_offset_, last_crc_, prefix_crc_};
 }
 
 void AofLog::finish() {

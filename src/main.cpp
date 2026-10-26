@@ -24,6 +24,7 @@ void print_usage() {
                  " [--max-clients COUNT] [--maxmemory BYTES]"
                  " [--maxmemory-policy noeviction|allkeys-lru]\n"
               << "    [--appendonly yes] [--aof-file PATH] [--appendfsync always|everysec|no]\n"
+              << "    [--snapshot-dir PATH] (requires AOF; SIGUSR1 requests a checkpoint)\n"
               << "  maxmemory: logical data charge, 0 = unlimited (default); not RSS.\n"
               << "\n"
               << "Smoke mode is for transport validation only.\n"
@@ -91,6 +92,8 @@ int main(int argc, char* argv[]) {
     bool append_seen = false;
     bool file_seen = false;
     bool sync_seen = false;
+    redisdb::persistence::SnapshotOptions snapshot;
+    bool snapshot_seen = false;
 
     for (int index = 2; index < argc; index += 2) {
         if (index + 1 >= argc) {
@@ -176,16 +179,24 @@ int main(int argc, char* argv[]) {
             sync_seen = true;
             continue;
         }
+        if (mode == "--resp2-server" && option == "--snapshot-dir" && !snapshot_seen) {
+            if (value.empty()) {
+                return invalid_arguments();
+            }
+            snapshot.directory = value;
+            snapshot_seen = true;
+            continue;
+        }
         return invalid_arguments();
     }
 
-    if (!aof.enabled && (file_seen || sync_seen)) {
+    if (!aof.enabled && (file_seen || sync_seen || snapshot_seen)) {
         return invalid_arguments();
     }
 
     try {
         if (mode == "--resp2-server") {
-            redisdb::server::run_resp2_server(port, max_clients, memory, aof);
+            redisdb::server::run_resp2_server(port, max_clients, memory, aof, snapshot);
         } else {
             redisdb::server::run_smoke_echo(port, max_clients);
         }
