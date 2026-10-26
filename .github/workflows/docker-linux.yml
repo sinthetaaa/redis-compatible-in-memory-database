@@ -1,0 +1,64 @@
+name: Docker Linux packaging and baselines
+on:
+  push:
+    branches: [main, 'fasttrack/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  docker-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tools and install Redis CLI (client only)
+        run: |
+          docker version
+          docker compose version
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends redis-tools
+      - name: Validate Compose and build Linux Release runtime image
+        run: |
+          docker compose config --quiet
+          docker compose config --format json | python3 -c 'import json,sys; c=json.load(sys.stdin); s=c["services"]["redisdb"]; p=s["ports"]; assert len(p)==1 and p[0]["host_ip"]=="127.0.0.1" and str(p[0]["published"])=="6380" and p[0]["target"]==6380; assert s.get("network_mode") != "host"'
+          docker build --build-arg VCS_REF="$GITHUB_SHA" -t redisdb:ci .
+      - name: Tooling unit tests
+        run: python3 -B -m unittest discover -s tests/unit -p 'test_stage4a_tools.py' -v
+      - name: Container networking and persistence integration
+        run: python3 tests/docker/container_test.py --image redisdb:ci --report benchmark-results/container.json
+      - name: Pinned Linux Redis 8.10.2 binary-exact compatibility
+        run: python3 tests/differential/linux_container.py --image redisdb:ci --report benchmark-results/linux-parity.json
+      - name: Bounded container baseline (no throughput pass threshold)
+        run: python3 benchmarks/tcp_baseline.py --image redisdb:ci --seconds 2 --warmup 0.25 --repeats 2 --output benchmark-results/linux-benchmark.json
+      - name: Publish concise job summary
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          from pathlib import Path
+          import json
+          for path in sorted(Path('benchmark-results').glob('*.json')):
+              result = json.loads(path.read_text())
+              print(f'### {path.name}')
+              if 'profiles' in result:
+                  print(f'Complete: {result["complete"]}; profiles: {len(result["profiles"])}')
+                  print('| Policy | Keys | Workload | Clients | Pipeline | Median ops/s | Median p99 ms |')
+                  print('|---|---|---|---|---|---|---|')
+                  for row in result['profiles']:
+                      if 'median_ops_sec' in row:
+                          print(f'| {row["policy"]} | {row["keys"]} | {row["workload"]} | {row["clients"]} | {row["pipeline"]} | {row["median_ops_sec"]:.0f} | {row["median_p99_ms"]:.3f} |')
+              else:
+                  print(f'Cases recorded: {len(result.get("cases", []))}; status: {result.get("classification", "container suite completed")}')
+                  for key in ('image_bytes', 'reference_image', 'reference_image_id',
+                              'reference_architecture', 'reference_executable_sha256'):
+                      if key in result:
+                          print(f'{key}: {result[key]}')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage4a-linux-results
+          path: benchmark-results/*.json
+          if-no-files-found: ignore
+          retention-days: 7

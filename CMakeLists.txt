@@ -103,6 +103,15 @@ if(BUILD_TESTING)
     if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+        add_test(NAME integration.resp_bind
+                 COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_bind_test.py"
+                         "$<TARGET_FILE:redisdb-server>")
+        set_tests_properties(integration.resp_bind PROPERTIES TIMEOUT 30)
+        add_test(NAME unit.stage4a_tools
+                 COMMAND "${Python3_EXECUTABLE}" -B -m unittest discover
+                         -s "${PROJECT_SOURCE_DIR}/tests/unit" -p test_stage4a_tools.py)
+        set_tests_properties(unit.stage4a_tools PROPERTIES TIMEOUT 15)
+
         add_test(NAME integration.resp_memory_limits
                  COMMAND "${Python3_EXECUTABLE}"
                          "${PROJECT_SOURCE_DIR}/tests/integration/resp_memory_limits_test.py"

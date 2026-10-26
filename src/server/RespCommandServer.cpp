@@ -85,7 +85,8 @@ class CommandClock final : public storage::Clock {
 } // namespace
 
 void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::MemoryOptions memory,
-                      persistence::AofOptions aof, persistence::SnapshotOptions snapshot) {
+                      persistence::AofOptions aof, persistence::SnapshotOptions snapshot,
+                      std::string_view bind_address) {
     if (max_clients == 0) {
         throw std::invalid_argument("max_clients must be positive");
     }
@@ -99,7 +100,7 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     net::ConnectionManager::Limits limits;
     limits.max_connections = max_clients;
 
-    net::ConnectionManager manager(net::TcpListener::bind_loopback(port), poller, limits);
+    net::ConnectionManager manager(net::TcpListener::bind_ipv4(bind_address, port), poller, limits);
     // One database for all TCP connections; the single event-loop thread
     // serializes each command. It must outlive dispatcher route closures.
     storage::SystemClock server_clock;
@@ -209,7 +210,8 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     if (snapshots && std::signal(SIGUSR1, request_snapshot) == SIG_ERR) {
         throw std::runtime_error("unable to install snapshot notification handler");
     }
-    std::cout << "RESP_READY 127.0.0.1:" << manager.listener_port() << '\n' << std::flush;
+    std::cout << "RESP_READY " << bind_address << ":" << manager.listener_port() << '\n'
+              << std::flush;
     constexpr auto PollInterval = std::chrono::milliseconds{100};
     constexpr std::size_t MaxExpiryChecksPerTurn = 32;
     auto next_sweep = server_clock.monotonic_now();

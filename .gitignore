@@ -27,3 +27,7 @@
 *.log
 *.core
 core.*
+
+# Python test/benchmark caches
+__pycache__/
+*.py[cod]

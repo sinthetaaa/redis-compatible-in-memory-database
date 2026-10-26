@@ -109,6 +109,32 @@ void test_binding_and_flags() {
     check(!listener.accept_one().has_value(), "empty accept should return nullopt");
 }
 
+void test_explicit_binding() {
+    for (const auto literal : {"127.0.0.1", "0.0.0.0"}) {
+        auto listener = TcpListener::bind_ipv4(literal, 0);
+        check_socket_flags(listener.fd());
+        sockaddr_in bound{};
+        socklen_t size = sizeof(bound);
+        check(::getsockname(listener.fd(), reinterpret_cast<sockaddr*>(&bound), &size) == 0,
+              "explicit bind getsockname");
+        check(bound.sin_addr.s_addr ==
+                  htonl(std::string_view(literal) == "127.0.0.1" ? INADDR_LOOPBACK : INADDR_ANY),
+              "explicit bind address mismatch");
+        auto client = connect_loopback(listener.port());
+        wait_readable(listener.fd());
+        check(listener.accept_one().has_value(), "explicit bind accept");
+    }
+    for (const auto invalid : {"localhost", "::1", "127.1", "127.0.0.2", "0.0.0.0 ", ""}) {
+        bool rejected = false;
+        try {
+            (void)TcpListener::bind_ipv4(invalid, 0);
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        check(rejected, "invalid bind address accepted");
+    }
+}
+
 void test_single_connection_and_io() {
     TcpListener listener = TcpListener::bind_loopback(0, 8);
 
@@ -269,6 +295,7 @@ void test_error_paths() {
 int main() {
     try {
         test_binding_and_flags();
+        test_explicit_binding();
         test_single_connection_and_io();
         test_multiple_connections();
         test_move_and_cleanup();

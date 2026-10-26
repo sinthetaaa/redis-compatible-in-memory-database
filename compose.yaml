@@ -1,0 +1,21 @@
+name: redisdb-stage4a
+services:
+  redisdb:
+    build:
+      context: .
+      args:
+        VCS_REF: ${REDISDB_VCS_REF:-unknown}
+    image: redisdb:stage4a
+    ports:
+      - "127.0.0.1:6380:6380"
+    volumes:
+      - redisdb-data:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 30s
+    restart: "no"
+    mem_limit: 512m
+    pids_limit: 64
+volumes:
+  redisdb-data:

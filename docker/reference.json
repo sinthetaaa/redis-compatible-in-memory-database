@@ -1,0 +1,21 @@
+{
+  "version": "8.10.2",
+  "image": "redis:8.10.2-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0",
+  "resolved_utc": "2026-10-26",
+  "registry": "https://registry-1.docker.io/v2/library/redis/manifests/8.10.2-alpine",
+  "platforms": {
+    "amd64": {
+      "manifest_digest": "sha256:16b124a2d3eacd620d917ead6fd26cbf1f1d7117fa94122398971931cfe2d403",
+      "config_digest": "sha256:6cfed4c686145bcd5807ef3ac1d2bf3384503cb3da30b0d308b4f25eb50dc373",
+      "executable_sha256": "2b93ec201ad8ea23feff053e261cfdf8cc0e95c45e0052d28ddef7a504dbfa3f",
+      "binary_layer_digest": "sha256:a2e7cb82bdcdf7621c24c213d3a3b5726e8798d5203b8382d89148103bdb191f"
+    },
+    "arm64": {
+      "manifest_digest": "sha256:0819246a2bb1979f7745a8bae2559a2ffa49071ef7a5e7213b3e347e162aeb26",
+      "config_digest": "sha256:9eba214ac186cd19f8675fd248d92db3bfef0180773990b304b378cbe384c45f",
+      "executable_sha256": "74188347eefe5aa1c1837e7260cbd5dbd5fcb99f0964a461fea4083f466d3e71",
+      "binary_layer_digest": "sha256:416fec0000fa05c569717296fc56ae43b543abdf6d97082dd53082bfebdc6156"
+    }
+  },
+  "identity_contract": "Platform manifests/configs and executable hashes independently resolved from digest-verified OCI bytes on 2026-10-26. Pull exact platform digest; verify architecture, config ID, RepoDigest, executable hash, --version and INFO SERVER version/PID=1. No floating fallback; macOS pin is separate."
+}

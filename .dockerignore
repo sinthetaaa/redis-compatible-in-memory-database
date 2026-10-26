@@ -1,0 +1,15 @@
+# Allowlist: no credentials, .git, runtime data, tests, caches or host binaries.
+**
+!Dockerfile
+!CMakeLists.txt
+!cmake/
+!cmake/**
+!include/
+!include/**
+!src/
+!src/**
+# Exclude credential-shaped files even beneath source directories.
+**/.env*
+**/.aws/**
+**/*.pem
+**/*.key
