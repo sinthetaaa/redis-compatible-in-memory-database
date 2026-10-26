@@ -11,12 +11,22 @@
 This document preserves the approved 20-phase implementation
 roadmap, including all 169 subphases.
 
-**Current fast-track checkpoint (2026-10-26):** Stages 1–4B are accepted on main
-`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`, including Linux Docker and sanitizer
-validation. Stage 5A prepares the [private deployment runbook](PRIVATE_DEPLOYMENT.md).
-Phase 16's real-host/persistent-storage/SSH gate is mandatory and **not passed**.
-Dated phase records retain their historical context; fast-track acceptance does
-not automatically close every item in the original 20-phase roadmap.
+**Current fast-track checkpoint (2026-10-26):** Stages 1–5A accepted at
+`832631ecec6afb55869514d2f3fa6fdd8155dc77`. Stage 6A local implementation is on
+`fasttrack/network-observability`, reviewed for feature publication, NOT accepted.
+See [per-subphase audit and durable continuation](CONTINUATION_HANDOFF.md).
+Original Phase 11 features largely pre-existed; 6A supplies idle configuration,
+shutdown draining and focused stress checks. Phase 12 adds operational logging,
+counters and read-only command subsets. Local Debug/Release 79/79 each, UBSan
+80/80 and final focused CLI gates 5/5 each passed; Linux CI remains pending.
+
+**Approved scope revision:** original Phase 16 actual private remote Linux
+deployment is EXCLUDED from revised completion scope, not completed. No provisioned
+host or SSH demonstration is claimed. Linux Docker packaging/CI remain mandatory.
+All other phases remain in scope. After 6A: 6B Phase 10; 6C Phases 13–14;
+6D documentation/reconciliation/demo (6–9, 15, 17); 6E Phases 18–19.
+Dated phase records are retained; comprehensive unrelated checkbox reconciliation
+is deferred to Stage 6D.
 
 ## Execution Policy
 
@@ -1004,7 +1014,13 @@ including interruption and recovery tests.
 
 # Phase 11 — Network Robustness and Backpressure
 
-**Status:** NOT STARTED
+**Status:** Stage 6A local audit/implementation; acceptance PENDING
+
+Previously implemented: 11A–11D, core 11F–11G and bounded 11H foundations.
+New branch: public 11E timeout with active-work protection, 11F drain deadline,
+11H bounded 32-client correctness stress. Source/test evidence, local results and
+Linux CI state for every row: [handoff audit](CONTINUATION_HANDOFF.md#stage-6a-implementation-and-audit).
+Checkboxes remain open until publication/CI/merge acceptance.
 
 - [ ] 11A — Input-buffer limits
 - [ ] 11B — Output-buffer limits
@@ -1022,7 +1038,12 @@ trivially exhaust server resources.
 
 # Phase 12 — Configuration and Observability
 
-**Status:** NOT STARTED
+**Status:** Stage 6A local implementation; acceptance PENDING
+
+12A–12B startup flags/validation and core 12G client/persistence failure behavior
+pre-existed. This branch extends idle validation and adds 12C–12F and structured
+12G diagnostics. [Handoff](CONTINUATION_HANDOFF.md) distinguishes reused/new work,
+local validation and pending Linux CI; no formal completion claimed.
 
 - [ ] 12A — Configuration parser
 - [ ] 12B — Startup validation
@@ -1101,8 +1122,13 @@ shutdown, persistence recovery and demonstration.
 
 # Phase 16 — Private Remote Linux Deployment
 
-**Status:** Stage 5A preparation IN PROGRESS; actual host validation NOT STARTED
-**Deployment Milestone B: MANDATORY FINAL MILESTONE — NOT COMPLETE**
+**Status:** EXCLUDED from revised completion scope by approved 2026-10-26 decision.
+**Not completed; no actual remote deployment claimed.**
+
+The following original plan is preserved for historical context. Stage 5A
+preparation/runbooks remain available; provisioning, remote storage and SSH
+acceptance are no longer mandatory. Docker/Linux validation in Phase 15 remains
+mandatory. These unchecked historical items do not block revised completion.
 
 - [ ] 16A — Provider evaluation
 - [ ] 16B — Server provisioning
@@ -1212,7 +1238,8 @@ and its acceptance gate have passed.
 - Reproducible performance measurements.
 - Linux and Docker packaging.
 - GitHub Actions CI.
-- Private remote Linux deployment.
+- Original private remote Linux deployment outcome excluded by revised scope;
+  no remote deployment claimed.
 - Final engineering audit.
 - Verified resume-ready technical achievements.
 

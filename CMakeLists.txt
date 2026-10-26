@@ -30,6 +30,7 @@ endfunction()
 add_library(
     redisdb-core STATIC
     src/server/Version.cpp
+    src/server/Operations.cpp
     src/commands/Command.cpp
     src/commands/CommandDispatcher.cpp
     src/commands/ArityValidator.cpp
@@ -107,6 +108,11 @@ if(REDISDB_BUILD_PROFILES AND UNIX)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(redisdb-operations-tests tests/unit/operations_test.cpp)
+    target_link_libraries(redisdb-operations-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-operations-tests)
+    add_test(NAME unit.operations COMMAND redisdb-operations-tests)
+    set_tests_properties(unit.operations PROPERTIES TIMEOUT 10)
     add_executable(redisdb-transaction-tests tests/unit/transaction_test.cpp)
     target_link_libraries(redisdb-transaction-tests PRIVATE redisdb-core)
     redisdb_enable_warnings(redisdb-transaction-tests)
@@ -115,6 +121,10 @@ if(BUILD_TESTING)
     if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+        add_test(NAME integration.resp_operations
+                 COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_operations_test.py"
+                         "$<TARGET_FILE:redisdb-server>")
+        set_tests_properties(integration.resp_operations PROPERTIES TIMEOUT 60)
         add_test(NAME integration.resp_hardening
                  COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_hardening_test.py"
                          "$<TARGET_FILE:redisdb-server>")
@@ -122,7 +132,7 @@ if(BUILD_TESTING)
         if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=[^ ]*address")
             # Keep sanitizer quarantine/leak detection enabled. Its allocator
             # overhead needs a separate RSS envelope from native leak screening.
-            set_tests_properties(integration.resp_hardening PROPERTIES
+            set_tests_properties(integration.resp_hardening integration.resp_operations PROPERTIES
                                  ENVIRONMENT "REDISDB_TEST_ASAN=1")
         endif()
 

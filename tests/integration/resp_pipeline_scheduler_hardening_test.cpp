@@ -386,6 +386,30 @@ void test_full_buffer_without_continuation_closes() {
     check(fixture.manager.connection_count() == 0, "full-buffer connection remained registered");
 }
 
+void test_idle_preserves_deferred_work() {
+    ConnectionManager::Limits limits;
+    limits.idle_timeout = 30ms;
+    Fixture fixture(limits);
+    auto client = connect_loopback(fixture.manager.listener_port());
+    const auto tokens = fixture.accept(1);
+    fixture.manager.set_resumable_input_handler([](Connection& connection) {
+        connection.consume_input(1);
+        return Action::Continue;
+    });
+    send_exact(client.get(), "AB");
+    wait_for_server_input(fixture.manager, tokens[0], 2);
+    (void)fixture.manager.dispatch_ready({{tokens[0], EventMask::Read}});
+    const auto last = fixture.manager.find(tokens[0])->last_activity();
+    check(fixture.manager.reap_idle_connections(last + 100ms) == 0,
+          "idle reaper closed deferred work without pending output");
+    check(fixture.manager.has_pending_work(), "deferred work missing at shutdown");
+    fixture.manager.stop_accepting();
+    check(!fixture.manager.listener_registered(), "shutdown listener still registered");
+    check(fixture.manager.close_connection(tokens[0]), "shutdown client not closed");
+    check(!fixture.manager.listener_registered(), "shutdown close reopened listener");
+    check(!fixture.manager.has_pending_work(), "closed client left pending work");
+}
+
 void test_invalid_write_continuation_isolated() {
     Fixture fixture;
 
@@ -419,6 +443,7 @@ int main() {
         test_fair_round_robin_deferred_budget();
         test_full_buffer_without_continuation_closes();
         test_invalid_write_continuation_isolated();
+        test_idle_preserves_deferred_work();
 
         std::cout << "Scheduler hardening tests passed.\n";
 

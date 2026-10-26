@@ -20,9 +20,12 @@ are merged and validated at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`.
 Stage 4B performance hardening is merged and Linux-validated at
 `d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; see
 [measured findings and transaction guarantees](docs/BENCHMARKS.md).
-Stage 5A private-deployment preparation is local on `fasttrack/private-deployment`:
-[runbook, pinned configuration and isolated acceptance](docs/PRIVATE_DEPLOYMENT.md).
-The mandatory real-host and SSH-tunnel acceptance remains pending. Compaction remains future work.
+Stage 5A preparation is accepted at `832631ecec6afb55869514d2f3fa6fdd8155dc77`.
+Stage 6A is a reviewed feature-publication network/observability checkpoint;
+Linux CI and merge acceptance are pending. See [handoff](docs/CONTINUATION_HANDOFF.md).
+Original Phase 16 actual remote Linux deployment is excluded by approved scope
+revision; no remote deployment is claimed. Linux Docker validation remains mandatory.
+Compaction remains Stage 6B.
 Older acceptance records below retain their dated, historical context.
 
 The RESP2 server defaults to loopback and implements PING/ECHO/QUIT, strings,
@@ -1274,3 +1277,63 @@ Clang ASan+UBSan, corpus-integrity and 10,000-run fuzz validation passed.
 The formal Phase 5 closure verdict and per-subphase evidence appear in
 `docs/PROJECT_STATE.md`. Older subsection descriptions above capture their
 individual milestones and are historical, not current feature-status claims.
+
+## Operational subset (Stage 6A local checkpoint)
+
+```sh
+./build/debug/redisdb-server --resp2-server --idle-timeout-ms 30000
+redis-cli -p 6380 INFO stats
+redis-cli -p 6380 CONFIG GET 'maxmemory*'
+```
+
+All settings are startup-only. Existing flags/defaults remain; idle timeout defaults
+to 0 (disabled), accepts 0–31536000000 ms, and reaps incomplete/inactive clients.
+Pending output and scheduled buffered work are exempt. Each client still has bounded
+application buffers; slow readers can retain a bounded connection slot indefinitely.
+SIGTERM/SIGINT stops new admission, drains observed pending work for up to one second,
+then synchronizes pending AOF before the unchanged RESP_STOPPED marker. Filesystem
+stalls are outside that network deadline; future unread requests are not guaranteed.
+
+INFO returns a RESP2 bulk string with CRLF section headings/fields. No argument,
+`default` or `all` includes server, clients, stats, memory, persistence. One named
+section is accepted case-insensitively; unknown sections return an empty bulk;
+multiple sections return an arity error. This is a small subset, not full Redis INFO.
+
+| Section | Fields |
+|---|---|
+| server | redisdb_version |
+| clients | connected_clients (sampled directly) |
+| stats | total_connections_received, total_commands_processed, total_net_input_bytes, total_net_output_bytes; redisdb_commands_succeeded, redisdb_commands_rejected, redisdb_connections_closed, redisdb_parser_errors, redisdb_transport_errors |
+| memory | redisdb_logical_memory_bytes (cached logical charge, not RSS) |
+| persistence | aof_enabled, redisdb_aof_sequence (written sequence, not a weaker-policy durability claim) |
+
+Counters reset at restart and saturate at UINT64_MAX. Processed counts reply-factory
+returns; non-error replies succeed, error replies reject. Fatal exceptions and
+malformed frames are excluded; malformed pipeline frames increment parser_errors.
+INFO excludes its own command from its snapshot. Byte/connection/error transport
+counters include completed polling turns only; current-turn deltas appear on later
+turns. Accepted counts registered sockets, closed counts manager removals including
+idle, and teardown after the final shutdown is excluded. No command payloads or
+keys are collected. Inspection does not expire keys, touch LRU or append AOF;
+normal scheduled maintenance continues independently.
+
+CONFIG GET accepts one or more exact names or patterns with one trailing `*`.
+Supported names: port (effective port), bind, maxclients, maxmemory,
+maxmemory-policy, appendonly, appendfsync, timeout (whole seconds truncated),
+idle-timeout-ms (exact milliseconds). Matching ignores ASCII case; replies use
+canonical lowercase names in fixed startup-setting order with duplicates removed.
+Redis preserves uppercase spelling for exact names; this subset canonicalizes it.
+Unknown names/unsupported glob forms return no pairs. Responses are alternating
+bulk name/value RESP2 arrays. Missing GET patterns report arity error; other
+subcommands including SET report unsupported subcommand. No filesystem paths,
+credentials or unrelated OS settings are exposed.
+
+Stderr emits JSON lines with severity, event and static detail for startup,
+shutdown, snapshot publication and failures. Command payloads, keys, values, paths
+and arbitrary exception text are never logged. Diagnostic write/flush failure exits
+74; a blocked stderr sink can stall low-frequency lifecycle reporting. There is no
+per-request logging or background telemetry. Persistence remains fail-closed.
+
+The [durable handoff](docs/CONTINUATION_HANDOFF.md) records the complete Phase 11/12
+audit, bounded stress envelopes, compatibility differences and local versus CI
+verification. Stage 6A is not accepted until authorized publication and Linux CI.

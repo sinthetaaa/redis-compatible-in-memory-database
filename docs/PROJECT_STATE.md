@@ -2,22 +2,35 @@
 
 ## 1. Current snapshot (2026-10-26)
 
-- Accepted main: `d69b3ede7405b4fe843ffb1c3bbfe4d957810615`.
-- Fast-track Stages 1, 2, 3A, 3B, 4A and 4B are merged and validated: RESP2 subset,
-  TTL, logical memory limits/exact LRU, AOF/snapshot V1, crash recovery, Linux
-  packaging, differential validation and measured noeviction optimization.
-- Exact-main Linux CI: Debug/Release 77 each (40316862854), ASan/UBSan 78 plus
-  10,000 fuzz executions (40316862866), Docker 15 cases, Redis 8.10.2 persistent
-  parity 54 cases/40 routes and 24 profiles/48 runs (40316862873).
-- Current work: Stage 5A private-deployment preparation on `fasttrack/private-deployment`.
-  [Runbook](PRIVATE_DEPLOYMENT.md), pinned private Compose, read-only inspection and
-  UUID-owned smoke/restore tooling are local; no commit/push or new CI acceptance yet.
-- Local Docker daemon is unavailable. New Linux Compose tests require authorized
-  publication/CI; a real host, persistent disk and SSH-tunnel demonstration remain
-  mandatory Stage 5B evidence. No host provisioned or remote deployment claimed.
-- Persistence formats, native loopback default and accepted container tests are
-  preserved. Compaction/retention, replication, authentication and TLS remain out of scope.
-- The following dated snapshots are historical, superseded by this current record.
+- Last verified accepted main: `832631ecec6afb55869514d2f3fa6fdd8155dc77`. Local main,
+  fetched origin/main and remote main match; GitHub identity `sinthetaaa` verified.
+- Fast-track Stages 1–5A are accepted at this task baseline: RESP2 data types,
+  TTL, logical memory/noeviction/exact LRU, transactional AOF/snapshot V1,
+  recovery, differential/performance foundations, Linux Docker/CI and private
+  deployment preparation. Historical evidence below retains its original dates.
+- Current Stage 6A branch: `fasttrack/network-observability`, reviewed for authorized feature
+  publication; Linux CI pending. Original Phase 11 baseline audit plus public idle timeout, protected
+  idle cleanup, bounded shutdown drain; Phase 12 JSON lifecycle logging, saturating
+  counters and read-only INFO/CONFIG GET subset. No persistence format changes.
+- [Continuation handoff](CONTINUATION_HANDOFF.md) contains every 11A–11H and
+  12A–12G audit row, precise counter/compatibility contracts, validation status,
+  source paths, limitations and next steps. Local Debug/Release passed 79/79 each;
+  UBSan/fuzz-seed suite 80/80; final CLI/diagnostic gates 5/5 in each build;
+  operational parity 10 cases, persistent curated parity 54 cases/40 routes and
+  differential harness 41 tests passed. Format/diff checks passed;
+  Stage 6A is NOT accepted until authorized publication, exact-head Linux CI and
+  merge acceptance. Feature-head CI results must be verified after publication.
+- **Approved revised scope:** actual private remote Linux deployment (original
+  Phase 16) is EXCLUDED, not completed. No VPS, card verification or remote
+  deployment is required or claimed. Docker/Linux container validation remains
+  mandatory. Historical deployment preparation is retained.
+- Remaining: 6B safe AOF compaction (Phase 10); 6C correctness/performance
+  (13–14); 6D docs/reconciliation/demo (6–9, 15, 17); 6E engineering audit and
+  portfolio closure (18–19). All original phases except 16 remain in scope.
+- Loopback default, non-root Docker/private publication, single event loop,
+  TTL/LRU/transaction acknowledgment invariants remain. Normal feature commit/push is authorized after review;
+  merge requires separate authorization and post-merge CI. Mac Docker not validated; Linux CI pending.
+- The following dated snapshots are historical, superseded by this record.
 
 ## Historical snapshot — Phase 6F closure
 
