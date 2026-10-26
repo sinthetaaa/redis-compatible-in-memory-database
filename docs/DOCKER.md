@@ -3,8 +3,12 @@
 Stage 4A is merged at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`.
 [Main Docker CI run 40289732162](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40289732162)
 passed the actual image build, 15 container cases, Redis 8.10.2 parity (54 cases /
-40 routes), and 30 benchmark profiles. Stage 4B changes require new Linux CI;
-the local Docker daemon remains unavailable and no system configuration was changed.
+40 routes), and 30 benchmark profiles. Stage 4B is merged and validated at
+`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; its
+[main Docker run 40316862873](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40316862873)
+passed 15 container cases, persistent parity and 24 profiles/48 scaling runs.
+For the new Stage 5A configuration, see the [private deployment runbook](PRIVATE_DEPLOYMENT.md).
+Its health/backup/Compose acceptance is pending Linux CI and actual remote validation.
 
 ## Image and runtime design
 
@@ -33,8 +37,7 @@ selects AOF `always`, `/data/appendonly.aof`, `/data/snapshots`, port 6380, expl
 uses read-only rootfs, all capabilities dropped, no-new-privileges, 64 PIDs,
 512 MiB cgroup memory, one CPU (Stage 4B) and 30-second stop grace. The owned
 test/benchmark adapter applies the same CPU/memory/PID limits and checks Docker
-HostConfig. Local Compose rendering is verified; enforcement of the new CPU
-quota awaits actual Stage 4B Linux CI. Logical charge is not RSS; affected-value
+HostConfig; these limits passed Stage 4B main Linux CI. Logical charge is not RSS; affected-value
 staging (or full-database LRU fallback) and temporary buffers can hit the cgroup limit.
 The image does not manage retention, backups, log rotation or remote deployment.
 
@@ -157,7 +160,7 @@ recorded, and mismatch/infrastructure/identity errors exit nonzero. No floating
 fallback or unverified distro Redis server. The macOS executable pin and harness
 are untouched. Version/digest/hash changes require reviewed repinning, never an
 automatic floating-tag refresh. Stage 4A's merged-main parity passed; the changed
-Stage 4B transaction implementation requires a fresh Linux parity run. Its candidate
+Stage 4B transaction implementation also passed merged-main Linux parity. Its candidate
 now uses AOF `always` to exercise transaction staging while the reference stays
 nonpersistent. Docker CI uses the 24-profile SET/mixed-write scaling matrix through
 10,000 keys; Stage 4A's historical 30-profile matrix remains the tool's default.
@@ -179,4 +182,6 @@ Compose rendered successfully with the sole host binding `127.0.0.1`.
 The existing documented local Apple ASan runtime limitation remains; Linux
 ASan/UBSan/fuzz execution subsequently passed on merged Stage 4A main
 ([run 40289732173](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40289732173)).
-Stage 4B Linux Docker/ASan validation remains pending feature publication.
+Stage 4B main Linux Debug/Release (77 each), ASan/UBSan (78) and 10,000 fuzz
+executions passed runs 40316862854/40316862866; Docker passed 40316862873.
+These accepted results do not validate Stage 5A's new Compose configuration or a remote host.

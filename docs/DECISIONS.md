@@ -14,6 +14,13 @@ the corresponding functionality has been implemented.
 Decision changes require a documented technical reason,
 impact assessment, and updated project documentation.
 
+**Current checkpoint (2026-10-26):** Fast-track Stages 1–4B are accepted through
+main `d69b3ede7405b4fe843ffb1c3bbfe4d957810615` (Linux CI 40316862854,
+40316862866, 40316862873). Stage 5A prepares ADR-012's private single-host Compose,
+stopped backup and SSH-tunnel procedures; remote deployment is not yet validated.
+See [PRIVATE_DEPLOYMENT.md](PRIVATE_DEPLOYMENT.md). Dated records below preserve
+their original acceptance context; this note updates status, not the ADR invariants.
+
 ---
 
 ## Phase 6F Formal Documentation Closure — VERIFIED PASS (2026-10-24)
@@ -115,7 +122,7 @@ for micro-optimizations.
 ## ADR-002 — Single-Threaded Command Execution
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** Serialized RESP2 event loop implemented and Linux-validated
 
 ### Decision
 
@@ -297,7 +304,7 @@ are included in the project.
 ## ADR-006 — Explicit Persistence Durability
 
 **Status:** Accepted
-**Implementation:** Stage 3A AOF merged; Stage 3B snapshots implemented locally
+**Implementation:** Stage 3A AOF and Stage 3B snapshots merged; V1 unchanged through Stage 4B
 
 ### Decision
 
@@ -400,7 +407,7 @@ No invented throughput, latency or memory figures.
 ## ADR-008 — Redis as Reference, Not Implementation
 
 **Status:** Accepted
-**Implementation:** Differential testing pending
+**Implementation:** Pinned Redis 8.10.2 native and persistent Linux differential validation accepted
 
 ### Decision
 
@@ -473,9 +480,9 @@ AOF/snapshot/recovery phases; no disk durability is implied by this ADR.
 ## ADR-010 — Memory Accounting and Eviction
 
 **Status:** Accepted
-**Implementation:** V1 deterministic logical estimator and cached ledger
-implemented (Phase 6F). Limit configuration, noeviction enforcement and
-LRU are NOT implemented; deferred to Phase 7.
+**Implementation:** V1 logical estimator/ledger, maxmemory, noeviction admission
+and exact allkeys-lru implemented through Fast-track Stage 2. RSS remains a
+separate measurement, not the logical ledger.
 
 ### Decision
 
@@ -507,7 +514,7 @@ Never describe approximate LRU as exact LRU.
 ## ADR-011 — Portable, Versioned Snapshots
 
 **Status:** Accepted
-**Implementation:** Stage 3B implemented locally on `fasttrack/snapshots-recovery`
+**Implementation:** Stage 3B merged and recovery validated through Stage 4B
 
 ### Decision
 
@@ -560,7 +567,7 @@ power-loss testing.
 ## ADR-012 — Conservative Private Deployment
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** Stage 5A preparation in progress; real remote deployment/SSH acceptance pending
 
 ### Decision
 

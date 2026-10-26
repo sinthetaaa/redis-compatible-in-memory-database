@@ -1,6 +1,25 @@
 # PROJECT STATE — Redis-Compatible In-Memory Database Server
 
-## 1. Snapshot
+## 1. Current snapshot (2026-10-26)
+
+- Accepted main: `d69b3ede7405b4fe843ffb1c3bbfe4d957810615`.
+- Fast-track Stages 1, 2, 3A, 3B, 4A and 4B are merged and validated: RESP2 subset,
+  TTL, logical memory limits/exact LRU, AOF/snapshot V1, crash recovery, Linux
+  packaging, differential validation and measured noeviction optimization.
+- Exact-main Linux CI: Debug/Release 77 each (40316862854), ASan/UBSan 78 plus
+  10,000 fuzz executions (40316862866), Docker 15 cases, Redis 8.10.2 persistent
+  parity 54 cases/40 routes and 24 profiles/48 runs (40316862873).
+- Current work: Stage 5A private-deployment preparation on `fasttrack/private-deployment`.
+  [Runbook](PRIVATE_DEPLOYMENT.md), pinned private Compose, read-only inspection and
+  UUID-owned smoke/restore tooling are local; no commit/push or new CI acceptance yet.
+- Local Docker daemon is unavailable. New Linux Compose tests require authorized
+  publication/CI; a real host, persistent disk and SSH-tunnel demonstration remain
+  mandatory Stage 5B evidence. No host provisioned or remote deployment claimed.
+- Persistence formats, native loopback default and accepted container tests are
+  preserved. Compaction/retention, replication, authentication and TLS remain out of scope.
+- The following dated snapshots are historical, superseded by this current record.
+
+## Historical snapshot — Phase 6F closure
 
 - Updated: 2026-10-24 (Phase 6F formally CLOSED after reviewed documentation merge and exact-main Linux CI; Phase 6G not started).
 - Current phase: Phase 6 — Collection Data Types IN PROGRESS. Phases 0–5 and 6A–6F formally COMPLETE; Phase 6G differential testing NOT STARTED.

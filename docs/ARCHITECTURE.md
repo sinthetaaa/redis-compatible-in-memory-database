@@ -6,23 +6,21 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state (2026-10-24):** Phases 0–5 and 6A–6F are
-formally complete. The Phase 6F V1 cached logical-byte ledger was merged in
-implementation `dabe5941e385180d49da2abfbed9b818e4e06487` and reviewed
-five-document closure `fbd3e9de90d77eeecc665abfad71f68c2f0ff86f` (tree `8698677050cecbe36cb1588ac02610876cc2c5a4`).
-The docs feature `698b800b4e794d437f4bc6f21d7d1264283b5705` passed its exact-head Linux CI;
-final main networking `40070533556` (Debug/Release) and
-Clang 18 ASan/UBSan/libFuzzer `40070533439` passed all required jobs and steps.
-The accounting estimate is not RSS, a memory cap, or an eviction policy.
-Phase 6G Redis differential testing is next and NOT STARTED; memory-limit
-enforcement, eviction, persistence, recovery and deployment remain planned.
+**Architecture state (2026-10-26):** Fast-track Stages 1–4B are accepted on main
+`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`. The RESP2 subset, TTL, logical
+maxmemory/noeviction/exact LRU, AOF/snapshot V1, recovery, pinned Linux Redis
+differential testing and Linux Docker runtime are implemented and validated.
+Noeviction persistence stages affected-key preimages; exact LRU retains a full
+clone and full V1 recency record. Logical charge is distinct from RSS/cgroup limits.
+Stage 5A prepares a single-host private deployment without changing server code;
+actual remote/SSH acceptance remains pending. See [PRIVATE_DEPLOYMENT.md](PRIVATE_DEPLOYMENT.md).
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
 and source-of-truth milestones are recorded in `docs/PROJECT_STATE.md` and
 `docs/ROADMAP.md`.
 
-The production executable serves loopback-only TCP RESP2 with a single
+The production executable defaults to loopback TCP RESP2 with a single
 serialized command event loop on macOS kqueue and Linux epoll. A shared
 in-memory keyspace supports strings, integer operations and TTL commands,
 including EXPIRE/PEXPIRE/TTL/PTTL/PERSIST and SET EX/PX. Expired entries
@@ -30,9 +28,9 @@ are hidden by lazy checks, while a deadline-ordered index supports at most
 32 active cleanup checks on each nominal 100 ms monotonic maintenance turn.
 Connection admission, parser framing, replies and work are bounded.
 
-Phase 6F deterministic logical memory accounting is implemented;
-differential testing, memory-limit enforcement, eviction, AOF, snapshots,
-restart recovery and deployment remain future milestones.
+Container mode explicitly binds its own network namespace to 0.0.0.0; host
+publication stays 127.0.0.1. AOF, snapshots and restart recovery are accepted;
+real-host storage/network/SSH validation is the remaining deployment gate.
 
 ---
 

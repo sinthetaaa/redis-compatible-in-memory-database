@@ -2,8 +2,10 @@
 
 Stage 4A is merged and Linux-validated at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`;
 see [Docker acceptance evidence](DOCKER.md). The tables here are **native macOS**
-measurements, kept separate from Linux container results. Stage 4B is local and
-unpublished; its new Linux Docker/ASan checks await feature publication. Neither
+measurements, kept separate from Linux container results. Stage 4B is merged at
+`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; post-merge Linux Debug/Release,
+ASan/UBSan/fuzz and Docker CI passed (40316862854/40316862866/40316862873).
+The native development checkpoints below retain their original measurement context. Neither
 set of measurements establishes Redis throughput parity or production capacity.
 
 ## Method and reproduction

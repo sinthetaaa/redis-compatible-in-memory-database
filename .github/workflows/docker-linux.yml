@@ -35,9 +35,26 @@ jobs:
           PY
           docker build --build-arg VCS_REF="$GITHUB_SHA" -t redisdb:ci .
       - name: Tooling unit tests
-        run: python3 -B -m unittest discover -s tests/unit -p 'test_stage4a_tools.py' -v
+        run: |
+          python3 -B -m unittest discover -s tests/unit -p 'test_stage4a_tools.py' -v
+          python3 -B -m unittest discover -s tests/unit -p 'test_private_deployment.py' -v
       - name: Container networking and persistence integration
         run: python3 tests/docker/container_test.py --image redisdb:ci --report benchmark-results/container.json
+      - name: Private deployment Compose acceptance (owned disposable data only)
+        run: |
+          python3 tools/private_deployment.py smoke \
+            --image-id "$(docker image inspect redisdb:ci --format '{{.Id}}')" \
+            --revision "$GITHUB_SHA" --report benchmark-results/private-deployment.json
+          python3 - <<'PY'
+          import json, os
+          r = json.load(open('benchmark-results/private-deployment.json'))
+          assert r['complete'] and r['classification'] == 'SMOKE_PASS'
+          assert r['revision'] == os.environ['GITHUB_SHA']
+          assert len(r['cases']) == 10 and len(set(r['cases'])) == 10
+          assert 'exact owned-resource cleanup' in r['cases']
+          assert not r['remote_deployment_validated']
+          print('PASS 10 private Compose checks; remote host/SSH acceptance remains pending')
+          PY
       - name: Pinned Linux Redis 8.10.2 binary-exact compatibility
         run: python3 tests/differential/linux_container.py --image redisdb:ci --report benchmark-results/linux-parity.json
       - name: Bounded container baseline (no throughput pass threshold)
@@ -80,7 +97,7 @@ jobs:
                           print(f'| {row["policy"]} | {row["keys"]} | {row["workload"]} | {row["clients"]} | {row["pipeline"]} | {row["median_ops_sec"]:.0f} | {row["median_p99_ms"]:.3f} |')
               else:
                   print(f'Cases recorded: {len(result.get("cases", []))}; status: {result.get("classification", "container suite completed")}')
-                  for key in ('image_bytes', 'reference_image', 'reference_image_id',
+                  for key in ('image_bytes', 'image_id', 'revision', 'reference_image', 'reference_image_id',
                               'reference_architecture', 'reference_executable_sha256'):
                       if key in result:
                           print(f'{key}: {result[key]}')
