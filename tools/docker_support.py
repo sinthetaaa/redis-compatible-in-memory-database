@@ -54,7 +54,7 @@ class DockerResources:
         name = 'redisdb-stage4a-' + self.owner + '-' + str(len(self.containers))
         flags = ['create', '--name', name, '--label', LABEL + '=' + self.owner,
                  '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-                 '--pids-limit', '64', '--memory', '512m',
+                 '--pids-limit', '64', '--memory', '512m', '--cpus', '1',
                  '--mount', f'type=volume,src={volume},dst=/data']
         if publish:
             if self.network is None:

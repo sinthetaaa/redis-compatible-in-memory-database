@@ -1,12 +1,10 @@
 # Stage 4A: Linux container packaging and private demo
 
-Implementation is local on `fasttrack/docker-benchmarks`, based on accepted main
-`798010ff34ec0c094aa37f7821524277edbb75dd`. Container execution is **not yet
-validated**: Docker CLI/Compose are installed locally, but the Desktop daemon
-socket is absent. No daemon was started or software installed. The new
-`docker-linux.yml` workflow requires a subsequent authorized branch publication
-before GitHub can execute it. No Linux image-build, persistence, parity or
-performance success is claimed from static inspection or native macOS tests.
+Stage 4A is merged at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`.
+[Main Docker CI run 40289732162](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40289732162)
+passed the actual image build, 15 container cases, Redis 8.10.2 parity (54 cases /
+40 routes), and 30 benchmark profiles. Stage 4B changes require new Linux CI;
+the local Docker daemon remains unavailable and no system configuration was changed.
 
 ## Image and runtime design
 
@@ -15,7 +13,7 @@ The multi-stage Dockerfile pins the Debian bookworm-slim OCI index to
 (resolved 2026-10-26). Builder: GCC, CMake >=3.25, Ninja, C++20, Release, tests off,
 stripped server. Runtime: matching Debian base, libstdc++/runtime dependencies and
 one executable. No compiler, source tree or build cache is copied. Exact image
-size remains unmeasured until a real build; the container test reports bytes.
+size on Stage 4A's Linux amd64 runner was 75,371,632 bytes; new builds report their own size.
 Apt packages follow that Debian suite's updates; base identity is fixed, but
 bit-for-bit builds across different apt repository dates are not promised.
 `.dockerignore` allows only build inputs and excludes host data/credentials.
@@ -33,8 +31,11 @@ flag. Publication happens on the serialized event loop. The default image CMD
 selects AOF `always`, `/data/appendonly.aof`, `/data/snapshots`, port 6380, explicit
 `0.0.0.0`, and 64 MiB **logical** maxmemory with noeviction. Compose additionally
 uses read-only rootfs, all capabilities dropped, no-new-privileges, 64 PIDs,
-512 MiB cgroup memory and 30-second stop grace. Logical charge is not RSS;
-full-database staging and temporary buffers can still hit the cgroup limit.
+512 MiB cgroup memory, one CPU (Stage 4B) and 30-second stop grace. The owned
+test/benchmark adapter applies the same CPU/memory/PID limits and checks Docker
+HostConfig. Local Compose rendering is verified; enforcement of the new CPU
+quota awaits actual Stage 4B Linux CI. Logical charge is not RSS; affected-value
+staging (or full-database LRU fallback) and temporary buffers can hit the cgroup limit.
 The image does not manage retention, backups, log rotation or remote deployment.
 
 ## Safe networking
@@ -108,7 +109,7 @@ Equivalent direct run, after building/tagging the image:
 docker build --build-arg VCS_REF="$(git rev-parse HEAD)-local" -t redisdb:stage4a .
 docker volume create redisdb-stage4a-demo-data
 docker run -d --name redisdb-stage4a-demo --read-only --cap-drop ALL \
-  --security-opt no-new-privileges --memory 512m --pids-limit 64 \
+  --security-opt no-new-privileges --memory 512m --cpus 1 --pids-limit 64 \
   -p 127.0.0.1:6380:6380 \
   --mount type=volume,src=redisdb-stage4a-demo-data,dst=/data redisdb:stage4a
 docker kill --signal USR1 redisdb-stage4a-demo
@@ -155,7 +156,11 @@ unordered SMEMBERS/HGETALL semantics. Raw request/reply hex and failures are
 recorded, and mismatch/infrastructure/identity errors exit nonzero. No floating
 fallback or unverified distro Redis server. The macOS executable pin and harness
 are untouched. Version/digest/hash changes require reviewed repinning, never an
-automatic floating-tag refresh. Linux parity remains **unexecuted** until this adapter passes.
+automatic floating-tag refresh. Stage 4A's merged-main parity passed; the changed
+Stage 4B transaction implementation requires a fresh Linux parity run. Its candidate
+now uses AOF `always` to exercise transaction staging while the reference stays
+nonpersistent. Docker CI uses the 24-profile SET/mixed-write scaling matrix through
+10,000 keys; Stage 4A's historical 30-profile matrix remains the tool's default.
 
 The new GitHub-hosted Ubuntu workflow builds the image, runs these checks and
 records image size, exact reference identity and bounded baseline JSON/job summary.
@@ -172,4 +177,6 @@ and graceful shutdown. Five offline Docker-tooling identity/safety/method checks
 The existing pinned macOS Redis differential trace passed **54 cases / 40 routes**.
 Compose rendered successfully with the sole host binding `127.0.0.1`.
 The existing documented local Apple ASan runtime limitation remains; Linux
-ASan/UBSan/fuzz execution is pending publication alongside Docker execution.
+ASan/UBSan/fuzz execution subsequently passed on merged Stage 4A main
+([run 40289732173](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40289732173)).
+Stage 4B Linux Docker/ASan validation remains pending feature publication.

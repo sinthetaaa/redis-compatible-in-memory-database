@@ -17,10 +17,11 @@ are implemented.
 
 ## Commit boundary
 
-1. Prepare a private database copy and execute the command tentatively, including
+1. Capture first preimages of changed keys under `noeviction`, or prepare a private
+   database copy under exact LRU, and execute the command tentatively, including
    validation, memory admission, TTL handling, collection results and eviction.
    Rejected commands roll back and produce no journal record.
-2. Compare the tentative state with the original. Encode actual changed-key
+2. Compare touched keys with their preimages (full comparison in the LRU fallback). Encode actual changed-key
    postimages and tombstones as one transaction, including every eviction victim.
    MSET is one transaction; duplicate destinations have their final values.
 3. Write the complete framed record, retrying short writes and EINTR.
@@ -29,7 +30,7 @@ are implemented.
 
 No other command runs during this sequence. A persistent command uses one wall-clock
 sample so reads cannot cross a deadline outside their expiry transaction. Read-only
-traffic avoids the copy unless expiry cleanup may mutate the keyspace. Maintenance
+traffic avoids staging unless expiry cleanup may mutate the keyspace. Maintenance
 expiry uses the same journal boundary. Startup expiry cleanup is journaled and
 synchronized before readiness, preventing later LRU records from referring to an
 inconsistent keyset.
@@ -115,9 +116,11 @@ touches are not durable. Changing from a journal written without LRU to LRU uses
 documented sorted-key cold order. Startup removes due keys and rejects a configured
 memory limit too small for the recovered live state, rather than silently evicting it.
 
-Persistent writes currently stage a complete database copy (O(database size) extra
-time and temporary memory), then encode only changed values and LRU metadata.
+Stage 4B's `noeviction` staging copies affected preimages and expiry nodes, then
+compares only touched keys. Rollback erases tentative nodes and transfers reserved
+backup nodes without allocation. Exact LRU retains the complete-copy fallback
+(O(database size) extra time/memory) and its unchanged V1 full-order record.
 Collection postimages and the complete LRU order can make records large. Disk writes,
 `fsync`, replay and watermark publication block the event loop. The logical data budget
 does not bound temporary copies, journal size, metadata or RSS. These are explicit
-Stage 3A tradeoffs; benchmarks, incremental transaction staging and compaction are later work.
+tradeoffs; see [measurements and remaining limits](BENCHMARKS.md). Compaction remains future work.

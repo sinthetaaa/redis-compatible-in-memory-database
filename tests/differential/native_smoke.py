@@ -87,10 +87,15 @@ def _close_owned(proc: subprocess.Popen | None) -> None:
         proc.wait(timeout=3)
 
 
-def _start_custom(binary: Path, log_dir: Path) -> tuple[subprocess.Popen, int]:
+def _start_custom(binary: Path, log_dir: Path, *, appendfsync: str = 'off') -> tuple[subprocess.Popen, int]:
+    if appendfsync not in ('off', 'always', 'everysec', 'no'):
+        raise HarnessFailure('invalid custom persistence policy')
+    options = [] if appendfsync == 'off' else [
+        '--appendonly', 'yes', '--aof-file', str(log_dir / 'custom.aof'),
+        '--appendfsync', appendfsync]
     stderr = (log_dir / "custom-stderr.txt").open("wb")
     try:
-        proc = subprocess.Popen([str(binary), "--resp2-server", "--port", "0", "--max-clients", "16"],
+        proc = subprocess.Popen([str(binary), "--resp2-server", "--port", "0", "--max-clients", "16", *options],
                                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=stderr,
                                 close_fds=True)
     finally:

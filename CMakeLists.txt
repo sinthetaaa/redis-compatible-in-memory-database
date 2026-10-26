@@ -99,9 +99,32 @@ target_link_libraries(
 
 redisdb_enable_warnings(redisdb-server)
 
+option(REDISDB_BUILD_PROFILES "Build the small transaction/AOF phase profiler" OFF)
+if(REDISDB_BUILD_PROFILES AND UNIX)
+    add_executable(redisdb-transaction-profile benchmarks/transaction_profile.cpp)
+    target_link_libraries(redisdb-transaction-profile PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-transaction-profile)
+endif()
+
 if(BUILD_TESTING)
+    add_executable(redisdb-transaction-tests tests/unit/transaction_test.cpp)
+    target_link_libraries(redisdb-transaction-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-transaction-tests)
+    add_test(NAME unit.transaction COMMAND redisdb-transaction-tests)
+    set_tests_properties(unit.transaction PROPERTIES TIMEOUT 30)
     if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+        add_test(NAME integration.resp_hardening
+                 COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_hardening_test.py"
+                         "$<TARGET_FILE:redisdb-server>")
+        set_tests_properties(integration.resp_hardening PROPERTIES TIMEOUT 90)
+        if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=[^ ]*address")
+            # Keep sanitizer quarantine/leak detection enabled. Its allocator
+            # overhead needs a separate RSS envelope from native leak screening.
+            set_tests_properties(integration.resp_hardening PROPERTIES
+                                 ENVIRONMENT "REDISDB_TEST_ASAN=1")
+        endif()
 
         add_test(NAME integration.resp_bind
                  COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_bind_test.py"

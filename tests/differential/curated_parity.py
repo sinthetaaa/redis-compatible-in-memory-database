@@ -1,7 +1,8 @@
 """Phase 6G.1B.1: deterministic 40-route native Redis 8.10.2 parity and raw replay.
 
 Only the existing owned-process helpers are used. No global Redis services,
-admin commands, persistence, or unowned process cleanup are permitted.
+admin commands or unowned process cleanup are permitted. Optional candidate AOF
+files stay inside the owned temporary directory; the reference remains nonpersistent.
 """
 from __future__ import annotations
 
@@ -185,7 +186,8 @@ def _assert_coverage(steps: list[tuple[str, tuple[bytes, ...]]], matrix: Path) -
         raise HarnessFailure(f'curated trace missing routes: {sorted(missing)}')
 
 
-def run(custom: Path, reference: Path, report_path: Path, trace: list[dict[str, str]], *, replay: bool) -> dict:
+def run(custom: Path, reference: Path, report_path: Path, trace: list[dict[str, str]], *,
+        replay: bool, appendfsync: str = 'off') -> dict:
     report = {
         'format': 'phase6g-curated-v1', 'phase': '6G.1B.1',
         'scope': 'CURATED_ONLY_NOT_RANDOM_OR_LINUX',
@@ -194,6 +196,7 @@ def run(custom: Path, reference: Path, report_path: Path, trace: list[dict[str, 
         'classification': 'HARNESS_INFRA_FAILURE', 'failure_reason': None,
         'cleanup': {'custom': {'started': False}, 'reference': {'started': False}},
         'replay_mode': replay,
+        'candidate_persistence': appendfsync,
     }
     procs = {'custom': None, 'reference': None}
     cleanup_errors = []
@@ -211,7 +214,7 @@ def run(custom: Path, reference: Path, report_path: Path, trace: list[dict[str, 
             root = Path(tmp)
             try:
                 procs['reference'], rp = _start_reference(reference, root)
-                procs['custom'], cp = _start_custom(custom, root)
+                procs['custom'], cp = _start_custom(custom, root, appendfsync=appendfsync)
                 with _connect(cp) as candidate_a, _connect(rp) as reference_a, \
                      _connect(cp) as candidate_b, _connect(rp) as reference_b:
                     sockets = {
@@ -295,6 +298,7 @@ def main() -> int:
     parser.add_argument('--reference', required=True, type=Path)
     parser.add_argument('--report', required=True, type=Path)
     parser.add_argument('--replay', type=Path, help='original JSON result, exact trace bytes; no generator')
+    parser.add_argument('--appendfsync', choices=('off', 'always', 'everysec', 'no'), default='off')
     args = parser.parse_args()
     try:
         if args.replay:
@@ -303,7 +307,8 @@ def main() -> int:
             steps = curated_trace()
             _assert_coverage(steps, Path(__file__).with_name('command_matrix.csv'))
             trace = _pack_trace(steps)
-        result = run(args.custom, args.reference, args.report, trace, replay=bool(args.replay))
+        result = run(args.custom, args.reference, args.report, trace, replay=bool(args.replay),
+                     appendfsync=args.appendfsync)
         print(f'PHASE6G_1B1_CURATED_NATIVE=PASS cases={result["passed"]} routes=40 replay={bool(args.replay)}')
         print(f'CURATED_EVIDENCE={args.report}')
         return 0

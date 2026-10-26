@@ -225,12 +225,7 @@ class Database final {
     // Startup-only incremental insertion, with ledger/index reconstruction and no eviction.
     void restore_snapshot_entry(EntryEffect effect);
     void finish_recovery(); // purge due deadlines, then enforce configured capacity
-    void clear() noexcept {
-        entries_.clear();
-        expiry_index_.clear();
-        lru_.clear();
-        accounted_bytes_ = 0;
-    }
+    void clear() noexcept;
 
   private:
     // Treat deadline <= current wall time as expired. This is logically
@@ -245,7 +240,8 @@ class Database final {
     void erase_entry(EntryMap::iterator found) const;
     void swap_state(Database& other) noexcept;
     [[nodiscard]] std::unique_ptr<Database> clone_state() const;
-    bool transaction_active_ = false;
+    void remember(std::string_view key) const;
+    Transaction* transaction_ = nullptr;
     MemoryOptions memory_options_;
     mutable std::list<std::string> lru_; // oldest at front, newest at back
     mutable EntryMap entries_;
@@ -264,9 +260,11 @@ class Database final {
     mutable std::set<ExpiryKey, ExpiryLess> expiry_index_;
 };
 
-// Persistence-only tentative command execution. Cloning and effect construction
-// can throw; rollback and publication cannot. Serialized callers must not expose
-// the tentative database until commit. Read-only normal traffic need not clone.
+// Persistence-only tentative command execution. NoEviction remembers only first
+// preimages of physically changed keys. Exact LRU retains the full-clone fallback
+// (V1 commits also carry full recency order). Preparation/effects can throw;
+// rollback and publication never allocate. Serialized callers must not expose
+// tentative state until the journal accepts it. Read-only traffic needs no clone.
 class Database::Transaction final {
   public:
     explicit Transaction(Database& database);
@@ -277,8 +275,16 @@ class Database::Transaction final {
     void commit() noexcept;
 
   private:
+    friend class Database;
+    void remember(std::string_view key);
+    void clear_tentative() noexcept;
     Database& database_;
     std::unique_ptr<Database> original_;
+    std::set<std::string, std::less<>> touched_;
+    EntryMap cleared_entries_;
+    decltype(Database::expiry_index_) cleared_expiry_;
+    bool cleared_ = false;
+    bool incremental_ = false;
     bool committed_ = false;
 };
 
