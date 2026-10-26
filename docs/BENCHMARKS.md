@@ -277,6 +277,13 @@ four-client load per policy with 512 bounded reconnects, then reused clients,
 non-reader. It checks sampled RSS/FD bounds where available, malformed/failed
 commands, immediate SIGTERM after acknowledged pipelined writes, recovery and
 repeated SIGKILL/restart. This short check cannot prove absence of long-term leaks.
+Native builds enforce a 32 MiB sampled RSS-growth bound. Address-instrumented
+builds use a separate 512 MiB envelope because ASan's retained freed allocations
+and metadata are part of RSS; the first Linux sanitizer run exceeded the native
+bound (about 39 → 164 MB) without an ASan/UBSan diagnostic. CMake marks only
+address-instrumented builds for this envelope. ASan quarantine and fatal
+ASan/UBSan/LeakSanitizer checks remain enabled; native Debug/Release retain the
+strict bound. Sanitizer RSS is not compared with native performance/RSS.
 Docker now configures one CPU alongside 512 MiB and 64 PIDs, with runtime assertions;
 new enforcement and Linux performance/ASan must be validated after publication.
 Stage 4A Linux figures used the older CPU configuration and are not directly

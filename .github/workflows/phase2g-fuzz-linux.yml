@@ -89,6 +89,9 @@ jobs:
           assert all('-fsanitize=address,undefined' in e['command'] for e in core + memory_tests + aof_tests + snapshot_tests + transaction_tests), (
               'Full-program storage/test sanitizer instrumentation missing'
           )
+          assert 'REDISDB_TEST_ASAN=1' in Path('build/fuzz-linux/CTestTestfile.cmake').read_text(), (
+              'Address-instrumented hardening test needs its separate RSS envelope'
+          )
           ninja = Path('build/fuzz-linux/build.ninja').read_text()
           assert '-fsanitize=fuzzer,address,undefined' in ninja, 'Fuzzer link flags missing'
           manifest = Path('build/fuzz-linux/fuzz-corpus.sha256')

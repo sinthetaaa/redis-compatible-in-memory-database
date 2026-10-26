@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import contextlib
 import hashlib
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -105,8 +106,13 @@ def sustained_and_shutdown(root):
                     samples.append(resource_sample(running.proc.pid))
                     rounds += 1
                 assert running.command(b'PING') == RespValue('simple', b'PONG')
-            # Bound the short stress check; this is not a proof of no long-term leak.
-            assert max(s['rss_bytes'] for s in samples) - before['rss_bytes'] < 32*1024*1024, samples
+            # ASan retains freed allocations in quarantine and adds metadata.
+            # CMake marks actual address-instrumented builds; keep the native
+            # 32 MiB growth check and a separate 512 MiB sanitizer envelope.
+            # ASan/LSan still check real memory errors/leaks at normal shutdown.
+            # Neither short RSS check proves absence of long-term growth.
+            rss_limit = (512 if os.environ.get('REDISDB_TEST_ASAN') == '1' else 32) * 1024 * 1024
+            assert max(s['rss_bytes'] for s in samples) - before['rss_bytes'] < rss_limit, samples
             if before['fds'] is not None:
                 assert max(s['fds'] for s in samples) <= before['fds'] + 9, samples
             # Pipeline weaker-policy mutations then signal immediately after replies:
@@ -118,6 +124,7 @@ def sustained_and_shutdown(root):
             print(f'{policy}: {total} mixed operations, {min(rounds,4)*128} reconnects; '
                   f'RSS start/end/max={before["rss_bytes"]}/{samples[-1]["rss_bytes"]}/'
                   f'{max(s["rss_bytes"] for s in samples)}; '
+                  f'RSS growth limit={rss_limit}; '
                   f'FD start/end={before["fds"]}/{samples[-1]["fds"]}')
         finally:
             if running.proc.poll() is None:

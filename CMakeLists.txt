@@ -119,6 +119,12 @@ if(BUILD_TESTING)
                  COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_hardening_test.py"
                          "$<TARGET_FILE:redisdb-server>")
         set_tests_properties(integration.resp_hardening PROPERTIES TIMEOUT 90)
+        if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=[^ ]*address")
+            # Keep sanitizer quarantine/leak detection enabled. Its allocator
+            # overhead needs a separate RSS envelope from native leak screening.
+            set_tests_properties(integration.resp_hardening PROPERTIES
+                                 ENVIRONMENT "REDISDB_TEST_ASAN=1")
+        endif()
 
         add_test(NAME integration.resp_bind
                  COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/integration/resp_bind_test.py"
