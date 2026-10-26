@@ -14,12 +14,12 @@ the corresponding functionality has been implemented.
 Decision changes require a documented technical reason,
 impact assessment, and updated project documentation.
 
-**Current checkpoint (2026-10-26):** Fast-track Stages 1–4B are accepted through
-main `d69b3ede7405b4fe843ffb1c3bbfe4d957810615` (Linux CI 40316862854,
-40316862866, 40316862873). Stage 5A prepares ADR-012's private single-host Compose,
-stopped backup and SSH-tunnel procedures; remote deployment is not yet validated.
-See [PRIVATE_DEPLOYMENT.md](PRIVATE_DEPLOYMENT.md). Dated records below preserve
-their original acceptance context; this note updates status, not the ADR invariants.
+**Current checkpoint (2026-10-26):** Stages 1–5A accepted through
+`832631ecec6afb55869514d2f3fa6fdd8155dc77`. Stage 6A is reviewed for feature publication,
+awaiting Linux CI and merge acceptance. Approved scope revision excludes actual
+private remote deployment (Phase 16); ADR-012's existing private Docker/network
+safety constraints remain. No remote deployment claimed. Historical notes retain
+their original context. See [continuation handoff](CONTINUATION_HANDOFF.md).
 
 ---
 
@@ -1141,3 +1141,38 @@ Record changes with:
 - Relevant tests and commits.
 
 Do not silently alter previously accepted decisions.
+
+## ADR-016 — Minimal event-loop operational observability (Stage 6A)
+
+**Date:** 2026-10-26. **Status:** Local implementation/validation passed;
+publication/Linux CI and merge acceptance remain pending.
+**Previous:** no public INFO/CONFIG route, plain error diagnostics; idle manager
+infrastructure existed but was disabled by the public server.
+
+Use startup-only CLI options; add bounded millisecond idle timeout with zero
+default. Pending output and scheduled work exempt a client from idle reaping and
+idle poll deadlines. Stop admission on shutdown and give observed pending work a
+one-second monotonic network drain before the existing checked journal finish.
+This bounds slow-reader shutdown without changing acknowledgment guarantees.
+
+Expose only cached metrics and safe selected startup settings via read-only
+INFO/CONFIG GET before database clock/transaction execution. Counters are owned by
+the event loop, reset at restart and saturate rather than wrapping. Transport
+counters represent completed polls; successful command counts mean non-error reply
+factory returns, not guaranteed client receipt or weaker-policy disk durability.
+Canonical lowercase CONFIG reply names and exact/trailing-star matching deliberately
+limit compatibility. AOF/snapshot V1, TTL, logical charge and exact LRU stay intact.
+
+Use low-frequency, dependency-free JSON-line lifecycle diagnostics to stderr.
+Only literal categories can enter records; exception text, keys, payloads and
+paths are excluded. Preserve established useful AOF/OOM error categories and exact
+stdout markers. Diagnostic write/flush failure exits 74 without recursive logging.
+This avoids payload exposure, per-request blocking logging, telemetry buffering,
+threads/locks and keyspace scans. Broken diagnostic reporting is process-fatal and
+may therefore leave an unacknowledged durable transaction, as existing crash rules
+already permit. No claim of complete Redis operational compatibility.
+
+Affected: Phases 11–12. Evidence: operations unit/TCP tests, deterministic
+connection/scheduler tests, existing persistence failure regressions, bounded
+network stress and limited pinned Redis operational comparison. Exact local/CI
+status is in [CONTINUATION_HANDOFF.md](CONTINUATION_HANDOFF.md).

@@ -390,13 +390,20 @@ void test_deterministic_idle_reaping() {
 
     check(manager.connection_count() == 1, "early reaper changed connection count");
 
-    check(manager.reap_idle_connections(last + 31ms) == 1, "expired connection was not evicted");
+    manager.find(token)->queue_output("pending");
+    check(manager.reap_idle_connections(last + 31ms) == 0,
+          "pending output was incorrectly idle-reaped");
+    (void)manager.find(token)->flush_once(100);
+    const auto after_flush = manager.find(token)->last_activity();
+    check(manager.reap_idle_connections(after_flush + 31ms) == 1,
+          "expired connection was not evicted");
 
     check(manager.connection_count() == 0, "expired connection still owned");
 
     check(manager.find(token) == nullptr, "expired token still resolves");
 
-    check(manager.reap_idle_connections(last + 40ms) == 0, "idle reaping was not idempotent");
+    check(manager.reap_idle_connections(after_flush + 40ms) == 0,
+          "idle reaping was not idempotent");
 }
 
 void test_idle_deadline_bounds_infinite_poll() {

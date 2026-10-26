@@ -1,8 +1,10 @@
+#include "redisdb/server/Operations.hpp"
 #include "redisdb/server/RespCommandServer.hpp"
 #include "redisdb/server/SmokeServer.hpp"
 #include "redisdb/server/Version.hpp"
 
 #include <charconv>
+#include <csignal>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -21,7 +23,7 @@ void print_usage() {
               << "  redisdb-server --smoke-echo [--port PORT]"
                  " [--max-clients COUNT]\n"
               << "  redisdb-server --resp2-server [--port PORT] [--bind 127.0.0.1|0.0.0.0]"
-                 " [--max-clients COUNT] [--maxmemory BYTES]"
+                 " [--max-clients COUNT] [--idle-timeout-ms MS] [--maxmemory BYTES]"
                  " [--maxmemory-policy noeviction|allkeys-lru]\n"
               << "    [--appendonly yes] [--aof-file PATH] [--appendfsync always|everysec|no]\n"
               << "    [--snapshot-dir PATH] (requires AOF; SIGUSR1 requests a checkpoint)\n"
@@ -50,13 +52,17 @@ template <typename Integer> bool parse_unsigned(std::string_view text, Integer& 
 }
 
 int invalid_arguments() {
-    std::cerr << "Invalid arguments. Use --help for usage.\n";
+    redisdb::server::log_event("error", "invalid_arguments");
     return 2;
 }
 
 } // namespace
 
 int main(int argc, char* argv[]) {
+    // A closed stderr pipe must reach the checked logger failure path rather
+    // than terminate asynchronously before write/flush can report EPIPE.
+    if (std::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+        return 74;
     if (argc == 2) {
         const std::string_view argument{argv[1]};
 
@@ -83,6 +89,8 @@ int main(int argc, char* argv[]) {
     std::uint16_t port = 6380;
     std::size_t max_clients = 1024;
 
+    bool idle_seen = false;
+    std::chrono::milliseconds idle_timeout{0};
     bool port_seen = false;
     bool bind_seen = false;
     std::string_view bind_address = "127.0.0.1";
@@ -111,6 +119,16 @@ int main(int argc, char* argv[]) {
             }
             bind_address = value;
             bind_seen = true;
+            continue;
+        }
+        if (mode == "--resp2-server" && option == "--idle-timeout-ms" && !idle_seen) {
+            std::uint64_t parsed = 0;
+            // Bound to one year, avoiding steady-clock deadline overflow.
+            if (!parse_unsigned(value, parsed) || parsed > 31536000000ULL) {
+                return invalid_arguments();
+            }
+            idle_timeout = std::chrono::milliseconds{parsed};
+            idle_seen = true;
             continue;
         }
         if (option == "--port" && !port_seen) {
@@ -207,13 +225,13 @@ int main(int argc, char* argv[]) {
     try {
         if (mode == "--resp2-server") {
             redisdb::server::run_resp2_server(port, max_clients, memory, aof, snapshot,
-                                              bind_address);
+                                              bind_address, idle_timeout);
         } else {
             redisdb::server::run_smoke_echo(port, max_clients);
         }
         return 0;
     } catch (const std::exception& error) {
-        std::cerr << "Server error: " << error.what() << '\n';
+        redisdb::server::log_failure(error.what());
 
         return 1;
     }

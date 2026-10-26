@@ -6,14 +6,33 @@
 **Development platform:** macOS ARM64
 **Deployment target:** Linux
 **Protocol target:** Documented RESP2 subset
-**Architecture state (2026-10-26):** Fast-track Stages 1–4B are accepted on main
-`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`. The RESP2 subset, TTL, logical
-maxmemory/noeviction/exact LRU, AOF/snapshot V1, recovery, pinned Linux Redis
-differential testing and Linux Docker runtime are implemented and validated.
-Noeviction persistence stages affected-key preimages; exact LRU retains a full
-clone and full V1 recency record. Logical charge is distinct from RSS/cgroup limits.
-Stage 5A prepares a single-host private deployment without changing server code;
-actual remote/SSH acceptance remains pending. See [PRIVATE_DEPLOYMENT.md](PRIVATE_DEPLOYMENT.md).
+**Architecture state (2026-10-26):** Fast-track Stages 1–5A accepted at
+`832631ecec6afb55869514d2f3fa6fdd8155dc77`. Stage 6A operational/network
+changes are reviewed for feature publication; acceptance and Linux CI pending.
+[Handoff](CONTINUATION_HANDOFF.md) records scope, audit and exact validation.
+Original Phase 16 actual remote deployment is excluded, not claimed complete;
+Docker/Linux validation remains mandatory.
+
+Stage 6A keeps one event loop and accepted storage/persistence formats. INFO and
+CONFIG GET are intercepted after structural command decoding and before the
+command clock/transaction path. They sample cached logical memory, journal sequence,
+current clients and saturating counters, without touching keys, deadlines or LRU.
+Transport counters aggregate completed polls; command counters exclude the current
+inspection. Both reset on process restart. INFO does no full-keyspace scans.
+
+`--idle-timeout-ms` defaults to zero (disabled); startup range is 0 through
+31536000000 ms. The manager skips pending output, AwaitWrite and deferred CPU work
+both when reaping and choosing idle poll deadlines, avoiding false closes and
+expired-deadline busy polling. Incomplete input can expire. SIGINT/SIGTERM stops
+listener admission and drains observed pending work for up to one monotonic second,
+then explicitly finishes AOF before RESP_STOPPED. Filesystem stalls are outside
+the network deadline; unread future kernel requests have no completion guarantee.
+
+Lifecycle/error diagnostics use JSON lines on stderr with severity/event/detail,
+only static safe categories; readiness, snapshot and shutdown stdout markers remain.
+No per-request logging, thread, lock, telemetry queue or filesystem metric scan is
+added. Failed diagnostic write/flush exits 74; serious persistence errors remain
+fatal and receive no successful acknowledgment. [README operational contract](../README.md#operational-subset-stage-6a-local-checkpoint).
 
 This file contains both the intended design and dated milestone sketches;
 not every planned component below is implemented. Current accepted behavior
@@ -30,7 +49,7 @@ Connection admission, parser framing, replies and work are bounded.
 
 Container mode explicitly binds its own network namespace to 0.0.0.0; host
 publication stays 127.0.0.1. AOF, snapshots and restart recovery are accepted;
-real-host storage/network/SSH validation is the remaining deployment gate.
+actual remote deployment is excluded; Linux container acceptance remains mandatory.
 
 ---
 

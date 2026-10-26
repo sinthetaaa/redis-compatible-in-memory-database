@@ -55,8 +55,16 @@ jobs:
           assert not r['remote_deployment_validated']
           print('PASS 10 private Compose checks; remote host/SSH acceptance remains pending')
           PY
-      - name: Pinned Linux Redis 8.10.2 binary-exact compatibility
-        run: python3 tests/differential/linux_container.py --image redisdb:ci --report benchmark-results/linux-parity.json
+      - name: Pinned Linux Redis 8.10.2 command and operational compatibility
+        run: |
+          python3 tests/differential/linux_container.py --image redisdb:ci --report benchmark-results/linux-parity.json
+          python3 - <<'PY'
+          import json
+          r = json.load(open('benchmark-results/linux-parity.json'))
+          assert r['passed'] and len(r['cases']) == 54 and r['routes'] == 40
+          assert r['operational_passed'] and len(r['operational_cases']) == 10
+          print('PASS 54 command cases/40 routes and 10 operational cases against the same pinned Redis')
+          PY
       - name: Bounded container baseline (no throughput pass threshold)
         run: |
           python3 benchmarks/tcp_baseline.py --image redisdb:ci --scaling --seconds 2 --warmup 0.25 --repeats 2 --output benchmark-results/linux-benchmark.json

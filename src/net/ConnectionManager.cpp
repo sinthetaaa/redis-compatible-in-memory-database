@@ -94,7 +94,7 @@ void ConnectionManager::suspend_listener() {
 }
 
 void ConnectionManager::resume_listener() {
-    if (listener_registered_ || connections_.size() >= limits_.max_connections) {
+    if (stopping_ || listener_registered_ || connections_.size() >= limits_.max_connections) {
         return;
     }
 
@@ -623,6 +623,22 @@ ConnectionManager::dispatch_ready(const std::vector<ReadyEvent>& events) {
     return stats;
 }
 
+void ConnectionManager::stop_accepting() {
+    stopping_ = true;
+    suspend_listener();
+}
+
+bool ConnectionManager::has_pending_work() const noexcept {
+    if (!deferred_pending_.empty() || !waiting_for_write_.empty())
+        return true;
+    for (const auto& [token, connection] : connections_) {
+        (void)token;
+        if (connection->wants_write())
+            return true;
+    }
+    return false;
+}
+
 std::size_t ConnectionManager::reap_idle_connections(std::chrono::steady_clock::time_point now) {
     if (limits_.idle_timeout.count() == 0) {
         return 0;
@@ -633,7 +649,9 @@ std::size_t ConnectionManager::reap_idle_connections(std::chrono::steady_clock::
     for (const auto& [token, connection] : connections_) {
         const auto last = connection->last_activity();
 
-        if (now >= last && now - last >= limits_.idle_timeout) {
+        if (!connection->wants_write() && !deferred_pending_.contains(token) &&
+            !waiting_for_write_.contains(token) && now >= last &&
+            now - last >= limits_.idle_timeout) {
             expired.push_back(token);
         }
     }
@@ -662,7 +680,10 @@ ConnectionManager::DispatchResult ConnectionManager::poll_once(std::chrono::mill
         const auto now = std::chrono::steady_clock::now();
 
         for (const auto& [token, connection] : connections_) {
-            (void)token;
+            if (connection->wants_write() || deferred_pending_.contains(token) ||
+                waiting_for_write_.contains(token)) {
+                continue;
+            }
 
             const auto deadline = connection->last_activity() + limits_.idle_timeout;
 

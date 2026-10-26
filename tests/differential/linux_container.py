@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 from docker_support import DockerResources, connect, docker, inspect
 from curated_parity import curated_trace
+from operations_parity import check_operations
 from resp2_wire import RespReader, comparable, encode_command
 
 
@@ -21,7 +22,7 @@ def require(condition, message):
 
 def run(image, report):
     contract = json.loads((ROOT / 'docker/reference.json').read_text())
-    report.update({'cases': [], 'passed': False, 'classification': 'HARNESS_INFRA_FAILURE'})
+    report.update({'cases': [], 'operational_cases': [], 'passed': False, 'classification': 'HARNESS_INFRA_FAILURE'})
     with DockerResources() as owned:
         if owned.architecture not in contract['platforms']:
             raise ValueError('unsupported Linux reference architecture')
@@ -90,6 +91,27 @@ def run(image, report):
         finally:
             for sock, _ in sockets.values():
                 sock.close()
+        # Reuse the same identity-verified reference and AOF-enabled candidate.
+        # Fresh sockets are needed because the original 54-case trace ends in QUIT.
+        with connect(port) as custom_sock, connect(ref_port) as reference_sock:
+            custom_reader, reference_reader = RespReader(custom_sock), RespReader(reference_sock)
+            def exchange(*command):
+                replies = []
+                for sock, reader in ((custom_sock, custom_reader), (reference_sock, reference_reader)):
+                    sock.sendall(encode_command(command))
+                    replies.append(reader.read_reply())
+                report['operational_cases'].append({
+                    'request_hex': encode_command(command).hex(),
+                    'custom_reply_hex': replies[0][1].hex(),
+                    'reference_reply_hex': replies[1][1].hex()})
+                return replies[0][0], replies[1][0]
+            report['classification'] = 'OPERATIONAL_PARITY_FAILURE'
+            check_operations(exchange, 6380, 6379, custom_aof=True)
+            require(len(report['operational_cases']) == 10, 'operational case inventory mismatch')
+            report['operational_comparison'] = (
+                'shared startup settings and RESP2 shapes; candidate AOF on/reference off checked '
+                'against startup; Redis-only wildcard fields and custom-only INFO metrics excluded')
+            report['operational_passed'] = True
         docker('stop', '--time', '20', candidate, ref)
     report.update({'routes': 40, 'comparison': 'binary exact; duplicate-checked canonicalization only for SMEMBERS/HGETALL',
                    'persistence': 'candidate always; reference off', 'passed': True, 'classification': 'PARITY_PASS'})
@@ -109,4 +131,4 @@ if __name__ == '__main__':
     finally:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2) + '\n')
-    print(f'PASS Linux container parity: {len(report["cases"])} cases, 40 routes, Redis 8.10.2 immutable OCI')
+    print(f'PASS Linux container parity: {len(report["cases"])} cases, 40 routes + {len(report["operational_cases"])} operational cases, Redis 8.10.2 immutable OCI')

@@ -98,7 +98,7 @@ def sustained_and_shutdown(root):
                 slow.sendall(encode_command((b'GET', b'large')) * 128)
                 deadline = time.monotonic() + 5
                 rounds = 0
-                while rounds < 4 or time.monotonic() < deadline:
+                while rounds < 4 or (rounds < 64 and time.monotonic() < deadline):
                     # Bound churn to 512 reconnects per policy. Thereafter reuse
                     # four clients: unconstrained churn exhausts host TIME_WAIT
                     # ports and measures client-host limits rather than leaks.

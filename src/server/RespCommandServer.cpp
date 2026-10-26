@@ -1,4 +1,5 @@
 #include "redisdb/server/RespCommandServer.hpp"
+#include "redisdb/server/Operations.hpp"
 
 #include "redisdb/commands/Command.hpp"
 #include "redisdb/commands/CommandDispatcher.hpp"
@@ -86,7 +87,7 @@ class CommandClock final : public storage::Clock {
 
 void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::MemoryOptions memory,
                       persistence::AofOptions aof, persistence::SnapshotOptions snapshot,
-                      std::string_view bind_address) {
+                      std::string_view bind_address, std::chrono::milliseconds idle_timeout) {
     if (max_clients == 0) {
         throw std::invalid_argument("max_clients must be positive");
     }
@@ -99,6 +100,7 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     NativePoller poller;
     net::ConnectionManager::Limits limits;
     limits.max_connections = max_clients;
+    limits.idle_timeout = idle_timeout;
 
     net::ConnectionManager manager(net::TcpListener::bind_ipv4(bind_address, port), poller, limits);
     // One database for all TCP connections; the single event-loop thread
@@ -119,6 +121,21 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
         journal->recover(database,
                          checkpoint); // no readiness/command execution before complete validation
     }
+    RuntimeStats stats;
+    OperationalView view;
+    view.settings = {{"port", std::to_string(manager.listener_port())},
+                     {"bind", std::string(bind_address)},
+                     {"maxclients", std::to_string(max_clients)},
+                     {"maxmemory", std::to_string(memory.max_bytes.value_or(0))},
+                     {"maxmemory-policy", memory.policy == storage::EvictionPolicy::NoEviction
+                                              ? "noeviction"
+                                              : "allkeys-lru"},
+                     {"appendonly", aof.enabled ? "yes" : "no"},
+                     {"appendfsync", aof.sync == persistence::SyncPolicy::Always        ? "always"
+                                     : aof.sync == persistence::SyncPolicy::EverySecond ? "everysec"
+                                                                                        : "no"},
+                     {"timeout", std::to_string(idle_timeout.count() / 1000)},
+                     {"idle-timeout-ms", std::to_string(idle_timeout.count())}};
     std::exception_ptr persistence_failure;
     auto routes = commands::connectivity_routes();
     for (auto& route : commands::string_routes(database)) {
@@ -146,48 +163,65 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
             if (persistence_failure) {
                 std::rethrow_exception(persistence_failure);
             }
-            CommandClock::Scope command_time(command_clock, journal != nullptr);
-            auto decoded = commands::decode_command(request);
-            if (!decoded.command) {
-                return protocol::RespValue::error("ERR expected RESP2 array of bulk strings");
-            }
-
-            const auto& name = decoded.command->name();
-            const bool mutating =
-                name == "SET" || name == "MSET" || name == "APPEND" || name == "INCR" ||
-                name == "DECR" || name == "INCRBY" || name == "DECRBY" || name == "DEL" ||
-                name == "EXPIRE" || name == "PEXPIRE" || name == "PERSIST" || name == "LPUSH" ||
-                name == "RPUSH" || name == "LPOP" || name == "RPOP" || name == "HSET" ||
-                name == "HDEL" || name == "SADD" || name == "SREM";
-            std::unique_ptr<storage::Database::Transaction> transaction;
-            if (journal && (mutating || database.has_due_expiration())) {
-                transaction = std::make_unique<storage::Database::Transaction>(database);
-            }
-            auto dispatched = dispatcher.dispatch(*decoded.command);
-            if (!dispatched.handled) {
-                if (dispatched.error != commands::DispatchError::UnknownCommand) {
-                    throw std::logic_error("unexpected dispatcher outcome");
+            auto execute = [&]() -> protocol::RespValue {
+                auto decoded = commands::decode_command(request);
+                if (!decoded.command) {
+                    return protocol::RespValue::error("ERR expected RESP2 array of bulk strings");
                 }
-                return commands::unknown_command_reply(*decoded.command);
-            }
 
-            if (transaction &&
-                !std::holds_alternative<protocol::Error>(dispatched.handled->reply.storage())) {
-                const auto effects = transaction->effects();
-                try {
-                    journal->append(effects); // always policy syncs here, before publication/reply
-                } catch (...) {
-                    persistence_failure = std::current_exception();
-                    throw;
+                const auto& name = decoded.command->name();
+                if (name == "INFO" || name == "CONFIG") {
+                    view.stats = stats;
+                    view.clients = manager.connection_count();
+                    view.logical_bytes = database.accounted_bytes();
+                    view.aof_enabled = journal != nullptr;
+                    view.aof_sequence = journal ? journal->sequence() : 0;
+                    return operational_reply(*decoded.command, view);
                 }
-                transaction->commit(); // allocation-free publication; errors roll back by RAII
-            }
+                CommandClock::Scope command_time(command_clock, journal != nullptr);
+                const bool mutating =
+                    name == "SET" || name == "MSET" || name == "APPEND" || name == "INCR" ||
+                    name == "DECR" || name == "INCRBY" || name == "DECRBY" || name == "DEL" ||
+                    name == "EXPIRE" || name == "PEXPIRE" || name == "PERSIST" || name == "LPUSH" ||
+                    name == "RPUSH" || name == "LPOP" || name == "RPOP" || name == "HSET" ||
+                    name == "HDEL" || name == "SADD" || name == "SREM";
+                std::unique_ptr<storage::Database::Transaction> transaction;
+                if (journal && (mutating || database.has_due_expiration())) {
+                    transaction = std::make_unique<storage::Database::Transaction>(database);
+                }
+                auto dispatched = dispatcher.dispatch(*decoded.command);
+                if (!dispatched.handled) {
+                    if (dispatched.error != commands::DispatchError::UnknownCommand) {
+                        throw std::logic_error("unexpected dispatcher outcome");
+                    }
+                    return commands::unknown_command_reply(*decoded.command);
+                }
 
-            if (dispatched.handled->disposition ==
-                commands::ConnectionDisposition::CloseAfterReply) {
-                connection.request_close_after_flush();
-            }
-            return std::move(dispatched.handled->reply);
+                if (transaction &&
+                    !std::holds_alternative<protocol::Error>(dispatched.handled->reply.storage())) {
+                    const auto effects = transaction->effects();
+                    try {
+                        journal->append(
+                            effects); // always policy syncs here, before publication/reply
+                    } catch (...) {
+                        log_event("error", "persistence_failure");
+                        persistence_failure = std::current_exception();
+                        throw;
+                    }
+                    transaction->commit(); // allocation-free publication; errors roll back by RAII
+                }
+
+                if (dispatched.handled->disposition ==
+                    commands::ConnectionDisposition::CloseAfterReply) {
+                    connection.request_close_after_flush();
+                }
+                return std::move(dispatched.handled->reply);
+            };
+            auto reply = execute();
+            add_counter(stats.commands);
+            add_counter(std::holds_alternative<protocol::Error>(reply.storage()) ? stats.rejected
+                                                                                 : stats.succeeded);
+            return reply;
         });
 
         using Action = net::ConnectionManager::InputAction;
@@ -201,6 +235,7 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
             return Action::AwaitWrite;
         case protocol::PipelineStop::Invalid:
             // Malformed RESP2 is isolated to this client by ConnectionManager.
+            add_counter(stats.parser_errors);
             throw std::runtime_error("invalid RESP2 request frame");
         }
         throw std::logic_error("unexpected pipeline result");
@@ -210,47 +245,74 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     if (snapshots && std::signal(SIGUSR1, request_snapshot) == SIG_ERR) {
         throw std::runtime_error("unable to install snapshot notification handler");
     }
+    log_event("info", "startup");
     std::cout << "RESP_READY " << bind_address << ":" << manager.listener_port() << '\n'
               << std::flush;
     constexpr auto PollInterval = std::chrono::milliseconds{100};
     constexpr std::size_t MaxExpiryChecksPerTurn = 32;
     auto next_sweep = server_clock.monotonic_now();
-    while (command_stop_requested == 0) {
-        (void)manager.poll_once(PollInterval);
-        // ConnectionManager isolates ordinary client exceptions. A journal
-        // failure is process-fatal, including other callbacks in this poll turn.
-        if (persistence_failure) {
-            std::rethrow_exception(persistence_failure);
-        }
-        // Maintenance is outside each individual command but serialized on
-        // the same event-loop thread: bounded work, no data races or timers.
-        const auto current = server_clock.monotonic_now();
-        if (current >= next_sweep) {
-            if (journal && database.has_due_expiration()) {
-                storage::Database::Transaction transaction(database);
-                (void)database.sweep_expired(MaxExpiryChecksPerTurn);
-                journal->append(transaction.effects());
-                transaction.commit();
-            } else if (!journal) {
-                (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+    auto poll = [&] {
+        const auto turn = manager.poll_once(PollInterval);
+        add_counter(stats.accepted, turn.accepted);
+        add_counter(stats.closed, turn.closed);
+        add_counter(stats.received, turn.bytes_received);
+        add_counter(stats.sent, turn.bytes_sent);
+        add_counter(stats.io_errors, turn.io_failures);
+    };
+    try {
+        while (command_stop_requested == 0) {
+            poll();
+            // ConnectionManager isolates ordinary client exceptions. A journal
+            // failure is process-fatal, including other callbacks in this poll turn.
+            if (persistence_failure) {
+                std::rethrow_exception(persistence_failure);
             }
-            next_sweep = current + PollInterval;
+            // Maintenance is outside each individual command but serialized on
+            // the same event-loop thread: bounded work, no data races or timers.
+            const auto current = server_clock.monotonic_now();
+            if (current >= next_sweep) {
+                if (journal && database.has_due_expiration()) {
+                    storage::Database::Transaction transaction(database);
+                    (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+                    journal->append(transaction.effects());
+                    transaction.commit();
+                } else if (!journal) {
+                    (void)database.sweep_expired(MaxExpiryChecksPerTurn);
+                }
+                next_sweep = current + PollInterval;
+            }
+            if (journal) {
+                journal->tick();
+            }
+            if (snapshots && snapshot_requested != 0) {
+                snapshot_requested = 0;
+                // The event loop is paused for checkpoint and capture; no other
+                // command or expiry callback can mutate this state midway.
+                const auto generation = snapshots->publish(database, *journal);
+                log_event("info", "snapshot_published");
+                std::cout << "SNAPSHOT_PUBLISHED " << generation << ' ' << journal->sequence()
+                          << '\n'
+                          << std::flush;
+            }
         }
-        if (journal) {
-            journal->tick();
+        log_event("info", "shutdown_started");
+        manager.stop_accepting();
+        const auto drain_deadline = server_clock.monotonic_now() + std::chrono::seconds{1};
+        while (manager.has_pending_work() && server_clock.monotonic_now() < drain_deadline) {
+            poll();
+            if (persistence_failure)
+                std::rethrow_exception(persistence_failure);
         }
-        if (snapshots && snapshot_requested != 0) {
-            snapshot_requested = 0;
-            // The event loop is paused for checkpoint and capture; no other
-            // command or expiry callback can mutate this state midway.
-            const auto generation = snapshots->publish(database, *journal);
-            std::cout << "SNAPSHOT_PUBLISHED " << generation << ' ' << journal->sequence() << '\n'
-                      << std::flush;
-        }
+        if (manager.has_pending_work())
+            log_event("warning", "shutdown_drain_timeout");
+        if (journal)
+            journal->finish();
+    } catch (...) {
+        if (journal)
+            log_event("error", "persistence_or_maintenance_failure");
+        throw;
     }
-    if (journal) {
-        journal->finish();
-    }
+    log_event("info", "shutdown_completed");
     std::cout << "RESP_STOPPED\n" << std::flush;
 }
 

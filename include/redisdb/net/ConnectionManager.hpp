@@ -138,6 +138,9 @@ class ConnectionManager final {
 
     void refresh_interest(RegistrationToken token);
 
+    void stop_accepting();
+    [[nodiscard]] bool has_pending_work() const noexcept;
+
     // True when reading is suspended because of
     // output pressure or received EOF.
     [[nodiscard]] bool read_paused(RegistrationToken token) const noexcept;
@@ -169,6 +172,7 @@ class ConnectionManager final {
     RegistrationToken listener_token_ = InvalidToken;
     RegistrationToken next_token_ = 1;
     bool listener_registered_ = false;
+    bool stopping_ = false;
     InputHandler input_handler_;
     ResumableInputHandler resumable_input_handler_;
 
