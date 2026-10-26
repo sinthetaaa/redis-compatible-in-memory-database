@@ -34,16 +34,28 @@ struct AofIo {
 inline constexpr std::size_t MaxAofRecordBytes = 64 * 1024 * 1024;
 [[nodiscard]] std::string encode_effects(const storage::CommittedEffects& effects);
 [[nodiscard]] storage::CommittedEffects decode_effects(std::string_view bytes);
+// CRC extension accepts a finalized CRC; CRC of an empty prefix is zero.
+[[nodiscard]] std::uint32_t extend_crc32c(std::uint32_t prefix, std::string_view bytes) noexcept;
+struct AofCheckpoint {
+    std::uint64_t sequence = 0;
+    std::uint64_t offset = 20;
+    std::uint32_t record_crc = 0;
+    std::uint32_t prefix_crc = 0;
+    bool operator==(const AofCheckpoint&) const = default;
+};
 [[nodiscard]] std::uint32_t crc32c(std::string_view bytes) noexcept;
 
 // Exclusive regular-file ownership. Existing malformed files are never repaired
 // or truncated automatically. The parent directory must already exist.
 class AofLog final {
   public:
-    AofLog(const AofOptions& options, const storage::Clock& clock, AofIo io = {});
+    AofLog(const AofOptions& options, const storage::Clock& clock, AofIo io = {},
+           bool require_existing = false);
     AofLog(const AofLog&) = delete;
     AofLog& operator=(const AofLog&) = delete;
-    void recover(storage::Database& database);
+    void recover(storage::Database& database,
+                 std::optional<AofCheckpoint> checkpoint = std::nullopt);
+    [[nodiscard]] AofCheckpoint checkpoint(); // synchronize all written records
     void append(const storage::CommittedEffects& effects);
     void tick();
     void finish(); // explicit checked synchronization at clean shutdown
@@ -69,6 +81,7 @@ class AofLog final {
     std::uint32_t durable_crc_ = 0;
     std::uint64_t end_offset_ = 20;
     std::uint32_t last_crc_ = 0;
+    std::uint32_t prefix_crc_ = 0;
     bool pending_ = false;
     bool recovered_ = false;
     bool failed_ = false;

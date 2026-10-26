@@ -219,6 +219,11 @@ class Database final {
     // Startup only: replay effects without re-running commands or eviction.
     // A replay failure requires discarding the startup database.
     void replay_effects(const CommittedEffects& effects);
+    // Snapshot capture does not expire or touch entries; caller serializes access.
+    void visit_snapshot(const std::function<void(const std::string&, const Entry&)>& visitor) const;
+    [[nodiscard]] CommittedEffects snapshot_order() const;
+    // Startup-only incremental insertion, with ledger/index reconstruction and no eviction.
+    void restore_snapshot_entry(EntryEffect effect);
     void finish_recovery(); // purge due deadlines, then enforce configured capacity
     void clear() noexcept {
         entries_.clear();

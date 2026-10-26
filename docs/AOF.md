@@ -10,8 +10,10 @@ mkdir -p data
 
 Default: persistence disabled. When enabled, `always` is the default policy;
 the default file is `./appendonly.aof`. The parent directory must exist.
-Configuration is startup-only. No new Redis commands, snapshots, compaction,
-rewriting, replication or background persistence worker are implemented.
+Configuration is startup-only. Stage 3B adds opt-in coordinated snapshots via
+`--snapshot-dir PATH` and `SIGUSR1`; see [SNAPSHOTS.md](SNAPSHOTS.md). No new Redis
+commands, compaction, rewriting, replication or background persistence worker
+are implemented.
 
 ## Commit boundary
 
@@ -90,7 +92,9 @@ CRC32C detects accidental corruption; it is not authentication.
   including truncation exactly at a record boundary.
 
 The journal and `.commit` file form one recovery unit; retain/copy both together
-while the server is stopped. Orphan temporary watermark files after a crash are
+while the server is stopped. With snapshots enabled, also retain/copy the snapshot
+directory (CURRENT and its selected generation) from the same stopped server;
+snapshots do not replace any journal history. Orphan temporary watermark files after a crash are
 not recovery sources and are not automatically removed. An exclusive advisory
 file lock prevents simultaneous server writers. Files must be regular files;
 final-component symlinks are refused. The data directory must be trusted against

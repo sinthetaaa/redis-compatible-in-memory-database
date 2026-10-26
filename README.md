@@ -8,13 +8,14 @@ an incremental RESP2 protocol engine, in-memory storage,
 key expiration, eviction, append-only persistence,
 snapshotting and crash recovery.
 
-**Project status (2026-10-25):** Phases 0–5 and 6A–6F are complete.
+**Project status (2026-10-26):** Phases 0–5 and 6A–6F are complete.
 Fast-track Phase 6G is integrated at `7c5a70592d0843261048bd5b9a51d2745eeb6cf6`;
 its Linux-native differential campaign remains deferred to the Docker milestone.
 Fast-track Stage 2 memory limits and exact all-keys LRU are integrated at
-`226dd4bf03797da27a6e6aa3b7b3827038e7f13d`. Stage 3A adds opt-in AOF persistence
-and restart recovery on local branch `fasttrack/aof-persistence`; publication is pending.
-Snapshots, compaction, benchmarks and deployment remain future work.
+`226dd4bf03797da27a6e6aa3b7b3827038e7f13d`. Stage 3A AOF persistence is merged at
+`010e09a0fbec09c313a20c9449a6013b330ddea2`. Stage 3B snapshots and crash recovery
+are implemented locally on `fasttrack/snapshots-recovery`, pending publication.
+Compaction, benchmarks and deployment remain future work.
 Older acceptance records below retain their dated, historical context.
 
 The loopback-only RESP2 server implements PING/ECHO/QUIT, strings,
@@ -35,7 +36,11 @@ Persistence remains disabled by default. Enable it with `--appendonly yes`, choo
 `--appendfsync always|everysec|no` (`always` by default). The journal and adjacent `.commit`
 watermark must be retained together. See [AOF format and guarantees](docs/AOF.md)
 for commit ordering, expiry/eviction recovery, strict corruption handling and
-explicit performance/durability limitations. No snapshots or AOF compaction are included.
+explicit performance/durability limitations. Opt-in snapshots use an existing
+`--snapshot-dir PATH` and require AOF; after readiness, `SIGUSR1` requests a
+synchronized checkpoint on the serialized event loop. See [snapshot format and
+recovery](docs/SNAPSHOTS.md) for atomic generation selection, retained previous
+snapshots, failure behavior and limits. The complete AOF is retained; no compaction.
 
 ## Memory limits and eviction
 

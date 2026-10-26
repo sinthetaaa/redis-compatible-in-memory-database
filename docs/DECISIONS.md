@@ -297,7 +297,7 @@ are included in the project.
 ## ADR-006 — Explicit Persistence Durability
 
 **Status:** Accepted
-**Implementation:** Stage 3A AOF implemented locally; snapshots remain deferred
+**Implementation:** Stage 3A AOF merged; Stage 3B snapshots implemented locally
 
 ### Decision
 
@@ -507,7 +507,7 @@ Never describe approximate LRU as exact LRU.
 ## ADR-011 — Portable, Versioned Snapshots
 
 **Status:** Accepted
-**Implementation:** Not started
+**Implementation:** Stage 3B implemented locally on `fasttrack/snapshots-recovery`
 
 ### Decision
 
@@ -536,6 +536,24 @@ until the replacement is safely published.
 
 A successful rename alone does not establish
 power-loss durability.
+
+---
+
+### Stage 3B selection (2026-10-26)
+
+Immutable, framed snapshot generations use the existing AOF entry codec and
+absolute deadlines, with separately framed LRU order and V1 logical charges.
+The event loop synchronizes the journal checkpoint before serialized capture.
+A file-synced generation and directory sync precede atomically selecting it via
+a file-synced CURRENT and a final directory sync. Previous generations and all
+journal bytes are retained. Startup validates the selected snapshot, full AOF
+history and exact sequence/offset/record CRC/prefix CRC association, then replays
+only newer effects and journals startup expiry cleanup. AOF-only directories
+remain compatible. Missing/corrupt selected state fails closed without fallback.
+SIGUSR1 only sets a notification flag. See [SNAPSHOTS.md](SNAPSHOTS.md) for the
+format, publication interruption contract, tested boundaries and blocking/storage
+costs. Local implementation and validation do not imply publication or host
+power-loss testing.
 
 ---
 

@@ -41,6 +41,8 @@ using NativePoller = net::EpollPoller;
 #endif
 
 volatile std::sig_atomic_t command_stop_requested = 0;
+volatile std::sig_atomic_t snapshot_requested = 0;
+void request_snapshot(int) { snapshot_requested = 1; }
 
 void request_command_stop(int) { command_stop_requested = 1; }
 
@@ -83,12 +85,16 @@ class CommandClock final : public storage::Clock {
 } // namespace
 
 void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::MemoryOptions memory,
-                      persistence::AofOptions aof) {
+                      persistence::AofOptions aof, persistence::SnapshotOptions snapshot) {
     if (max_clients == 0) {
         throw std::invalid_argument("max_clients must be positive");
     }
 
+    if (!snapshot.directory.empty() && !aof.enabled) {
+        throw std::invalid_argument("snapshots require appendonly yes");
+    }
     command_stop_requested = 0;
+    snapshot_requested = 0;
     NativePoller poller;
     net::ConnectionManager::Limits limits;
     limits.max_connections = max_clients;
@@ -99,10 +105,18 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     storage::SystemClock server_clock;
     CommandClock command_clock(server_clock);
     storage::Database database(command_clock, memory);
+    std::unique_ptr<persistence::SnapshotStore> snapshots;
+    std::optional<persistence::AofCheckpoint> checkpoint;
+    if (!snapshot.directory.empty()) {
+        snapshots = std::make_unique<persistence::SnapshotStore>(snapshot);
+        checkpoint = snapshots->restore(database);
+    }
     std::unique_ptr<persistence::AofLog> journal;
     if (aof.enabled) {
-        journal = std::make_unique<persistence::AofLog>(aof, server_clock);
-        journal->recover(database); // no readiness/command execution before complete validation
+        journal = std::make_unique<persistence::AofLog>(aof, server_clock, persistence::AofIo{},
+                                                        checkpoint.has_value());
+        journal->recover(database,
+                         checkpoint); // no readiness/command execution before complete validation
     }
     std::exception_ptr persistence_failure;
     auto routes = commands::connectivity_routes();
@@ -192,6 +206,9 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
     });
 
     install_command_signals();
+    if (snapshots && std::signal(SIGUSR1, request_snapshot) == SIG_ERR) {
+        throw std::runtime_error("unable to install snapshot notification handler");
+    }
     std::cout << "RESP_READY 127.0.0.1:" << manager.listener_port() << '\n' << std::flush;
     constexpr auto PollInterval = std::chrono::milliseconds{100};
     constexpr std::size_t MaxExpiryChecksPerTurn = 32;
@@ -219,6 +236,14 @@ void run_resp2_server(std::uint16_t port, std::size_t max_clients, storage::Memo
         }
         if (journal) {
             journal->tick();
+        }
+        if (snapshots && snapshot_requested != 0) {
+            snapshot_requested = 0;
+            // The event loop is paused for checkpoint and capture; no other
+            // command or expiry callback can mutate this state midway.
+            const auto generation = snapshots->publish(database, *journal);
+            std::cout << "SNAPSHOT_PUBLISHED " << generation << ' ' << journal->sequence() << '\n'
+                      << std::flush;
         }
     }
     if (journal) {
