@@ -52,6 +52,18 @@ class NativeServer:
                     return {'bytes': int(line.split()[1]) * 1024, 'method': 'Linux /proc PID VmHWM'}
         return {'bytes': None, 'method': 'not available reliably on this native platform'}
 
+    def resources(self):
+        # POSIX ps reports cumulative process CPU time and current RSS (KiB).
+        # CPU resolution is platform dependent; this is not a peak-RSS sample.
+        result = subprocess.run(['ps', '-o', 'time=,rss=', '-p', str(self.proc.pid)],
+                                capture_output=True, text=True, timeout=5, check=True)
+        cpu, rss = result.stdout.split()
+        seconds = 0.0
+        for part in cpu.split(':'):
+            seconds = seconds * 60 + float(part)
+        return {'cpu_seconds': seconds, 'rss_bytes': int(rss) * 1024,
+                'method': 'ps cumulative CPU time/current RSS; boundary samples, not peak'}
+
     def snapshot(self):
         start = time.perf_counter()
         self.proc.send_signal(signal.SIGUSR1)
@@ -103,6 +115,10 @@ class ContainerServer:
             if line.startswith('VmHWM:'):
                 return {'bytes': int(line.split()[1]) * 1024, 'method': 'Linux container /proc/1/status VmHWM'}
         return {'bytes': None, 'method': 'VmHWM unavailable'}
+
+    def resources(self):
+        return {'cpu_seconds': None, 'rss_bytes': None,
+                'method': 'container CPU/current RSS sampling not implemented; see peak_rss'}
 
     def snapshot(self):
         before = docker('logs', self.container).stdout.count('SNAPSHOT_PUBLISHED ')

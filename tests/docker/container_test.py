@@ -48,6 +48,9 @@ def main():
         assert state['Config']['User'] == '10001:10001'
         assert state['Config']['Entrypoint'] == ['/usr/local/bin/redisdb-server']
         assert state['HostConfig']['ReadonlyRootfs'] and not state['HostConfig']['Privileged']
+        assert state['HostConfig']['Memory'] == 512 * 1024 * 1024
+        assert state['HostConfig']['NanoCpus'] == 1_000_000_000
+        assert state['HostConfig']['PidsLimit'] == 64
         assert docker('exec', container, 'id', '-u').stdout.strip() == '10001'
         assert docker('exec', container, 'id', '-g').stdout.strip() == '10001'
         status = docker('exec', container, 'cat', '/proc/1/status').stdout

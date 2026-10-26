@@ -38,6 +38,13 @@ def exchange(sock, reader, command):
     return reader.read_reply()[0]
 
 
+def validate_get(reply, expected):
+    if reply.kind != 'bulk' or len(reply.value) != VALUE_BYTES:
+        raise RuntimeError('GET lost a preloaded value')
+    if expected is not None and reply.value != expected:
+        raise RuntimeError('GET returned incorrect bytes')
+
+
 def seed(port, count):
     with connect(port) as sock:
         reader = RespReader(sock)
@@ -49,7 +56,12 @@ def seed(port, count):
                 raise RuntimeError('dataset preload failed')
 
 
-def phase(port, *, clients, depth, keys, workload, seconds, phase_id, collect):
+def phase(port, *, clients, depth, keys, workload, seconds, phase_id, collect, expected=None):
+    # One serialized client has an exact state oracle, including pipeline order.
+    # Carry it across warmup/load. Concurrent clients retain type/length checks;
+    # independent compatibility/stress suites validate those shared-key races.
+    if clients == 1 and expected is None:
+        expected = {f'k{i:08}'.encode(): b'z' * VALUE_BYTES for i in range(keys)}
     timing = {}
     def start_clock():
         timing['start'] = time.perf_counter()
@@ -72,18 +84,24 @@ def phase(port, *, clients, depth, keys, workload, seconds, phase_id, collect):
                     value = f'{phase_id:02x}{client:02x}{operations + offset:012x}'.encode().ljust(VALUE_BYTES, b'x')
                     command = (b'SET', key, value) if write else (b'GET', key)
                     encoded = encode_command(command)
-                    batch.append((write, encoded))
+                    wanted = None
+                    if clients == 1:
+                        if write:
+                            expected[key] = value
+                        else:
+                            wanted = expected[key]
+                    batch.append((write, encoded, wanted))
                     request_bytes += len(encoded)
                 start_ns = time.perf_counter_ns()
-                sock.sendall(b''.join(encoded for _, encoded in batch))
-                for write, _ in batch:
+                sock.sendall(b''.join(encoded for _, encoded, _ in batch))
+                for write, _, wanted in batch:
                     reply = reader.read_reply()[0]
                     if write:
                         if reply != RespValue('simple', b'OK'):
                             raise RuntimeError('SET failed during benchmark')
                         writes += 1
-                    elif reply.kind != 'bulk' or len(reply.value) != VALUE_BYTES:
-                        raise RuntimeError('GET lost a preloaded value')
+                    else:
+                        validate_get(reply, wanted)
                     if collect:
                         latencies.append(time.perf_counter_ns() - start_ns)
                     operations += 1
@@ -152,8 +170,10 @@ def metadata(args):
             'key_distribution': 'uniform deterministic PRNG',
             'warmup_seconds': args.warmup, 'requested_seconds': args.seconds,
             'repeats': args.repeats, 'selected_policies': args.policies, 'max_operations_per_client': MAX_OPS_PER_CLIENT,
+            'scaling_matrix': args.scaling, 'smoke_matrix': args.smoke,
             'mode': 'container' if args.image else 'native',
             'method': 'closed-loop, bounded pipeline batches; nearest-rank per-operation completion latency',
+            'reply_validation': 'SET exact OK; single-client GET exact bytes with warmup state; concurrent GET type/length',
             'limitations': ['Python driver and reply parsing consume CPU; not server-only capacity',
                 'Pipelined operations share batch-send timestamp; includes queue and preceding reply decode time',
                 'Closed-loop load omits open-loop coordinated-omission correction',
@@ -169,7 +189,8 @@ def metadata(args):
         if labels.get('org.opencontainers.image.revision') != data['git_commit']:
             raise ValueError('container image revision must match benchmark Git HEAD')
         data.update({'image_id': image['Id'], 'image_architecture': image['Architecture'],
-                     'image_labels': image['Config']['Labels'], 'build_configuration': 'Dockerfile Release'})
+                     'image_labels': image['Config']['Labels'], 'build_configuration': 'Dockerfile Release',
+                     'container_limits': {'memory_bytes': 512 * 1024 * 1024, 'cpus': 1, 'pids': 64}})
     else:
         cache = args.server.parent / 'CMakeCache.txt'
         if not cache.is_file():
@@ -197,6 +218,8 @@ def main():
     parser.add_argument('--policies', nargs='+', choices=('off', 'always', 'everysec', 'no'),
                         default=['off', 'always', 'everysec', 'no'])
     parser.add_argument('--smoke', action='store_true', help='four bounded functional/performance profiles only')
+    parser.add_argument('--scaling', action='store_true',
+                        help='SET/write80 at 100/1000/10000 keys, one client, pipeline one')
     args = parser.parse_args()
     if not (.1 <= args.seconds <= 5 and .05 <= args.warmup <= 2 and 1 <= args.repeats <= 5):
         parser.error('duration/warmup/repeat bounds exceeded')
@@ -206,10 +229,14 @@ def main():
         args.server = args.server.resolve(strict=True)
     if args.output.exists():
         parser.error('output already exists; use a new path')
+    if args.smoke and args.scaling:
+        parser.error('--smoke and --scaling are mutually exclusive')
     report = {'metadata': metadata(args), 'profiles': [], 'complete': False}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:
-        for policy, keys, workload, clients, depth in scenarios(args.smoke):
+        selected = ([(p, k, w, 1, 1) for p in args.policies for k in (100, 1000, 10000)
+                     for w in ('set', 'write80')] if args.scaling else scenarios(args.smoke))
+        for policy, keys, workload, clients, depth in selected:
             if policy not in args.policies:
                 continue
             profile = {'policy': policy, 'keys': keys, 'dataset_value_bytes': keys * VALUE_BYTES,
@@ -220,12 +247,20 @@ def main():
                 server = ContainerServer(args.image, policy) if args.image else NativeServer(args.server, policy)
                 try:
                     seed(server.port, keys)
+                    expected = ({f'k{i:08}'.encode(): b'z' * VALUE_BYTES for i in range(keys)}
+                                if clients == 1 else None)
                     phase(server.port, clients=clients, depth=depth, keys=keys, workload=workload,
-                          seconds=args.warmup, phase_id=0, collect=False)
+                          seconds=args.warmup, phase_id=0, collect=False, expected=expected)
                     before = server.aof_bytes()
+                    resources_before = server.resources()
                     result = phase(server.port, clients=clients, depth=depth, keys=keys, workload=workload,
-                                   seconds=args.seconds, phase_id=1, collect=True)
+                                   seconds=args.seconds, phase_id=1, collect=True, expected=expected)
                     result['aof_growth_bytes'] = server.aof_bytes() - before
+                    result['resources_after'] = server.resources()
+                    cpu_before = resources_before.get('cpu_seconds')
+                    cpu_after = result['resources_after'].get('cpu_seconds')
+                    result['server_cpu_seconds'] = (cpu_after - cpu_before
+                        if cpu_before is not None and cpu_after is not None else None)
                     result['peak_rss'] = server.peak_rss()
                     result['snapshot_observed_seconds'] = server.snapshot() if policy != 'off' else None
                     result['repeat'] = repeat

@@ -80,11 +80,13 @@ jobs:
           assert any(e['file'].endswith('/src/persistence/AofLog.cpp') for e in core)
           aof_tests = [e for e in commands if '/redisdb-aof-tests.dir/' in e.get('command', '')]
           snapshot_tests = [e for e in commands if '/redisdb-snapshot-tests.dir/' in e.get('command', '')]
+          transaction_tests = [e for e in commands if '/redisdb-transaction-tests.dir/' in e.get('command', '')]
+          assert len(transaction_tests) == 1, 'Transaction rollback tests missing'
           assert any(e['file'].endswith('/src/persistence/Snapshot.cpp') for e in core)
           assert len(snapshot_tests) == 1, 'Snapshot recovery tests missing'
           assert len(aof_tests) == 1, 'AOF persistence tests missing'
           assert len(memory_tests) == 1, 'Memory-limit allocation-failure tests missing'
-          assert all('-fsanitize=address,undefined' in e['command'] for e in core + memory_tests + aof_tests + snapshot_tests), (
+          assert all('-fsanitize=address,undefined' in e['command'] for e in core + memory_tests + aof_tests + snapshot_tests + transaction_tests), (
               'Full-program storage/test sanitizer instrumentation missing'
           )
           ninja = Path('build/fuzz-linux/build.ninja').read_text()
@@ -120,6 +122,7 @@ jobs:
               f'Expected >=20 discovered CTests, got {counts}'
           )
           for name in ('unit.command', 'unit.memory_limits', 'integration.resp_memory_limits',
+                       'unit.transaction', 'integration.resp_hardening',
                        'unit.aof', 'integration.resp_aof',
                        'unit.snapshot', 'integration.resp_snapshot',
                        'fuzz.resp_parser_corpus_smoke'):

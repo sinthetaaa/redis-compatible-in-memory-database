@@ -10,13 +10,15 @@ snapshotting and crash recovery.
 
 **Project status (2026-10-26):** Phases 0–5 and 6A–6F are complete.
 Fast-track Phase 6G is integrated at `7c5a70592d0843261048bd5b9a51d2745eeb6cf6`;
-its macOS differential checks are accepted; the new Linux container adapter awaits CI execution.
+its macOS and pinned Linux Redis 8.10.2 differential checks are accepted.
 Fast-track Stage 2 memory limits and exact all-keys LRU are integrated at
 `226dd4bf03797da27a6e6aa3b7b3827038e7f13d`. Stage 3A AOF persistence is merged at
 `010e09a0fbec09c313a20c9449a6013b330ddea2`. Stage 3B snapshots and crash recovery
 are merged at `798010ff34ec0c094aa37f7821524277edbb75dd`. Stage 4A Docker packaging,
-explicit bind configuration and native performance baselines are implemented locally
-on `fasttrack/docker-benchmarks`; actual container/Linux validation awaits Docker CI.
+Linux persistence/recovery, Redis differential validation and container benchmarks
+are merged and validated at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`.
+Stage 4B performance hardening is local on `fasttrack/performance-hardening`;
+see [measured findings and transaction guarantees](docs/BENCHMARKS.md).
 Compaction and private remote deployment remain future work.
 Older acceptance records below retain their dated, historical context.
 

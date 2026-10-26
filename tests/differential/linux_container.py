@@ -59,7 +59,8 @@ def run(image, report):
         report.update({'reference_executable_sha256': executable, 'reference_version_output': version})
         report['classification'] = 'HARNESS_INFRA_FAILURE'
         candidate, port = owned.start(image, owned.volume(),
-            ['--resp2-server', '--bind', '0.0.0.0', '--port', '6380'])
+            ['--resp2-server', '--bind', '0.0.0.0', '--port', '6380',
+             '--appendonly', 'yes', '--aof-file', '/data/appendonly.aof', '--appendfsync', 'always'])
         sockets = {}
         try:
             for client in ('a', 'b'):
@@ -91,7 +92,7 @@ def run(image, report):
                 sock.close()
         docker('stop', '--time', '20', candidate, ref)
     report.update({'routes': 40, 'comparison': 'binary exact; duplicate-checked canonicalization only for SMEMBERS/HGETALL',
-                   'persistence': 'off', 'passed': True, 'classification': 'PARITY_PASS'})
+                   'persistence': 'candidate always; reference off', 'passed': True, 'classification': 'PARITY_PASS'})
 
 
 if __name__ == '__main__':

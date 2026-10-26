@@ -31,6 +31,26 @@ Database::Database(MemoryOptions options) noexcept
 Database::Database(const Clock& clock, MemoryOptions options) noexcept
     : clock_(clock), memory_options_(options) {}
 
+void Database::clear() noexcept {
+    if (transaction_ && transaction_->incremental_)
+        transaction_->clear_tentative();
+    entries_.clear();
+    expiry_index_.clear();
+    lru_.clear();
+    accounted_bytes_ = 0;
+}
+
+void Database::Transaction::clear_tentative() noexcept {
+    // clear() is a historical noexcept API. Retain its first whole-table state
+    // by swapping, rather than allocating undo records. First-write backups
+    // override keys changed before this clear; repeated clears need no backup.
+    if (!cleared_) {
+        cleared_entries_.swap(database_.entries_);
+        cleared_expiry_.swap(database_.expiry_index_);
+        cleared_ = true;
+    }
+}
+
 void Database::swap_state(Database& other) noexcept {
     entries_.swap(other.entries_);
     expiry_index_.swap(other.expiry_index_);
@@ -51,25 +71,115 @@ std::unique_ptr<Database> Database::clone_state() const {
 }
 
 Database::Transaction::Transaction(Database& database) : database_(database) {
-    if (database_.transaction_active_) {
+    if (database_.transaction_) {
         throw std::logic_error("nested database transaction");
     }
-    original_ = database_.clone_state();
-    database_.swap_state(*original_);
-    database_.transaction_active_ = true;
+    incremental_ = database_.memory_options_.policy == EvictionPolicy::NoEviction;
+    if (incremental_) {
+        original_ = std::make_unique<Database>(database_.clock_, database_.memory_options_);
+        original_->accounted_bytes_ = database_.accounted_bytes_;
+    } else {
+        original_ = database_.clone_state();
+        database_.swap_state(*original_);
+    }
+    database_.transaction_ = this;
 }
 
 Database::Transaction::~Transaction() noexcept {
+    database_.transaction_ = nullptr;
     if (!committed_) {
-        database_.swap_state(*original_);
+        if (!incremental_) {
+            database_.swap_state(*original_);
+        } else {
+            if (cleared_) {
+                database_.entries_.clear();
+                database_.expiry_index_.clear();
+                database_.entries_.swap(cleared_entries_);
+                database_.expiry_index_.swap(cleared_expiry_);
+            }
+            // Erase tentative nodes, then transfer already-allocated preimages.
+            // The live table never shrinks its buckets: original size still fits,
+            // even after deletion, insertion/rehash, or repeated writes to a key.
+            for (const auto& key : touched_) {
+                const auto found = database_.entries_.find(key);
+                if (found == database_.entries_.end())
+                    continue;
+                if (found->second.expires_at) {
+                    const auto indexed = database_.expiry_index_.find(
+                        std::pair{*found->second.expires_at, std::string_view(key)});
+                    if (indexed != database_.expiry_index_.end())
+                        database_.expiry_index_.erase(indexed);
+                }
+                database_.entries_.erase(found);
+            }
+            database_.entries_.merge(original_->entries_);
+            database_.expiry_index_.merge(original_->expiry_index_);
+            database_.accounted_bytes_ = original_->accounted_bytes_;
+        }
     }
-    database_.transaction_active_ = false;
 }
 
 void Database::Transaction::commit() noexcept { committed_ = true; }
 
+void Database::remember(std::string_view key) const {
+    if (transaction_)
+        transaction_->remember(key);
+}
+
+void Database::Transaction::remember(std::string_view key) {
+    if (!incremental_ || touched_.contains(key))
+        return;
+    // Stage every allocation before publishing undo metadata. A failed capture
+    // must neither modify the live entry nor mark an incomplete backup as valid.
+    std::set<std::string, std::less<>> touched;
+    touched.emplace(key);
+    EntryMap entries;
+    decltype(database_.expiry_index_) expiry;
+    const auto& source = cleared_ ? cleared_entries_ : database_.entries_;
+    const auto found = source.find(key);
+    if (found != source.end()) {
+        entries.emplace(found->first, found->second);
+        if (found->second.expires_at)
+            expiry.emplace(*found->second.expires_at, found->first);
+        if (original_->entries_.empty() ||
+            original_->entries_.size() + 1 > original_->entries_.bucket_count())
+            original_->entries_.reserve(original_->entries_.size() + 1);
+    }
+    original_->entries_.merge(entries);
+    original_->expiry_index_.merge(expiry);
+    touched_.merge(touched);
+}
+
 CommittedEffects Database::Transaction::effects() const {
     CommittedEffects result;
+    if (incremental_) {
+        std::set<std::string, std::less<>> cleared_keys;
+        if (cleared_) {
+            cleared_keys = touched_;
+            for (const auto& [key, entry] : cleared_entries_) {
+                (void)entry;
+                cleared_keys.insert(key);
+            }
+        }
+        for (const auto& key : cleared_ ? cleared_keys : touched_) {
+            const auto old = original_->entries_.find(key);
+            const Entry* previous = old != original_->entries_.end() ? &old->second : nullptr;
+            if (cleared_ && !touched_.contains(key)) {
+                const auto saved = cleared_entries_.find(key);
+                if (saved != cleared_entries_.end())
+                    previous = &saved->second;
+            }
+            const auto next = database_.entries_.find(key);
+            if (next == database_.entries_.end()) {
+                if (previous)
+                    result.entries.push_back({key, std::nullopt});
+            } else if (!previous || previous->value != next->second.value ||
+                       previous->expires_at != next->second.expires_at) {
+                result.entries.push_back({key, next->second});
+            }
+        }
+        return result; // touched_ is already sorted by binary key
+    }
     for (const auto& [key, entry] : original_->entries_) {
         (void)entry;
         if (!database_.entries_.contains(key)) {
@@ -270,6 +380,14 @@ void Database::commit_entries(EntryMap staged) {
             throw MemoryLimitError{};
         }
     }
+    // Capture destination absences/preimages and expiry/eviction victims before
+    // the allocation-free storage commit. Native traffic has no undo work.
+    for (const auto& [key, entry] : staged) {
+        (void)entry;
+        remember(key);
+    }
+    for (auto victim : victims)
+        remember(victim->first);
     // Commit boundary: all potentially throwing allocation/validation is done.
     // Heterogeneous index erasure avoids allocating key copies during teardown.
     for (auto victim : victims) {
@@ -303,6 +421,7 @@ void Database::replace_value(EntryMap::iterator found, Value staged) {
 void Database::erase_entry(EntryMap::iterator found) const {
     const auto next_total =
         memory_accounting::removal_total(accounted_bytes_, found->second.accounted_charge);
+    remember(found->first);
     if (found->second.expires_at) {
         const auto indexed = expiry_index_.find(
             std::pair{*found->second.expires_at, std::string_view(found->first)});
@@ -519,6 +638,7 @@ bool Database::clear_expiration(std::string_view key) {
     const auto charge = found->second.accounted_charge - delta;
     const auto candidate = memory_accounting::replacement_total(
         accounted_bytes_, found->second.accounted_charge, charge);
+    remember(found->first);
     expiry_index_.erase(
         expiry_index_.find(std::pair{*found->second.expires_at, std::string_view(found->first)}));
     found->second.expires_at.reset();
@@ -708,6 +828,7 @@ std::optional<std::string> Database::list_pop(std::string_view key, bool left) {
         const auto charge = found->second.accounted_charge - delta;
         const auto candidate = memory_accounting::replacement_total(
             accounted_bytes_, found->second.accounted_charge, charge);
+        remember(found->first);
         if (left) {
             list->elements.pop_front();
         } else {
