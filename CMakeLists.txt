@@ -46,6 +46,7 @@ add_library(
     src/storage/Clock.cpp
     src/persistence/AofLog.cpp
     src/persistence/Snapshot.cpp
+    src/persistence/V2Format.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -108,6 +109,11 @@ if(REDISDB_BUILD_PROFILES AND UNIX)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(redisdb-v2-format-tests tests/unit/v2_format_test.cpp)
+    target_link_libraries(redisdb-v2-format-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-v2-format-tests)
+    add_test(NAME unit.v2_format COMMAND redisdb-v2-format-tests)
+    set_tests_properties(unit.v2_format PROPERTIES TIMEOUT 10)
     add_executable(redisdb-operations-tests tests/unit/operations_test.cpp)
     target_link_libraries(redisdb-operations-tests PRIVATE redisdb-core)
     redisdb_enable_warnings(redisdb-operations-tests)
