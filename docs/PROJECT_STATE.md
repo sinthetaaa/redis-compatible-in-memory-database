@@ -1,5 +1,63 @@
 # PROJECT STATE — Redis-Compatible In-Memory Database Server
 
+## Current snapshot (2026-10-28) — 10D.1A engineering accepted
+
+**Stage 6B / 10D.1A engineering is COMPLETE AND ACCEPTED ON MAIN.** This dated
+snapshot and the [authoritative handoff checkpoint](CONTINUATION_HANDOFF.md#stage-6b--10d1a--formally-accepted-engineering-checkpoint)
+control continuation. Older snapshots and Section 16 below are historical and
+superseded. At preparation time on 2026-10-28, this four-document closure was an
+unstaged, uncommitted draft; engineering acceptance was already independently
+established. Documentation publication/acceptance requires separate guarded Git
+and exact-commit CI evidence. Consult current refs and workflow results to
+determine whether those gates have subsequently completed.
+
+- Accepted main merge: `d8f301ac384bae34fcf47b430766096cee5ec217`;
+  tree `4347de301ebc14fee0d9b5f0e70b524625feb945`. Ordered parents:
+  `667a9c047d913375263ec8145142bb01854ea5d5` and
+  `91b30f3c8529ed80954414a601b4ce102770888e`. Retained feature
+  `fasttrack/v2-root-identity-validation` is at the second parent.
+- Read-only root/LOCK leases and dependent artifact pins establish ownership
+  and preliminary filesystem identity, reject final symlinks and unsafe file
+  type/link/identity/size states, and support bounded reads into caller buffers
+  with identity rechecks and terminal shared failure. No raw-FD escape. Lock
+  lifetime follows dependent pins; callers serialize operations/destruction.
+  Advisory flock requires cooperating participants and trusted ancestors/directory
+  ownership; it does not prevent uncooperative mutation. Identity checks are not
+  selector/content validation, EOF or durable selection proof, or authentication.
+- Independent source review and incremental reviews accepted the Linux-compatible
+  `/tmp` fixture template and explicit one-byte contender status-write check.
+  Final macOS validation passed Debug 83/83, Release 83/83, UBSan/fuzz 84/84 and
+  focused 6/6 in all configurations; root counts stayed 23/57/67/20. No fresh
+  C++ tests ran for this documentation draft.
+- Exact-main [Networking 40561936792](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40561936792):
+  Debug 83/83 and Release 83/83, `unit.v2_root` passed in both; all pipeline,
+  server smoke, connection lifecycle and epoll repeat gates passed.
+  [Clang 18 ASan/UBSan/fuzz 40561936629](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40561936629):
+  84/84, pinned 50-seed smoke and 10,000 libFuzzer executions, no sanitizer failure.
+  [Docker 40561936642](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40561936642):
+  image/Compose, tooling, container networking/persistence and private Compose
+  passed; Redis parity 54 command cases/40 routes plus 10 operational cases;
+  24 benchmark profiles/48 timed runs passed. All runs completed/success on the
+  accepted merge SHA. GCC Debug/Release and Clang logs show zero new warnings
+  in V2Root.cpp/v2_root_test.cpp; unrelated historical warnings remain separate.
+- **Stage 6B compaction and original Phase 10 remain unfinished.** No production
+  V2 writes or live V2 recovery, writer/compactor integration, P1–P7 publication,
+  R4/R5 barriers or later 10D.1B–F/10C.2 work is implemented by 10D.1A. Frozen
+  format and compaction design remain authoritative. Stage 6A acceptance and
+  prior records remain intact. Original Phase 16 remains EXCLUDED, not complete;
+  Docker smoke does not establish remote host/SSH acceptance or Redis-wide parity.
+- Required sequence from this preparation checkpoint: independent documentation
+  review, separately authorized guarded docs feature publication/exact-feature
+  CI, then separately authorized guarded main merge/exact-main CI. After those
+  gates are verified, the next frozen implementation slice, 10D.1B, may be
+  separately authorized. Consult current refs and workflow results for completion.
+  This checkpoint itself grants no implementation authorization.
+
+## Historical Stage 6A closure snapshot (2026-10-27; superseded)
+
+The following snapshot and its task/publication instructions are retained verbatim
+as history; they do not authorize action or override the current snapshot above.
+
 ## 1. Current snapshot (2026-10-27)
 
 - **Stage 6A engineering: COMPLETE AND ACCEPTED.** All original Phase 11 tasks
@@ -1490,6 +1548,9 @@ recovery testing has been completed.
 - Update this file after meaningful milestones.
 
 ## 16. Exact Next Steps
+
+**Historical Stage 6A continuation, superseded by the 2026-10-28 current snapshot
+and authoritative handoff above.** The instructions below are preserved as history.
 
 **Current handoff (2026-10-27):** accepted main is
 `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`; Stage 6A engineering and original

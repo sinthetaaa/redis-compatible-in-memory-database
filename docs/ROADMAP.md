@@ -11,6 +11,46 @@
 This document preserves the approved 20-phase implementation
 roadmap, including all 169 subphases.
 
+## Latest fast-track status (2026-10-28) — accepted 10D.1A submilestone
+
+**10D.1A engineering is COMPLETE AND ACCEPTED ON MAIN**, merge
+`d8f301ac384bae34fcf47b430766096cee5ec217`, tree
+`4347de301ebc14fee0d9b5f0e70b524625feb945`; retained feature
+`fasttrack/v2-root-identity-validation` at
+`91b30f3c8529ed80954414a601b4ce102770888e`. The
+[authoritative handoff](CONTINUATION_HANDOFF.md#stage-6b--10d1a--formally-accepted-engineering-checkpoint)
+records ordered parents, independent source/correction acceptance and exact-main
+CI: Networking 40561936792 (83/83 Debug and Release), Clang 18 sanitizer/fuzz
+40561936629 (84/84, 50 seeds, 10,000 executions), Docker 40561936642 (including
+54 command cases/40 routes, 10 operational cases, 24 profiles/48 timed runs).
+All completed/success on the merge SHA; V2Root source/test warning cleanup passed.
+
+This is the root/LOCK identity and bounded read-only foundation submilestone.
+**Original Phase 10 and complete Stage 6B compaction are not finished.** No
+production V2 writer/recovery, P1–P7 publication, R4/R5 barriers or later 10D.1B–F
+work is accepted by this checkpoint. Frozen architecture/format authority is unchanged.
+At preparation time on 2026-10-28, this four-document closure was an unstaged,
+uncommitted draft; engineering acceptance was already independently established.
+From that checkpoint, the required sequence is independent documentation review,
+separately authorized guarded docs feature publication/exact-feature CI, then
+separately authorized guarded main merge/exact-main CI. Consult current refs and
+workflow results to determine which gates have subsequently completed. After those
+gates are verified, the next frozen implementation slice (10D.1B) may be separately
+authorized. This checkpoint itself grants no implementation authorization.
+
+The older “no Stage 6B work has begun,” “Stage 6B is not authorized,” and Phase 10
+“NOT STARTED — pending Stage 6B” statements below are **historical and superseded
+by this dated checkpoint**, including their old continuation/publication instructions.
+Original checklist status reconciliation remains a separate milestone; this note
+changes no original inventory item, checkbox, acceptance criterion or exclusion.
+All **20 original phases and 169 subphase IDs** remain intact. Original Phase 16
+remains **EXCLUDED BY APPROVED SCOPE REVISION**, not completed; no remote deployment
+is claimed. Broader Stage 6B and original Phase 10 acceptance remain pending.
+
+## Historical fast-track checkpoint (2026-10-27; superseded)
+
+The earlier checkpoint below is preserved verbatim as historical evidence.
+
 **Current fast-track checkpoint (2026-10-27):** Stages 1–5A and Stage 6A
 engineering are accepted on main `bf1f19f2961544b6524a3e31b4250ce4e9ff0952`.
 Original **Phase 11 (11A–11H) and Phase 12 (12A–12G): COMPLETE AND ACCEPTED**;

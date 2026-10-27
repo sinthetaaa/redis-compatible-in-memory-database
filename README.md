@@ -1,5 +1,23 @@
 # Redis-Compatible In-Memory Database Server
 
+**Latest engineering checkpoint (2026-10-28): Stage 6B / 10D.1A is accepted on
+main** at `d8f301ac384bae34fcf47b430766096cee5ec217`, with exact-main Linux
+Debug/Release 83/83 and Clang 18 ASan/UBSan 84/84, 50-seed smoke, 10,000 fuzz
+executions and Docker gates passed. V2 root/LOCK ownership, filesystem identity
+checks and bounded pinned reads provide a read-only foundation for later V2
+persistence integration; a deployed V2 writer, compactor and recovery system are
+not implemented. Stage 6B and original Phase 10 remain unfinished; full Redis
+compatibility is not claimed. See the [authoritative handoff](docs/CONTINUATION_HANDOFF.md#stage-6b--10d1a--formally-accepted-engineering-checkpoint).
+At preparation time on 2026-10-28, this four-document closure was an unstaged,
+uncommitted draft; engineering acceptance was already independently established.
+Documentation gates require independent review, separately authorized feature
+publication/exact-feature CI, then separately authorized main merge/exact-main CI.
+Consult current refs and workflow results to determine which gates subsequently
+completed; only afterward may the next frozen engineering slice be separately
+authorized. This checkpoint grants no implementation authorization. Older status
+and next-action statements below, including “Stage 6B is not started,” are
+historical/superseded.
+
 A C++20 systems engineering project to build a
 Redis-compatible in-memory database server from scratch.
 
