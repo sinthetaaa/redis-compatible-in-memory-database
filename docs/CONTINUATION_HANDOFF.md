@@ -1,3 +1,90 @@
+# Stage 6B / 10D.1A — formally accepted engineering checkpoint
+
+**2026-10-28: 10D.1A engineering is COMPLETE AND ACCEPTED ON MAIN.**
+At preparation time on 2026-10-28, this four-document closure was an unstaged,
+uncommitted draft. Engineering
+acceptance is established by the published merge and its exact-main CI below;
+documentation publication and acceptance require their own guarded Git and
+exact-commit CI evidence. Consult current repository refs and workflow results
+to determine whether those gates have subsequently completed.
+This checkpoint controls continuation and supersedes older current-action/status
+instructions below. Every previous handoff byte is preserved as historical evidence.
+
+- Accepted main: `d8f301ac384bae34fcf47b430766096cee5ec217`.
+  Tree: `4347de301ebc14fee0d9b5f0e70b524625feb945`, exactly the accepted feature tree.
+  Genuine non-fast-forward merge with exactly two ordered parents:
+  `667a9c047d913375263ec8145142bb01854ea5d5`, then
+  `91b30f3c8529ed80954414a601b4ce102770888e`.
+  Retained `fasttrack/v2-root-identity-validation` remains at
+  `91b30f3c8529ed80954414a601b4ce102770888e`; its sole parent is original
+  implementation commit `6b9b1c6061aaaaa75baa3aac07a1191c7c7ced25`.
+- Original engineering manifest: ADDED
+  `include/redisdb/persistence/V2Root.hpp`, `src/persistence/V2Root.cpp`,
+  `tests/unit/v2_root_test.cpp`; MODIFIED `CMakeLists.txt` and
+  `docs/CONTINUATION_HANDOFF.md`. The current closure draft changes only handoff,
+  PROJECT_STATE, README and ROADMAP; it adds no implementation.
+- Independent complete-source acceptance covered root/LOCK ownership, stable
+  identity validation and bounded pinned reads. Independent correction reviews
+  accepted the test fixture template change from `/private/tmp` to `/tmp` for
+  macOS/Linux portability, and the single contender pipe-write result check.
+  Original implementation and guarded warning-fix publication passed exact-feature
+  CI; those feature runs are historical, separate from the exact-main gates below.
+- Capability: move-only root leases retain an existing real root and an existing
+  regular single-link LOCK under nonblocking exclusive advisory flock. Dependent
+  pins retain the lock lifetime. Typed existing artifacts are opened read-only;
+  final-component symlinks and unsafe type/link/identity/size states are rejected.
+  Held/named identity rechecks surround bounded, caller-buffer pread operations;
+  failure latches shared state. Captured identity/length is preliminary evidence,
+  not decoded selector/content validity, actual EOF or durable selection proof.
+- Assumptions: callers serialize operations/destruction; root ancestors and directory
+  ownership are trusted. Advisory locks coordinate cooperating participants and
+  do not defend against uncooperative mutation. No authentication guarantee is
+  supplied by identities or CRC/checksum validation. Frozen
+  [V2 format](V2_PERSISTENCE_FORMAT.md) and [compaction architecture](AOF_COMPACTION_DESIGN.md)
+  retain their existing authority; this status checkpoint changes neither.
+- Completed final macOS correction validation: Debug **83/83**, Release **83/83**,
+  preserved UBSan/fuzz **84/84**, focused persistence **6/6** in each. Root scenarios:
+  **23 positive / 57 rejection / 67 syscall-boundary / 20 reached allocation
+  failures**. Strict C++20, standalone header, formatting and warning checks passed.
+  No fresh C++ execution is claimed for this documentation-only draft.
+
+Exact-main Linux evidence below is for `d8f301ac384bae34fcf47b430766096cee5ec217`,
+event `push`, branch `main`; all three runs and required jobs completed/success:
+
+- [Networking 40561936792](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40561936792):
+  Linux Debug **83/83**, Release **83/83**; `unit.v2_root` executed and passed in
+  both. Existing pipeline, server smoke, connection lifecycle and epoll repeat
+  gates passed.
+- [Clang 18 ASan/UBSan and fuzz 40561936629](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40561936629):
+  **84/84** CTests, including `unit.v2_root` and pinned 50-seed parser corpus
+  smoke; real **10,000** libFuzzer executions completed, no sanitizer failure.
+- [Docker Linux 40561936642](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40561936642):
+  image/Compose validation, 22 tooling tests, 15 container networking/persistence
+  cases and 10 owned-resource private Compose checks passed; pinned Redis 8.10.2
+  parity passed **54 command cases/40 routes and 10 operational cases**;
+  **24 benchmark profiles/48 timed runs** passed under unchanged bounds.
+
+Actual GCC Debug/Release and Clang build logs show **zero new warnings in
+`V2Root.cpp` and `v2_root_test.cpp`**; the discarded-write-result warning is absent.
+Historical unrelated ListCommands redundant-move, V2TailStream Marker-shadow and
+allocation-hook warnings remain separate. Docker smoke does not establish remote
+host/SSH acceptance; original Phase 16 remains EXCLUDED, not complete.
+
+**Boundary:** this read-only foundation performs no production V2 persistence
+writes or live V2 recovery. No V2 writer activation, compactor, candidate/CURRENT
+publication, P1–P7 ordering or R4/R5 restart barrier is implemented. Later
+10D.1B–F, 10C.2 and other implementation slices remain deferred. Neither complete
+Stage 6B compaction nor original Phase 10 is finished; original roadmap inventory,
+acceptance criteria and scope exclusions remain unchanged.
+
+**Required gates from this preparation checkpoint:** independent documentation
+review, separately authorized guarded docs feature publication and exact-feature
+Linux CI, then separately authorized guarded main merge and exact-main CI.
+After those gates are verified, the next frozen implementation slice (10D.1B)
+may be separately authorized. Consult current refs and workflow results for gate
+completion. This checkpoint itself grants no publication or implementation
+authorization.
+
 # Stage 6B / 10D.1A — Linux test-warning correction (2026-10-27)
 
 **LOCAL AND UNCOMMITTED: independent incremental review required before a
