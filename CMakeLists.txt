@@ -48,6 +48,7 @@ add_library(
     src/persistence/Snapshot.cpp
     src/persistence/V2Format.cpp
     src/persistence/V2BaseStream.cpp
+    src/persistence/V2TailStream.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -110,6 +111,11 @@ if(REDISDB_BUILD_PROFILES AND UNIX)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(redisdb-v2-tail-stream-tests tests/unit/v2_tail_stream_test.cpp)
+    target_link_libraries(redisdb-v2-tail-stream-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-v2-tail-stream-tests)
+    add_test(NAME unit.v2_tail_stream COMMAND redisdb-v2-tail-stream-tests)
+    set_tests_properties(unit.v2_tail_stream PROPERTIES TIMEOUT 120)
     add_executable(redisdb-v2-base-stream-tests tests/unit/v2_base_stream_test.cpp)
     target_link_libraries(redisdb-v2-base-stream-tests PRIVATE redisdb-core)
     redisdb_enable_warnings(redisdb-v2-base-stream-tests)
