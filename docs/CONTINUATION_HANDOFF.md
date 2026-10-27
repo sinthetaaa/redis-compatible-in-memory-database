@@ -1,3 +1,167 @@
+# Stage 6B.0C — architecture acceptance and documentation publication (2026-10-27)
+
+This checkpoint supersedes current-action instructions in the preserved 6B.0B,
+6B.0A and Stage 6A records below. All earlier handoff text remains verbatim.
+
+- **Accepted starting main:** `65a495a42df1e1bc73268137c3124852d76f71e5`.
+  Fresh origin fetch, authenticated GitHub identity `sinthetaaa`, correct repository,
+  branch `fasttrack/aof-compaction-design`, and HEAD/local main/origin/main/remote
+  main equality verified. No conflicting remote design branch existed. Exactly
+  the two intended documentation changes were present.
+- The user reports independent acceptance of the revised Stage 6B.0B architecture.
+  [AOF compaction design](AOF_COMPACTION_DESIGN.md) publishes accepted constraints:
+  dedicated opt-in V2 root; existing valid CURRENT for ordinary startup; explicit
+  init/offline import; mutually exclusive V1/V2 options; V2 SIGUSR1 compaction on
+  the existing event loop; unchanged V1 SIGUSR1 snapshots; continuous stable root
+  lock; checksummed generation-selected base/tail/marker; P0–P8 and R0–R5;
+  fail-closed file/sync errors; no automatic deletion or recovery fallback.
+  R4 is mandatory on every V2 serving restart before any startup write/readiness;
+  the modeled double-crash scenario remains required future validation.
+- Import clarification: omitting `--source-snapshot-dir` explicitly selects
+  AOF-only source recovery. The importer cannot discover an arbitrary separately
+  configured snapshot directory; an unprovided corrupt snapshot is not validated.
+  Provided snapshot directories require full validation. Source V1 files remain
+  read-only; original V1 formats/recovery remain unchanged.
+- Acceptance is **architecture only**, not byte-exact format, production-code
+  authorization or implemented/tested V2 behavior. Original 10A/10B and 10C–10G
+  remain incomplete. Retain-all is intermediate, not storage-lifecycle completion.
+  Exact-byte format review is required before implementing 10C.1; separate
+  independent deletion review and authorization are required before 10G.2 code.
+- Required order: **10C.1 → 10D.1 → 10C.2 → 10D.2 → 10E → 10F → 10G.1 →
+  10G.2 → formal Phase 10 closure**. Each needs separate authorization, focused
+  tests, exact-feature-head CI and an independently accepted predecessor.
+  Mandatory 10G.2 requires stopped physical reclamation safety/reduction evidence.
+- Publication review confirms consistent P/R visibility/durability, mandatory R4,
+  no pre-R4 startup writes, double-crash model, V1/source preservation, no retired
+  fallback, explicit stopped reclamation gates and acyclic dependencies. Validation
+  passed: exact two-file scope, preserved historical handoff, byte-identical ROADMAP
+  with all 169 identifiers, 100 Markdown links (53 unchanged source-line targets;
+  historical external URLs retained), local targets/anchors, fences, numbered
+  protocol/dependency ordering and tracked/new-file whitespace. No source/tests/CMake/workflows/Docker changes or local C++ tests.
+  Historical test/CI results below remain historical evidence.
+- One normal Conventional Commit and push are authorized after all guards pass.
+  Exact commit/parent/tree, remote equality and triggered Linux run IDs/results
+  belong in the external publication report, avoiding self-referential commit
+  metadata or claims of future CI success. Existing workflows validate unchanged
+  implementation regressions; they do not dynamically validate V2 design.
+- **STOP after feature CI.** No PR, merge, implementation, deletion, infrastructure
+  or Stage 6C. Original Phase 16 remains **EXCLUDED, never completed**.
+  Next guarded merge requires separate authorization, fresh identity/origin/ref
+  checks, accepted main unchanged, exact reviewed/tested feature head, clean
+  two-document scope, normal non-fast-forward merge with exactly accepted-main
+  then feature parents, tree equality to tested feature, and successful exact
+  post-merge main Linux CI. Any failing guard stops merge. Then separately
+  authorize 10C.1 scope and accept its byte format before coding.
+
+# Stage 6B.0B — current independent-review corrections (2026-10-27)
+
+This additive checkpoint supersedes current-action instructions in the preserved
+6B.0A/Stage 6A record below. Those historical sections remain unchanged.
+
+- **Accepted main remains `65a495a42df1e1bc73268137c3124852d76f71e5`.**
+  HEAD/local main/origin/main and branch `fasttrack/aof-compaction-design` verified
+  at entry; correct origin retained. Existing work was exactly the two uncommitted
+  docs. No new fetch, identity-network check, CI run or C++ test is claimed in 6B.0B.
+  Stage 6A remains formally closed; its final main CI metadata/results are retained
+  in the 6B.0A checkpoint: 40384462761 / 40384462817 / 40384462849.
+- Independent reviewer feedback supplied by the user **conditionally accepts the
+  general architectural direction**, with mandatory corrections. The revised
+  [AOF compaction design](AOF_COMPACTION_DESIGN.md) records findings/resolutions in
+  section 13. This revision awaits independent re-review; byte-exact V2 format,
+  deletion protocol and implementation scope are not accepted by this checkpoint.
+- Critical correction: restart R0–R3 validates only the selected unit read-only;
+  R4 pins/rechecks CURRENT/LOCK/selected identities, successfully fsyncs the root
+  containing observed CURRENT, then rechecks before any R5 baseline/marker/expiry
+  write, readiness or acknowledgment. Failed sync/identity check is fatal. Applies
+  after P6-before-P7 process death and first initialization/import selector rename.
+  Modeled second power loss cannot roll back selection after successful R4; tests
+  distinguish always durability from weak-policy unsynced suffix and from SIGKILL.
+- Proposed precise modes: explicit `--persistence-dir` V2 serving with appendonly
+  yes; separate offline `--persistence-init` and `--persistence-import-v1`; V1/V2
+  persistence options mutually exclusive. V2 SIGUSR1 runs generation compaction on
+  existing single event loop; V1 SIGUSR1 snapshots/defaults remain unchanged.
+  No source V1 AofLog constructor/recover or SnapshotStore constructor/publication
+  on import; ordered existing source locks, full prefix/suffix validation, source
+  hashes/membership preserved on success/failure, physical TTL/LRU fidelity.
+- Selected CURRENT/base/tail/marker and stable LOCK must be regular single-link
+  artifacts. Root-relative operations, continuous exclusive lock, exact owned-temp
+  cleanup/collision rules and fatal unsupported directory sync; trusted directory
+  assumption remains. No hostile-directory/anti-rollback guarantee is claimed.
+- **Required dependency order:** accepted 6B.0B re-review → 10C.1 format/model →
+  10D.1 tested durable publication primitive → 10C.2 init/import/recovery including
+  R4 → 10D.2 live compaction/handoff → 10E interruption acceptance → 10F full
+  compatibility/correctness → 10G.1 recovery/active-history measurements →
+  **10G.2 Explicit Stopped Generation Reclamation** → formal Phase 10 closure.
+  Basic correctness/fault tests accompany every slice. Each requires accepted
+  predecessors and separately authorized scope; no implementation has started.
+- Supplemental 10G.2 requires its own independent deletion review: stopped server,
+  stable root lock, selected R0–R4 validation, verified independent stopped backup,
+  explicit retention/pins, exact dry-run inventory and operator approval, identity
+  check before every root-relative unlink and directory fsync after each unlink,
+  safe partial retry and owned disposable test roots. Never delete selected,
+  CURRENT/LOCK, pinned or unapproved files; reject ambiguity. No automated startup
+  or background GC. Physical source-disk reduction must be measured/accepted before
+  formal Phase 10 closure; retain-all and 10G.1 alone cannot establish reclamation.
+- Documentation validation passed: revised sections fully read; 99 Markdown
+  links/anchors, 53 source-line targets against accepted files, table columns/
+  fences and whitespace checked; historical external links not re-fetched. The
+  exact two-document scope, no staged/unrelated untracked files, preserved historic
+  handoff, unchanged ROADMAP/169 original identifiers and acyclic dependencies
+  also passed. Historical run/test results remain labeled historical. Only these two
+  docs were written; no persistence files created/modified, production/tests/CMake/
+  CI/Docker changes, compilation/tests/benchmark rerun, evidence archive or commit/
+  push/merge. Changes remain uncommitted on `fasttrack/aof-compaction-design`.
+- Original Phase 10A/10B and implementation tasks are **not marked complete**.
+  Remaining stages 6C–6E are untouched. **Original Phase 16 actual remote Linux
+  deployment remains EXCLUDED, never completed.**
+- **STOP for independent re-review** of revised P0–P8/R0–R5 ordering, source V1
+  compatibility, mode/signal boundaries, file identities, dependency graph and
+  supplemental reclamation. Resolve section 13.3, then obtain separate 10C.1 scope
+  authorization and byte-format review before coding. No commit/push/merge or
+  Stage 6C work is authorized here.
+
+# Stage 6B.0A — current design-only checkpoint (2026-10-27)
+
+This additive checkpoint supersedes dated next-action instructions below; all
+historical Stage 6A sections are preserved.
+
+- **Last accepted main:** `65a495a42df1e1bc73268137c3124852d76f71e5`.
+  Stage 6A is **formally closed**; original Phases 11 and 12 are accepted.
+  Local main, fetched origin/main and remote main matched this SHA at task entry;
+  GitHub identity `sinthetaaa`, correct origin and clean starting worktree verified.
+- Final exact-main CI metadata rechecked: [Networking 40384462761](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40384462761),
+  [ASan/UBSan/fuzz 40384462817](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40384462817),
+  [Docker Linux 40384462849](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40384462849)
+  all completed successfully at that SHA. Accepted baseline evidence is Debug
+  79/79, Release 79/79, sanitizer 80/80 and 10,000 fuzz executions plus Redis/Docker
+  validation; this documentation audit did not rerun those workloads.
+- **Stage 6B.0A started as a design-only checkpoint.** Branch
+  `fasttrack/aof-compaction-design` was absent locally/remotely and created from
+  exact accepted main. HEAD remains at that SHA; main is unchanged. Draft changes
+  remain unstaged/uncommitted in exactly two documentation paths: this handoff and
+  [AOF_COMPACTION_DESIGN.md](AOF_COMPACTION_DESIGN.md).
+- Draft covers source contracts/line references, Phase 10A growth evidence,
+  alternatives, proposed opt-in V2 base + generation journal + watermark selected
+  by one manifest, publication/recovery/failure state machine, explicit read-only
+  V1 import, retention limits, validation matrix and 10C–10G slices. Its separate
+  adversarial self-review is not independent design acceptance. **10A/10B are not
+  marked complete. No persistence implementation has started.**
+- Validation: all 94 Markdown links checked, including relative paths/anchors/
+  source line bounds and API resolution of all 15 distinct historical/current
+  GitHub run links (historical failures remain recorded as failures);
+  `git diff --check` passed; only the two authorized docs changed, nothing staged;
+  production/source, tests, CMake, CI and Docker files unchanged. No compilation,
+  CTest, benchmark, Docker, sanitizer/fuzz rerun or evidence archive. No persistence
+  data was removed, truncated or altered; no commit/push/PR/merge performed.
+- **Exact next gate:** independent reviewer examines the uncommitted draft against
+  accepted source and resolves section 13, explicitly accepting architecture,
+  backward compatibility/V1 recovery and P0–P8 crash protocol before any coding.
+  Revisions remain documentation-only. Then obtain separate implementation
+  authorization for 10C.1 byte-format/model review; 10C–10G remain unstarted.
+- Remaining: 6B Phase 10; 6C Phases 13–14; 6D roadmap/docs/demo; 6E final audit/
+  portfolio closure. **Original Phase 16 actual remote deployment is EXCLUDED,
+  never completed.** STOP before implementation, commit, push, merge or Stage 6C.
+
 # Continuation checkpoint — Stage 6A documentation closure (2026-10-27)
 
 Repository: https://github.com/sinthetaaa/redis-compatible-in-memory-database
