@@ -1,3 +1,96 @@
+# Stage 6B / 10C.1A — independent format acceptance and publication (2026-10-27)
+
+This additive checkpoint supersedes current-action instructions below. Every
+previous handoff checkpoint is preserved verbatim as historical evidence.
+
+- **Stage 10C.1A independently ACCEPTED at byte-format specification level**,
+  as reported by the user; no blocking format contradiction. Accepted entry main:
+  `6233f42e35dc5243314f1425cbc0e7d3c5cfe969`. Correct repository/origin and GitHub
+  identity `sinthetaaa`, branch `fasttrack/aof-v2-format-spec`, HEAD/local main/
+  fetched origin/main/remote main equality, absent remote feature branch and exact
+  two-document worktree scope verified before edits/publication.
+- [Accepted format specification](V2_PERSISTENCE_FORMAT.md): base header 184 bytes
+  (27 contiguous fields), tail header 96 (14), commit marker 112 (18), CURRENT
+  112 (17). Independent review reproduced all 23 CRC32C/SHA-256 artifact outputs,
+  standard CRC32C check E3069283, empty/nonzero-S boundaries, mutation progression,
+  generations 3/4, binary/LRU examples, cross-file bindings and malformed cases.
+  V1 TXN1/KEY1/LRU1/DONE compatibility and P0–P8/R0–R5, including mandatory R4,
+  remain intact. LRU reachability and future implementation-test obligations are
+  editorial clarifications; no layout/magic/checksum/recipe bytes change.
+- **No V2 code implementation or runtime validation.** Original Phase 10C is not
+  formally complete. Existing main CI 40456025900 / 40456025929 / 40456025919
+  remains accepted V1 baseline evidence. New exact-feature-head workflows exercise
+  that existing implementation; they cannot dynamically validate an absent V2 codec.
+- **Next step: guarded format-document publication** of exactly this handoff and
+  the specification, one normal commit/push on the feature branch, then inspection
+  of actual exact-feature-head Networking, ASan/UBSan/libFuzzer and Docker execution.
+  Commit/parent/tree, actual run IDs/counts/conclusions and remote synchronization
+  belong in the publication report, not a future self-referential SHA here.
+- **After successful feature CI, STOP before merge.** A separate authorized guarded
+  main merge requires unchanged accepted main, exact reviewed/tested feature head,
+  clean two-document scope, ordered merge parents and merge-tree equality to the
+  tested feature, then successful exact post-merge main Linux CI.
+  After accepted merge, obtain separate **10C.1B codec/model implementation**
+  authorization; it is NOT STARTED and is not authorized by this publication.
+- Subsequent **10D.1, 10C.2, 10D.2, 10E, 10F, 10G.1 and 10G.2 remain pending**
+  in accepted dependency order. 10G.2 still requires its own deletion review,
+  stopped backup/pins/inventory and accepted physical-reduction evidence.
+  No PR, main merge, filesystem feature, import, compaction, reclamation, Stage 6C
+  or infrastructure work. **Original Phase 16 remote deployment remains EXCLUDED,
+  never completed.**
+
+# Stage 6B / 10C.1A — byte-exact V2 format design (2026-10-27)
+
+This additive checkpoint supersedes current-action instructions below; every
+historical handoff section is preserved verbatim.
+
+- **Accepted main:** `6233f42e35dc5243314f1425cbc0e7d3c5cfe969`.
+  Correct path/origin, GitHub identity `sinthetaaa`, clean tree, fresh fetch,
+  HEAD/local main/origin/main/remote main equality and branch absence verified.
+  Created `fasttrack/aof-v2-format-spec` directly from that SHA. Changes remain
+  unstaged and uncommitted; main remains unchanged.
+- Stage 6A is formally closed; Stage 6B architecture is independently accepted,
+  feature `5a090e87c3ae4aaf38d16007b4484e6a08a15b9e`, now on accepted main.
+  [Accepted architecture](AOF_COMPACTION_DESIGN.md) remains unchanged.
+  User-supplied successful exact-main CI: Networking **40456025900**,
+  ASan/UBSan/fuzz **40456025929**, Docker Linux **40456025919**. Historical V1
+  results: Debug/Release 79/79 each, sanitizer 80/80, 50 seeds/10,000 fuzz runs,
+  15 container/10 Compose checks, parity 54 cases/40 routes, 10 operational cases,
+  benchmark 24 profiles/48 runs. No new CI execution or V2 validation is claimed.
+- **10C.1A is design only, awaiting independent format acceptance.** Exact draft:
+  [V2_PERSISTENCE_FORMAT.md](V2_PERSISTENCE_FORMAT.md). Proposed fixed headers:
+  base 184 bytes, tail 96, selector/marker 112 each; BE fields, distinct V2 magics,
+  exact CRC32C ranges, per-entry KEY1/per-key LRU1/DONE, unchanged TXN1/effects,
+  store/generation-qualified immutable binding and mandatory full-EOF validation.
+  Generation begins at 1; logical sequence survives compaction. CURRENT excludes
+  mutable tail boundaries. P0–P8 and mandatory restart R4 remain unchanged.
+- Review questions: exact layouts/dual header CRC identity; observed/durable source
+  provenance and derived V1 durable prefix CRC; inherited hash/set decoder order
+  and noeviction journal LRU semantics; portable bounds/exhaustion policy; strong
+  validated types versus actual durability/activation. These are concrete proposed
+  decisions in section 13, not architecture-level byte-format acceptance.
+- Documentation calculations exercised the in-memory golden recipe, independently
+  cross-checked CRC32C conventions, header offsets/widths, binary/LRU and empty/
+  nonzero-S tail boundaries. Four independent width/table calculations and all
+  23 artifact outputs agree; 36 local links/anchors, fences/table columns and
+  tracked/new-file whitespace passed. ROADMAP is byte-identical with all 169
+  identifiers; historical handoff is preserved verbatim. External historical URLs
+  were not re-fetched. Documentation-only self-audit is not independent
+  review or a working V2 codec test. Only this handoff and the new specification
+  are authorized changes. No source/codec/test/build/CI/Docker implementation,
+  runtime persistence fixture/data operation, commit/push/PR/merge or archive.
+- **Next action:** independent reviewer reads the entire uncommitted format draft
+  against accepted source/architecture, reproduces vectors and field/CRC ranges,
+  resolves section 13 and explicitly accepts or requests documentation revisions.
+  STOP before coding. Original Phase 10C is not marked complete. Obtain separate
+  10C.1 implementation authorization after format acceptance.
+- Remaining Stage 6B dependency order: **10C.1 → 10D.1 → 10C.2 → 10D.2 →
+  10E → 10F → 10G.1 → 10G.2 → formal Phase 10 closure**. Each predecessor needs
+  independent acceptance and the next slice separate authorization. 10G.2 still
+  needs its own deletion review and stopped physical-reduction evidence. No
+  10D.1/10C.2, Stage 6C, reclamation or infrastructure work has started.
+  **Original Phase 16 remote VPS deployment remains EXCLUDED, never completed.**
+
 # Stage 6B.0C — architecture acceptance and documentation publication (2026-10-27)
 
 This checkpoint supersedes current-action instructions in the preserved 6B.0B,
