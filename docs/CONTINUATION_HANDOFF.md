@@ -1,3 +1,115 @@
+# Stage 6B / 10C.1B.1 — independent acceptance and feature publication (2026-10-27)
+
+This status clarification supersedes current-action instructions below; the local
+implementation checkpoint and every historical section remain verbatim.
+
+Independent implementation review passed, as reported by the user, with no
+blocking findings. The fixed-metadata implementation is accepted for feature
+publication only. Supplemental GCC 14, Clang 17 and ASan/UBSan focused Linux
+checks passed using a compatibility stub for the accepted V1 CRC interface;
+these are supplemental review evidence, not full-repository Linux integration.
+The existing macOS Debug 80/80, Release 80/80 and UBSan 81/81 integration evidence
+remains applicable to the unchanged implementation. Publication rechecked all
+three focused V2 tests, warning/header/format checks and exact five-file scope.
+
+Current authorized task: one normal feature commit/push on
+`fasttrack/v2-fixed-metadata-codecs`, followed by actual exact-feature-head Linux
+CI inspection. Commit identities and CI outcomes belong in the publication report;
+no future SHA or anticipated success is asserted here. Main merge remains a
+separately authorized guarded task after successful feature CI: unchanged accepted
+main, exact reviewed/tested feature head, five-file scope, ordered merge parents,
+merge-tree equality and successful exact post-merge main CI.
+
+No V2 filesystem, streaming, recovery, import, publication, writer activation or
+server functionality exists in this slice. Original Phase 10C remains incomplete;
+10C.1B.2 and subsequent milestones remain separately gated. STOP after feature CI.
+
+# Stage 6B / 10C.1B.1 — local fixed metadata implementation (2026-10-27)
+
+This additive checkpoint supersedes current-action instructions below. All earlier
+checkpoint text remains verbatim. **LOCAL, UNCOMMITTED; INDEPENDENT IMPLEMENTATION
+REVIEW REQUIRED.** No implementation publication or acceptance is claimed.
+
+- Accepted starting main: `e6b8e7a191b2ba9d8c25d5d5f132645af2a68e67`.
+  10C.1A independently accepted and merged, exact-main Networking **40469997848**,
+  ASan/UBSan/fuzz **40469997797**, Docker **40469997838** successful. These remain
+  previous-implementation baseline evidence, not tests of these new V2 codecs.
+  Correct path/origin, GitHub identity `sinthetaaa`, clean main, fresh fetch,
+  HEAD/local main/origin/main/remote main equality and new-branch absence verified.
+  Created `fasttrack/v2-fixed-metadata-codecs` directly from accepted main.
+- Exact scope: new `include/redisdb/persistence/V2Format.hpp`,
+  `src/persistence/V2Format.cpp`, `tests/unit/v2_format_test.cpp`; modified only
+  `CMakeLists.txt` (one core source and one unit target/test registration) and this
+  additive handoff. Accepted format/architecture/ROADMAP, V1 persistence/storage,
+  existing tests, server, CI and Docker remain unchanged.
+- `redisdb::persistence::v2` adds checked nondefault StoreId/GenerationId/
+  LogicalSequence/TailOffset/Crc32c domains, generation-qualified BaseIdentity,
+  TailHeaderIdentity and GenerationCheckpoint, owned untrusted field structs,
+  categorized FormatError exceptions, checked generation/sequence advancement,
+  canonical decimal generation parsing/formatting and pure CRC reuse. Integer
+  wrappers require the exact unsigned underlying type, preventing implicit
+  signed/floating/narrowing construction; no V1 checkpoint conversion exists.
+- Pure fixed codecs implement base header **184**, tail header **96**, marker
+  **112**, CURRENT **112** bytes, exact BE fields/CRCs/trailers/reserved values,
+  source kinds 0/1/2, structural counts/offsets and immutable cross-header binding.
+  Full-header CRC is distinct from stored tail-header CRC. Empty markers require
+  generation-local S/96/0/CRC(full header); supplied-header checks distinguish
+  empty/nonempty claims. No nonempty record boundary is asserted from metadata.
+  Raw marker codec cannot establish S without the supplied tail-header validator.
+- No ValidatedSelector, DurableTailBoundary, PreparedGeneration, streaming base
+  frames/tail records, complete-file CRC verification, recovery/import, publication,
+  locking, writer activation or server integration. Header consistency is explicitly
+  separate from complete-file/semantic validation, file identity and mandatory R4.
+  No V2 filesystem calls or persistence mutation; new tests operate entirely in
+  memory. Existing regression tests use their own disposable V1 test data/roots.
+- Dedicated `unit.v2_format` compares **13 fixed portions** from accepted E/C/L/T
+  vectors (12 initial family headers/markers plus nonempty T marker). The accepted
+  in-memory recipe also reproduced all 23 documented outputs during development.
+  Positive tests include BE high-bit fields, CRC standard/chunk extension, identity
+  equality, provenance 0/1/2, V1 observed/durable/empty tuples, nonzero-S markers
+  and exhausted-but-readable sequence. Negative cases cover all **504 short-input
+  lengths**, trailing bytes, V1/wrong magics, versions/flags/lengths/accounting,
+  every reserved byte, checksum/trailer, zero/foreign IDs, provenance/count/size/
+  boundary errors, canonical decimal and exhaustion, inconsistent encode arguments
+  and CRC-correct cross-header mismatches. Matching complete-base CRC claims are
+  deliberately not treated as verification of the base's absent body bytes.
+- Actual macOS local results: CMake Debug configure/build PASS; full Debug CTest
+  **80/80 PASS**; Release configure/build and full CTest **80/80 PASS**; existing
+  `build/stage4b-ubsan` reconfigured/built with undefined sanitizer and fuzz targets,
+  full CTest **81/81 PASS**, including the 50-seed corpus smoke. Final focused
+  `unit.v2_format` **1/1 PASS in Debug, Release and UBSan**. After adding the final
+  direct raw-field/BE cases, full Debug was rerun: **80/80 PASS** (11.96 seconds).
+  Release/UBSan full runs also include those final cases. No ASan or 10,000-run
+  local fuzz claim.
+  Full suites ran outside the socket-restricted sandbox as authorized. No local
+  Docker or GitHub CI execution. CTest discovery verifies V2 exactly once in each
+  configuration; actual compile commands retain warning/UBSan instrumentation.
+- Validation: clang-format dry-run/Werror PASS for all three new C++ files;
+  strict `-std=c++20` standalone-header and both translation-unit syntax checks
+  with all repository warnings plus `-Werror` PASS; tracked/new-file whitespace
+  and `git diff --check` PASS. Initial build found a missing test-helper closing
+  brace; corrected. A prematurely attempted focused CTest was Not Run because
+  that failed build had no test executable; subsequent builds/focused/full runs
+  passed. Self-review tightened integer construction and locally knowable empty-
+  marker invariants before full regression runs; checksum-correct negative tests
+  retain the intended binding checks. An audit helper expected an absent UBSan
+  compile_commands.json; corrected to inspect actual Ninja compilation commands.
+  No accepted assertion, warning flag, format field or existing test was weakened.
+- **No commit, push, merge, PR, evidence archive or history rewrite.** HEAD stays
+  at accepted main on the local implementation branch. Original Phase 10C and
+  Phase 10 remain incomplete; original Phase 16 remote deployment remains
+  **EXCLUDED**, never completed.
+- **Exact next gate:** independent reviewer examines all five uncommitted paths
+  against the frozen specification/source and local evidence, challenges bounds,
+  provenance, checksums, strong types and header-only validation limits, then
+  explicitly accepts this slice or requests corrections. STOP before publication.
+  Remaining **10C.1B.2**: separately authorized base KEY1/LRU1/DONE and tail TXN1
+  bounded streaming codecs/validators, semantic/complete-file checks and tests.
+  Subsequent **10D.1 → 10C.2 → 10D.2 → 10E → 10F → 10G.1 → 10G.2** remain
+  pending, with independent predecessor acceptance/separate authorization;
+  10G.2 still requires its own deletion review and stopped physical reduction.
+  No Stage 6C or infrastructure work has begun.
+
 # Stage 6B / 10C.1A — independent format acceptance and publication (2026-10-27)
 
 This additive checkpoint supersedes current-action instructions below. Every
