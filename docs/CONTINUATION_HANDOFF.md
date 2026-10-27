@@ -1,3 +1,51 @@
+# Stage 6B / 10D.1A — Linux test-warning correction (2026-10-27)
+
+**LOCAL AND UNCOMMITTED: independent incremental review required before a
+separately guarded follow-up feature commit and exact-feature Linux CI.**
+A main merge remains separately unauthorized. All previous handoff text follows
+verbatim; this checkpoint supersedes its current-action instructions.
+
+- Original independently accepted/published feature commit remains
+  6b9b1c6061aaaaa75baa3aac07a1191c7c7ced25, tree
+  74d6da37666df0660902c14f4ea06812398c5f36, sole parent/unchanged main
+  667a9c047d913375263ec8145142bb01854ea5d5. Successful exact-feature Linux runs
+  are historical evidence for that published commit: Networking 40551695101
+  (Debug 83/83, Release 83/83), sanitizer/fuzz 40551695304 (84/84, pinned
+  50-seed smoke, 10,000 libFuzzer executions), Docker 40551695226 (success).
+- Independent inspection observed a new Linux Release -Wunused-result warning
+  at v2_root_test.cpp:410: contender() discarded write()'s result. At that single
+  location, replace the discarded call with an explicit result != 1 check and
+  child _exit(1) on failure. The one-byte blocking pipe write, independent flock
+  contention, child/pipe ownership, parent poll/read/wait assertions, fixture
+  safety and all scenarios remain intact. No contention rewrite or test weakening.
+- V2Root.hpp, V2Root.cpp and CMakeLists.txt are byte-for-byte unchanged from the
+  published commit. No other source, test, workflow, specification or roadmap edit.
+- Actual local macOS rebuilds all PASS without compiler warnings. Focused six-test
+  persistence suites: Debug 6/6 (7.69 s), Release 6/6 (4.76 s), preserved UBSan
+  6/6 (11.66 s). Complete suites: Debug 83/83 (28.30 s), Release 83/83 (20.02 s),
+  UBSan/fuzz 84/84 (34.71 s), including corpus smoke. All root-test runs preserve
+  23 positive, 57 rejection, 67 syscall/boundary and 20 reached allocation failures.
+  UBSan cache/compiler/instrumentation remain byte-identical. Full suites used
+  the authorized outside-sandbox loopback route; no tests skipped or weakened.
+- Apple Clang 17 strict C++20 standalone-header and source/test checks PASS with
+  Wall/Wextra/Wpedantic/Wconversion/Wshadow/Wunused-result/Werror, including an
+  O3/NDEBUG test warning check. clang-format dry-run/Werror, registration counts
+  83/83/84 and whitespace checks PASS. These macOS checks do not establish that
+  Linux GCC's warning is resolved; subsequent exact-feature Linux CI must verify it.
+- Updated v2_root_test.cpp SHA-256:
+  7d2827c9377fcb08e31b56706b00d7ce292f89b49ffb43a286de7bfff711d480
+  Previous handoff bytes preserved, SHA-256:
+  13ced5e852b98fb775a843389ddc84b64ca0558a97e64877af9d13867e10f1e3
+  Final complete handoff and corrected-test hashes are recorded externally in
+  /private/tmp/redisdb-10d1a-warning-review-kwvd1vjk/SHA256SUMS.txt
+  and review.txt beside it, avoiding a self-referential handoff hash.
+- Final scope: exactly test and additive handoff modifications, nothing staged,
+  no new commit/push/PR/merge. Published feature and main refs unchanged. No
+  production persistence access or later-stage implementation. Next gates:
+  independent incremental acceptance, guarded follow-up feature commit,
+  exact-feature Linux CI, then separately authorized main merge. STOP LOCAL
+  AND UNCOMMITTED; do not publish this correction without incremental acceptance.
+
 # Stage 6B / 10D.1A — independent-review portability correction (2026-10-27)
 
 **LOCAL, UNCOMMITTED AND UNPUBLISHED; corrected-source independent acceptance

@@ -407,7 +407,8 @@ void contender(const Fixture& f, bool should_acquire) {
             should_acquire ? owner.valid()
                            : !owner.valid() && owner.error().code == RootErrorCode::LockUnavailable;
         const char status = ok ? '!' : '?';
-        (void)::write(pipefd[1], &status, 1);
+        if (::write(pipefd[1], &status, 1) != 1)
+            ::_exit(1);
         ::_exit(ok ? 0 : 1);
     }
     (void)::close(pipefd[1]);
