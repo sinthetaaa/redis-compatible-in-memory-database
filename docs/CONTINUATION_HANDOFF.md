@@ -1,3 +1,176 @@
+# Stage 6B / 10C.1B.2A — independent acceptance and feature publication (2026-10-27)
+
+Independent code review PASSED, as reported by the user, with no blocking source
+issue or format contradiction. The three implementation/test files match the
+reviewed SHA-256 copies; the reviewer independently reproduced E/C/L full-base
+lengths and CRCs. This accepts the bounded base-streaming slice for feature
+publication only, not filesystem safety, durability, serving or live recovery.
+
+The current authorized gate is one normal feature commit and push on
+`fasttrack/v2-base-streaming-validation`, followed by inspection of all three
+exact-feature-head Linux workflows. Actual commit identities, CI run IDs and
+execution outcomes belong in the publication report. STOP before main merge;
+that requires separate authorization, unchanged accepted main, exact reviewed/
+tested feature head and five-file scope, ordered merge parents, tested-tree
+equality and successful exact post-merge main CI. Tail streaming remains separately
+gated 10C.1B.2B; neither all 10C.1B nor original Phase 10C is complete. All prior
+checkpoints below remain verbatim.
+
+# Stage 6B / 10C.1B.2A — local bounded base streaming checkpoint (2026-10-27)
+
+This additive checkpoint supersedes current-action instructions below; every prior
+record remains verbatim. **LOCAL, UNCOMMITTED; STOP FOR INDEPENDENT CODE REVIEW.**
+This is not acceptance of all 10C.1B or original Phase 10C.
+
+- Accepted main and unchanged HEAD: `756d64c3058705f62175a62d6708bea69ff16802`.
+  **10C.1B.1 is formally complete**, independently accepted, merged into main and
+  validated by the required Linux workflows, as reported by the user: Networking
+  40495943071, ASan/UBSan/libFuzzer 40495943163, Docker 40495943084. Those results
+  validate the fixed-metadata predecessor, not this new base-stream implementation.
+  Entry checks verified exact repository/origin, GitHub identity `sinthetaaa`,
+  clean main/index, fresh fetch, HEAD/main/origin/main/remote main equality, fixed
+  metadata source/tests, and absent local/remote proposed branch. Created local
+  `fasttrack/v2-base-streaming-validation` directly from accepted main.
+- Exact five-file manifest: new `include/redisdb/persistence/V2BaseStream.hpp`,
+  `src/persistence/V2BaseStream.cpp`, `tests/unit/v2_base_stream_test.cpp`;
+  modified `CMakeLists.txt` (one core source and one unit target/test, six added
+  lines) and this additive handoff. Accepted V2Format.hpp/.cpp, V1 AofLog/Snapshot,
+  Database/MemoryAccounting, existing tests, architecture/format documents, CI,
+  Docker, benchmarks and ROADMAP are preserved. No reusable fixed-codec adjustment
+  was necessary. All original 169 roadmap identifiers remain unchanged.
+- Public pure API in `redisdb::persistence::v2`: `BaseStreamValidator` accepts
+  owned copies of untrusted `BaseReferenceFields` or `BaseIdentity`, including
+  exact complete extent and checksum claims, plus optional per-frame/entry/charge
+  resource limits. `feed(ByteView)` borrows each span only during the call;
+  `finish()` explicitly confirms caller-established EOF. NeedMore persists through
+  DONE; only successful finish exposes a const `ValidatedBase` through `result()`.
+  That object owns identity/header, physical entries, recomputed charges, pre-DONE
+  CRC, DONE frame CRC and LRU indices into its entries. No borrowed chunk storage
+  survives. Result views remain valid until destruction or a rejected subsequent
+  feed. Repeated finish is idempotent; any feed after success, including empty,
+  invalidates the result and fails. All failures latch a stable error and discard
+  private state. Caller serializes calls and establishes actual EOF against pinned
+  input extent; serialized-content validation proves neither filesystem identity,
+  selection, fsync durability nor permission to serve.
+- Grammar implemented: exact accepted 184-byte header, exactly K KEY1 frames,
+  exactly J raw-key LRU1 frames, one four-byte-payload DONE frame, immediate EOF.
+  Frames are tag/u32 length/payload/CRC32C/END!, n+16 bytes, unchanged coverage.
+  KEY1 <=67,108,864 bytes; LRU1 <=8,388,608 bytes. Header claims are validated
+  with existing fixed codecs and exact immutable binding. Full-file CRC32C is
+  extended incrementally over every byte including DONE. Prefix before DONE,
+  its payload checksum, DONE's own frame checksum/trailer, final byte length,
+  header CRC, store/generation/sequence, complete CRC and explicit EOF all match.
+  No matching naked checksum claim is treated as complete-file proof.
+- KEY1 calls accepted V1 `decode_effects` unchanged, then requires exactly one
+  replacement, no tombstone/LRU and strictly increasing unsigned-byte outer keys.
+  Empty/binary keys and values, list order/duplicates, unique unsorted hash fields
+  and set members, integer-looking strings and absolute deadlines survive.
+  Reuses pure checked model-1 accounting over every physical entry, including
+  already-past TTLs; verifies Q before success. No clock is sampled. LRU is an
+  exact oldest-to-newest permutation regardless of future serving policy; no
+  policy argument can bypass validation. Without history the owned entries retain
+  binary sorted cold-start order and `lru_order()` remains empty. Empty compacted
+  LRU permutations are valid. Pure `encode_key_frame`, `encode_lru_frame` and
+  `encode_done_frame` return owned frame strings and reject unrepresentable input;
+  KEY encoding also checks inherited decoder validity (including empty collections).
+  Framing errors use BaseFrameError; inherited encoder errors remain PersistenceError;
+  allocation failures propagate from encoders and latch ResourceLimit in the stream.
+- Memory/complexity review: one reusable incomplete frame buffer, plus owned
+  decoded values/entries and an owned-key balanced-tree permutation index; no
+  whole-base buffer, aggregate K/J reserve or database-sized encoder. Header
+  feasibility uses checked minimum-byte bounds. Frame lengths are capped and
+  compared with remaining supplied extent/native max_size before n+16/reserve;
+  streamed counts are bounded by checked header counts. Charge uses accepted
+  checked size_t operations, with size_t <=u64 statically asserted. Existing
+  inherited count/blob checks precede decode loops/accesses. State/permutation
+  storage is O(K + decoded bytes); index operations take O(log K) comparisons;
+  bounded frame storage does not mean constant total memory or RSS admission.
+  Final result moves are statically checked nonthrowing. Resource failures never
+  become empty state. Tests compare allocation work for one chunk versus bytes,
+  inject every allocation failure on the typed/LRU fixture through first success,
+  and show feasible K=1,048,577 metadata does not reserve or inherit the per-payload
+  one-million-item cap. A complete million-key base was not materialized locally.
+- Positive tests: independent forward-polynomial CRC32C/reference framing and
+  frozen section-15 E/C/L complete lengths/header CRCs/full CRCs; fresh empty E,
+  g=3/S=1 C and g=4/S=2 L, binary/NUL/high-bit/empty keys and values, all four
+  types, unsorted unique inner collections, duplicate list elements, byte-exact
+  `0007`, negative/positive/past TTLs and both native deadline extremes, physical
+  ledger 1096, LRU on/off and empty permutation, caller-byte destruction, V1 frame
+  encoder agreement, BaseIdentity overload, EOF-only completion and stable finish.
+  **784 partition cases** include whole/one-byte/7-byte chunks, every possible
+  two-chunk split of E/C/L and deterministic irregular sizes. Every fixed header
+  field/checksum/trailer boundary is split.
+- Negative tests: **829 rejection cases on this macOS clock**, including all
+  **764 E/C/L truncations**, empty input, header identification/CRC errors,
+  immutable identity/extent/whole-CRC mismatches, missing/duplicate DONE/trailing
+  bytes, unknown/extra/misordered frames, malformed DONE sizes, KEY/LRU caps,
+  UINT32_MAX frame/key lengths and UINT64_MAX extent/count claims, payload/CRC/
+  trailer truncations/corruption, wrong DONE prefix, forged K/J/Q, inflated tiny
+  files, tombstone/multiple effects/LRU inside KEY1, duplicate/descending/prefix/
+  high-bit outer order, invalid value/timed flags, duplicate hash/set items,
+  empty collections, inherited count/blob bounds/suffixes, duplicate/foreign/
+  missing LRU references and LRU without flag. Semantic cases have independently
+  rebuilt enclosing CRCs and assert error categories. Native unrepresentable
+  i64 deadlines are conditionally rejected when clock ticks/us >1; macOS uses
+  microseconds, so all i64 microsecond deadlines are representable here. There
+  are also three explicit resource-budget cases, six invalid encoder cases and
+  **34 reached injected allocation failures**. All error states reject later
+  feeds/finish and expose no result. Feasible native endpoint arithmetic cannot
+  overflow after the wire-length cap; hostile maximum lengths reject before add.
+  A physically realizable charge-overflow dataset was not allocated; checked
+  accounting and charge mismatch/budget rejection are exercised.
+- Large evidence: **75,498,000-byte** base from nine separately bounded 8 MiB
+  values, constructed/tested in two per-frame passes without a whole-base buffer,
+  streamed in **4093-byte** pieces. Largest observed validator allocation:
+  **8,388,648 bytes**, including allocator rounding. A separate exactly
+  **67,108,864-byte KEY1 payload** (eight-element list) passes in **8191-byte**
+  pieces. Both cases run deterministically in the single 120-second CTest budget;
+  no benchmark threshold or separate large-resource configuration was needed.
+- Actual local macOS validation: Debug configure/build PASS; focused new+fixed
+  tests **2/2 PASS**, full Debug **81/81 PASS (13.40 s)**. Release configure/build
+  PASS, focused **2/2 PASS**, full **81/81 PASS (36.76 s)**. Existing
+  `build/stage4b-ubsan` configured/built with `-fsanitize=undefined
+  -fno-sanitize-recover=all -fno-omit-frame-pointer` and fuzz targets ON; focused
+  **2/2 PASS**, full **82/82 PASS (41.87 s)**, including actual replay of the
+  frozen **50-seed** corpus. No sanitizer diagnostics or final compiler warnings.
+  Full suites use the established authorized out-of-sandbox loopback procedure;
+  no test was skipped or weakened. No local Docker, ASan, 10,000-run fuzz or
+  GitHub CI execution is claimed. Existing predecessor Linux outcomes remain
+  historical evidence only.
+- Validation/self-review: complete new implementation/tests reread; challenged
+  chunk/CRC/END!/EOF transitions, unsigned ordering, byte ownership, checked
+  remaining lengths/counts/charge, expired physical entries, policy-independent
+  permutation, native deadlines, unsorted inherited collections, terminal errors,
+  repeated finish/feed and absence of filesystem operations. No frozen-format
+  contradiction found. Corrected a test signedness warning; adjusted tombstone
+  and missing-LRU fixtures so minimum-size checks do not preempt intended semantic
+  checks; corrected a multiple-effect fixture's byte slice and native-deadline
+  expected charge (113 ->114). Initial focused runs failed during these fixture
+  corrections; one early full Debug run was **80/81**, then corrected full Debug
+  passed **81/81**. No production format/semantic relaxation was needed. Header
+  syntax validation initially compiled the header as a main file, triggering
+  pragma-once/Werror; corrected to a standalone including translation unit.
+  Final clang-format dry-run/Werror, strict C++20 standalone-header and both
+  translation-unit warning/Werror checks, CMake registration/instrumentation,
+  tracked/new-file whitespace, source scope and diff checks pass.
+- **No persistence filesystem I/O or live recovery implemented.** No paths/FDs,
+  locking, fsync, rename/unlink, import/init, tail TXN1 scan, commit boundary scan,
+  CURRENT publication, writer activation, compaction or deletion. New tests keep
+  V2 bytes in memory; existing regressions use their established disposable V1
+  fixtures. No persistence data artifacts or archives are added to the repository.
+  No commit/push/merge/PR/history rewrite; local and remote main remain accepted.
+  Stage 6C is not begun; original Phase 16 remote VPS deployment remains EXCLUDED.
+- **Exact independent review gate:** inspect all five uncommitted files against
+  the frozen specification and unchanged accepted codecs; independently challenge
+  framing/bounds, owned state, resource failures, full CRC/extent/EOF identity,
+  physical accounting and policy-independent permutation. Explicitly accept
+  10C.1B.2A or request corrections before any publication. STOP here.
+  Remaining **10C.1B.2B** is separately gated bounded tail TXN1 streaming and
+  commit-marker boundary validation. Subsequent order remains **10D.1 → 10C.2 →
+  10D.2 → 10E → 10F → 10G.1 → 10G.2** with independent acceptance and separate
+  authorization; 10G.2 additionally requires its own deletion review. Neither all
+  10C.1B nor original Phase 10C/Phase 10 is marked complete.
+
 # Stage 6B / 10C.1B.1 — independent acceptance and feature publication (2026-10-27)
 
 This status clarification supersedes current-action instructions below; the local
