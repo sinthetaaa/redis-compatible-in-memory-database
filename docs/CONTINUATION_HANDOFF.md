@@ -1,3 +1,197 @@
+# Stage 6B / 10C.1B.2B — independent review acceptance (2026-10-27)
+
+Independent full-source review **PASSED** on 2026-10-27 with no blocking source
+changes requested. Reviewed SHA-256 values:
+
+- `V2TailStream.hpp`: `76ee12acc336bdeb4ec528e7620aa877fe4e1a244d7c637330594ec4f8b851bd`
+- `V2TailStream.cpp`: `5e5c3a2ce245148e077ca51b00aa301d6894808f6367476bbe0bfe9be710dc71`
+- `v2_tail_stream_test.cpp`: `d0eeb03cd247c0ca6dea2bb14ab7627796dd51aa1c13296330668f8f28e93c87`
+
+Reported local Debug 82/82, Release 82/82 and UBSan/fuzz 83/83 passed.
+The authorized next gate is one guarded feature commit, normal feature push and
+exact-feature Linux CI verification. No GitHub CI outcome is predeclared.
+Main merge, 10D.1, filesystem persistence integration and later stages remain
+unauthorized. All previous handoff text follows verbatim.
+
+# Stage 6B / 10C.1B.2B — local bounded V2 tail streaming checkpoint (2026-10-27)
+
+**LOCAL, UNCOMMITTED AND UNPUBLISHED; STOP FOR INDEPENDENT FULL-SOURCE REVIEW.**
+This additive checkpoint supersedes current-action instructions below. All prior
+historical text is preserved verbatim. Neither all 10C.1B, original Phase 10C nor
+Stage 6B is declared complete.
+
+- Accepted starting main and unchanged HEAD:
+  `f6852b40161b4a724e5751686f255cc68b25f925`. Stage 10C.1B.2A is formally
+  accepted on main, with exact-main Networking 40505023576 (81/81 Debug and
+  Release), ASan/UBSan/fuzz 40505023361 (82/82, 50 seeds, 10,000 fuzz runs) and
+  Docker 40505023657 accepted in the prior merge task. These are predecessor
+  evidence, not tests or remote CI executions of this new slice.
+  Fresh preflight verified repository/origin, GitHub identity `sinthetaaa`, clean
+  main/worktree/index, no in-progress operation, normal fetch, HEAD/main/fetched
+  origin/main/actual remote main equality and zero ahead/behind. Proposed branch
+  absence was checked locally (absence exit code interpreted correctly) and
+  remotely. Created LOCAL `fasttrack/v2-tail-streaming-validation` directly from
+  that accepted main. No commit, push, PR, merge or history rewrite in this task.
+- Exact five-path manifest: NEW `include/redisdb/persistence/V2TailStream.hpp`,
+  `src/persistence/V2TailStream.cpp`, `tests/unit/v2_tail_stream_test.cpp`;
+  MODIFIED `CMakeLists.txt` (six registration lines only) and this additive handoff.
+  Accepted fixed V2/base code and tests, V1 AOF/Snapshot, storage/accounting,
+  existing tests/fixtures, frozen architecture/format, ROADMAP, server/RESP/CLI,
+  CMake presets, CI/Docker/benchmarks and other tracked paths remain unchanged.
+  Original 20 phases and all 169 unique roadmap identifiers remain preserved.
+- Public API: `TailStreamValidator(TailHeaderFields expected, MarkerFields marker,
+  uint64_t declared_extent, TailStreamLimits limits = {})`, with noexcept
+  `feed(ByteView)`, `finish()`, `status()`, `error()`, `result()`,
+  `bytes_received()`, `buffered_bytes()` and `buffer_capacity()`. Reuses existing
+  StreamStatus/ByteView without changing accepted headers. Inputs are owned
+  copies of untrusted claims; marker fields are revalidated even if caller-built.
+  Mandatory extent is 96..INT64_MAX on supported macOS/Linux. Caller serializes
+  calls, supplies all bytes in order, and calls finish only after actual EOF at
+  the pinned extent. Chunks are borrowed solely for each feed call.
+- Private-construction `ValidatedTailScan` owns immutable header identity and
+  metadata, final observed generation-qualified W/L/R/P, a matched generation-
+  qualified marker checkpoint, exact tail length and validated record count.
+  It owns no effects history. No result exists during NeedMore or Error; even
+  complete header/records and an already matched watermark remain NeedMore until
+  explicit successful finish. Finish is idempotent after success. Any feed after
+  success, including empty, fails terminally and invalidates the accessible result.
+  All failures retain their first error and discard the buffer/result. Result
+  references are borrowed until destruction or rejected feed; a copied result
+  owns its metadata independently of validator/input lifetime.
+- Trust boundary: this proves complete serialized-tail structure, inherited
+  effects semantics and actual encoded boundary claims only. It does NOT verify
+  the referenced base's complete bytes, selected files/inodes, CURRENT/LOCK,
+  permissions, fsync completion, durable acknowledgment, private-state replay
+  correctness, recovery readiness or authority to activate a writer/serve.
+  No callbacks, clocks, filesystem interfaces or live Database mutation exist.
+- Actual 96-byte tail header is decoded with unchanged `decode_tail_header()`;
+  all base fields must equal expected store/g/S/B/base CRC/base-header CRC/model.
+  Stored/full actual tail-header CRCs agree with derived TailHeaderIdentity and
+  marker binding. Constructor checks untrusted expected/marker structure with
+  existing pure fixed helpers; header completion independently checks actual bytes
+  and `validate_marker_header(marker, actual)`. Matching claims alone never finish
+  a scan. Header-only tails initialize W=S/L=96/R=0/P=CRC(all actual header bytes),
+  including positive S and S=UINT64_MAX after compaction.
+- Exact inherited TXN1 framing: tag(4), BE sequence(8), BE payload length(4),
+  payload n<=67,108,864, BE record CRC(4), literal END!(4); total n+24,
+  maximum 67,108,888. Record CRC covers the first 16+n bytes; prefix CRC covers
+  the complete record including CRC/trailer. Prelude validates tag/next sequence,
+  cap/remaining extent/native size/budgets before allocating. First sequence is
+  S+1, then exactly consecutive; exhaustion is checked before addition. A final
+  record at UINT64_MAX is readable; another record is rejected without wrap.
+- Each fully framed/checksummed record calls unchanged V1 `decode_effects()`
+  exactly once, then destroys the temporary owned effects before advancing
+  observed W/L/R/P. Tombstones, all four replacement types, binary/empty keys and
+  strings, list order/duplicates, unique unsorted inner hash/set items, signed
+  absolute deadlines and inherited counts/blob/native-clock limits remain V1.
+  No integer normalization, expiration, policy accounting, recency touch or replay.
+  Journal LRU validates grammar/uniqueness, not the strict base permutation rule;
+  a unique order containing keys outside this record's changed keys is accepted.
+  Configured-policy/keyspace replay validation remains a later coordinator task.
+- Actual watermark algorithm: only header completion and successful complete
+  record decode are candidate boundaries. All four actual D/O/R/P values must
+  simultaneously equal the marker. Reaching D with wrong coordinates or crossing
+  O without a match fails; an interior offset cannot be blessed by its own valid
+  prefix CRC. D=S must be S/96/0/actual full-header CRC. A matched boundary never
+  stops validation. Every later complete record remains scanned, with final W/L
+  possibly beyond D/O and no claim that the suffix was synchronized. Corrupt or
+  partial suffix, missing boundary, incomplete header/prelude/payload/CRC/trailer,
+  wrong extent or extra bytes rejects the whole scan. No truncation/repair/fallback.
+- Memory/complexity: one lazily allocated owned char array, initially 96 bytes,
+  then at most 67,108,888 bytes. Growth copies only the constant 16-byte prelude,
+  frees the old array BEFORE allocating its exact checked replacement, and never
+  geometrically over-reserves or holds two record buffers. Prefix is extended only
+  at accepted boundaries. Chunks copy once into available storage; effects decode
+  once per completed record, with constant framing/CRC passes. No whole-tail buffer, historical
+  vector or allocation by aggregate extent/count exists. Temporary decoded V1
+  objects may require additional bounded per-record memory: no constant-RSS or
+  universal resource-admission claim. Checked extent bounds prove received/end
+  addition safety; n+24/native narrowing and record/sequence counter increments
+  are checked before execution. Expected allocation/container failures latch
+  ResourceLimit, with allocation-free internal rejection and nonthrowing result
+  moves statically checked. Programmer errors are not interpreted as success.
+- Independent forward-polynomial CRC32C/reference byte builders reproduce frozen
+  E.tail=96/dbfbc819 (stored header CRC cc38e707), T.record=48 with R=ad924c74,
+  T.tail=144/04430f74 and T.marker=1/144/ad924c74/04430f74 (full marker CRC
+  7a05287b). C.tail=96/28b640b9, S=1, stored header CRC ad63e9bb;
+  U.record=56, R=e91dbec0, full record CRC f18ecbb6, U.tail=200/a33c606b;
+  L.tail=96/dc793392, S=2, stored header CRC c1721669. Complete record/checkpoint
+  values are independently asserted, not solely production roundtrips.
+- Coverage on this macOS clock: **21 positive helper scans**, **1,046 partition
+  scans** (every possible two-chunk split plus irregular caller-overwrite scans
+  for seven frozen header/tail/boundary fixtures), **1,170 rejection cases**, of
+  which **1,032 are all-byte truncations**, **nine explicit budget/overflow
+  cases**, and **24 reached injected allocation failures** through first success.
+  Additional direct ownership/resource/finalization assertions are not inflated
+  into those helper counts. Positive checks include markers at initial/intermediate/
+  final boundaries, valid suffixes, positive/max base sequence, sequence ending at
+  UINT64_MAX, binary/empty data, every type, tombstones, unsorted unique hash/set,
+  list duplicates, LRU present/absent/empty, negative/positive/past deadlines and
+  both native clock extremes, bytewise/chunked input, copied metadata after input
+  destruction, and terminal feed-after-finish. Actual observed/matched checkpoints
+  are compared in every partition scan.
+- Negative cases rebuild enclosing CRCs for intended semantic layers: malformed
+  tail headers/immutable identities and resealed foreign markers; invalid initial
+  claims; unknown tag, impossible/oversized lengths, CRC/END! errors; every sequence
+  gap/repeat/decrease/reset/exhaustion; zero/excessive effects/items, invalid tags/
+  timed/LRU flags, empty collections, duplicate/unordered outer keys, duplicate
+  hash/set/LRU keys, forbidden LRU data, oversized blobs and payload suffixes;
+  D below S/beyond final W, O before header/beyond extent/at EVERY interior byte of
+  a real record, individually wrong R/P, and corrupt/partial suffix after matched
+  initial/intermediate watermarks. Native deadline scaling overflow is conditional
+  on ticks/us >1: all i64 microsecond deadlines are representable on this Mac,
+  while the two unrepresentable extremes reject on nanosecond hosts. Astronomical
+  counter/offset overflow is prevented by caps/extent guards rather than allocating
+  an impossible-size file. No check/test/format was weakened.
+- Bounded stress: **67,268,728-byte** streamed tail with one exact-limit
+  **67,108,864-byte effects payload / 67,108,888-byte record**, made from eight
+  individually legal <=8 MiB list blobs, in **4093-byte chunks**. Largest observed
+  validator allocation is exactly **67,108,888 bytes**; 4,096 later records keep
+  the live allocation count constant and are included in the final CRC/checkpoint.
+  Whole-chunk versus bytewise medium input performs identical **four allocations /
+  16,644 requested bytes**. Oversized u32 length claims under INT64_MAX declared
+  extent fail with no allocation above the initial 96-byte header buffer.
+- Actual local macOS outcomes: Debug configure/build PASS; focused tail/base/
+  fixed/AOF/Snapshot **5/5 PASS (8.71 s)**; full **82/82 PASS (40.43 s)**.
+  Release configure/build PASS; focused **5/5 PASS (6.47 s)**; full **82/82 PASS
+  (58.41 s)**. Existing `build/stage4b-ubsan` cache/toolchain preserved, reconfigured
+  and built with `-fsanitize=undefined -fno-sanitize-recover=all
+  -fno-omit-frame-pointer`, fuzz targets ON; focused **5/5 PASS (13.37 s)** and
+  full **83/83 PASS (65.58 s)**, including actual frozen 50-seed parser smoke.
+  Full suites ran through the established authorized outside-sandbox loopback
+  route. All builds/new-file strict C++20 warning/Werror syntax checks, standalone
+  header compile and clang-format dry-run/Werror passed without new local compiler
+  warnings or sanitizer diagnostics. Existing Linux GCC allocation-hook/ListCommands
+  warning baselines were not edited; no new Linux/ASan CI or Docker execution is
+  claimed for this uncommitted slice. No dependency installation or fuzz-CI change.
+- Self-review reread the complete implementation/tests and challenged ownership,
+  state transitions, subtraction-first bounds, allocation capacity, prefix coverage,
+  actual boundary proof, corrupt suffix handling, sequence exhaustion, native
+  deadlines, inherited collection/LRU permissiveness and exception-safe terminal
+  states. Added explicit U record/boundary checks, positive-sequence decrease and
+  successive-growth allocation failures after a real watermark match. Before
+  execution, adjusted two negative fixtures' marker/extent setup to reach their
+  intended Length/Truncated checks. No executed test failure or blocking source/
+  specification contradiction remains. No accepted source/API/bytes were modified.
+- Final review checks include exact five-file scope, no staged work, HEAD/main/
+  origin/main at accepted starting SHA, unchanged protected paths and all 169
+  identifiers, preserved prior handoff suffix, registered/instrumented CTest,
+  tracked/new-file whitespace and git diff checks. Review deliverables are the
+  three complete new source files, complete CMake/handoff diff, executed test
+  report and final Git status; any local plain-text review export is outside the
+  repository and is not a commit, archive, persistence fixture or publication.
+- **Next gate:** independent full-source review against frozen format and accepted
+  V1/base APIs; explicitly accept this local 10C.1B.2B slice or request corrections
+  BEFORE any separately authorized feature publication. STOP uncommitted.
+  **10D.1 and every filesystem/locking/fsync/rename/unlink/publication task remain
+  deferred**, followed by independently gated **10C.2 → 10D.2 → 10E → 10F →
+  10G.1 → 10G.2**. No initialization, V1 import, selected recovery/private-state
+  replay, serving/writer activation, compaction or reclamation was implemented.
+  Original Phase 16 remote VPS deployment remains EXCLUDED; no Stage 6C or
+  infrastructure work was begun. No V2 persistence directory or selected artifact
+  was touched; new V2 fixtures exist only in memory, while existing regressions
+  use their established ordinary disposable V1 test fixtures.
+
 # Stage 6B / 10C.1B.2A — independent acceptance and feature publication (2026-10-27)
 
 Independent code review PASSED, as reported by the user, with no blocking source
