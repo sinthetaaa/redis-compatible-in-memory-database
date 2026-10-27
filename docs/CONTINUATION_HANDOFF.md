@@ -1,3 +1,215 @@
+# Stage 6B / 10D.1A — independent-review portability correction (2026-10-27)
+
+**LOCAL, UNCOMMITTED AND UNPUBLISHED; corrected-source independent acceptance
+is required before any feature publication.** This checkpoint supersedes current
+action instructions below; all historical handoff text follows verbatim.
+
+- Independent full-source review found one blocking Linux portability issue:
+  Fixture::Fixture() used the macOS-specific /private/tmp pathname, generally
+  absent on Ubuntu runners. The sole test-source correction changes the template
+  to /tmp/redisdb-v2-root-XXXXXX, supported by macOS and Linux. No fallback exists
+  into the repository or a user's persistence directory. A trusted /tmp ancestor
+  (a symlink on this Mac) is distinct from a symlink at the final V2 root component.
+  Production final-component O_NOFOLLOW rules are unchanged.
+- Exclusive mkdtemp creation/private ownership, saved directory device/inode,
+  non-following cleanup, assertions and independent-process locking scenarios
+  remain byte-for-byte unchanged. The test differs from the previous review by
+  exactly that one pathname replacement; no scenarios were removed or weakened.
+- Starting guards matched all five supplied hashes, exact five-path manifest,
+  clean index and branch fasttrack/v2-root-identity-validation. HEAD, local main,
+  origin/main and actual remote main remain
+  667a9c047d913375263ec8145142bb01854ea5d5; no remote feature branch exists.
+- Unchanged SHA-256 values:
+  V2Root.hpp: 70a1107c1b0d155c73175068b5a9a4a78e05f30ff58984fca6214bff6e8fb080
+  V2Root.cpp: e16ab6383166a7d3132ef964949e138d85a9eb044b00507035894eb73fe5a37c
+  CMakeLists.txt: f3e60c0b2e8b8fd1f799318ebbb2b2899d55b3972dafbaed9e69c47955760f6b
+- Corrected v2_root_test.cpp SHA-256:
+  65a1329b460f738a958750eff580af6c3841fbb48c205076036315ac0b7cd40b
+  Historical handoff payload SHA-256 (all bytes preserved after this checkpoint):
+  40fd84ce98e1638e7aba226b60b2a3ac3ce55e5676459b71eab6470055b3bf2c
+  The final complete handoff SHA-256 and all five final hashes are recorded in
+  /private/tmp/redisdb-v2-root-correction-iucrxd95/SHA256SUMS.txt
+  and review.txt in the same directory. The final handoff hash is external to
+  avoid a self-referential hash changing the bytes it identifies.
+- Actual corrected-source local macOS reruns: Debug configure/build PASS,
+  focused 6/6 PASS (7.64 s), full 83/83 PASS (28.33 s); Release configure/build
+  PASS, focused 6/6 PASS (3.90 s), full 83/83 PASS (20.26 s); preserved
+  build/stage4b-ubsan configure/build PASS, focused 6/6 PASS (11.56 s), full
+  84/84 PASS (34.35 s), including parser corpus smoke. UBSan cache remains
+  byte-identical, preserving compiler, Debug, fuzz ON and existing sanitizer flags.
+  Each focused run reports 23 positive, 57 rejection, 67 syscall/boundary and
+  20 reached allocation-failure scenarios. No count change.
+- Initial full-suite sandbox attempts failed on networking loopback bind access;
+  final full suites passed through the authorized outside-sandbox route. Both
+  attempts and final logs are retained in the external review export. No tests
+  were skipped. These macOS results do not establish Linux runtime or CI success.
+- Standalone-header and both new translation units pass strict C++20 with
+  Wall/Wextra/Wpedantic/Wconversion/Wshadow/Werror. clang-format dry-run/Werror,
+  tracked/new-file whitespace and CMake registration checks pass: 83/83/84 total
+  tests, exactly one unit.v2_root each, timeout 60 seconds. A whitespace audit
+  helper was corrected to accept git diff --no-index's normal new-file exit 1
+  only with empty diagnostics; no source change was needed for that helper.
+- Exactly the same five authorized paths remain; since the prior review only
+  the fixture pathname and this additive checkpoint changed. No production
+  persistence artifacts were accessed or modified; test fixtures/build outputs
+  are local harness outputs. Nothing staged or committed; no push, PR or merge.
+  No 10D.1B–F, P1–P7, R4 or later work was implemented. Feature publication
+  remains unauthorized pending corrected-source independent acceptance.
+
+# Stage 6B / 10D.1A — local V2 root and identity checkpoint (2026-10-27)
+
+**LOCAL, UNCOMMITTED AND UNPUBLISHED; STOP FOR INDEPENDENT FULL-SOURCE REVIEW.**
+This checkpoint supersedes current-action instructions below. All prior handoff
+text remains verbatim. No original roadmap item or all of Stage 6B is closed.
+
+- Accepted starting main / unchanged HEAD:
+  `667a9c047d913375263ec8145142bb01854ea5d5`; accepted tree:
+  `df7ef6fce9c54f4053655cfdf8885244f645e101`. The preceding read-only audit found
+  10C.1 technically ready for closure with no mandatory missing pure-codec seam.
+  This does not equate serialized validity with selected-file or sync authority.
+- Fresh preflight verified exact repository/origin, Git identity and authenticated
+  GitHub account `sinthetaaa`, clean main/index/worktree, no unfinished Git operation,
+  normal fetch, HEAD/main/origin/main/actual remote main equality and zero divergence.
+  Proposed branch was absent locally/remotely (local quiet show-ref absence code 1).
+  Created LOCAL `fasttrack/v2-root-identity-validation` directly from accepted main.
+- Exact manifest: NEW `include/redisdb/persistence/V2Root.hpp`,
+  `src/persistence/V2Root.cpp`, `tests/unit/v2_root_test.cpp`; MODIFIED
+  `CMakeLists.txt` (six registration lines; one core source and `unit.v2_root`,
+  timeout 60 seconds) and this additive handoff. All accepted V1/V2 source/tests,
+  UniqueFd, server/CLI/storage/networking, presets, frozen architecture/format,
+  ROADMAP, workflows/Docker/benchmarks/README remain unchanged. Original 20 phases
+  and 169 unique checklist identifiers remain preserved; Phase 16 stays EXCLUDED.
+- Public ownership API: move-only `RootLease::open_existing(const filesystem::path&,
+  shared_ptr<RootIo> = {}) noexcept`, `valid()`, `error()`, `recheck()`,
+  `pin_current()`, `pin_generation_file(ArtifactRole, GenerationId)` and
+  `close_checked()`. Move-only `PinnedFile` provides `valid()`, `error()`,
+  `identity()`, `recheck()`, `read_exact(uint64_t, span<byte>)` and
+  `close_checked()`, all noexcept. Identity is a borrowed historical observation,
+  not a validated selector/generation/EOF/durable boundary. No raw FD escape.
+- Acquisition normalizes only trailing slash/dot components, preserving trusted
+  ancestors and '..'. Opens the existing root once with directory/CLOEXEC/nofollow
+  flags, fstats directory identity, opens existing root-relative LOCK read-only
+  with CLOEXEC/nofollow/nonblocking and NO creation/truncation flags, validates
+  regular single-link bounded metadata, acquires LOCK_EX|LOCK_NB, then rechecks
+  held root/LOCK and named LOCK via fstatat(AT_SYMLINK_NOFOLLOW). Failed acquisition
+  closes partial resources immediately; it never retries using another LOCK.
+  Zero-byte LOCK is valid; no LOCK payload format is invented.
+- Typed artifact names only: CURRENT, base-g.snap, tail-g.aof, tail-g.commit.
+  Generation uses accepted checked GenerationId, allocation-free decimal to_chars
+  with roundtrip and name-buffer bounds. No arbitrary filename, directory scan,
+  selector decode or generation reservation. Existing artifact opens are read-only,
+  CLOEXEC/nofollow/nonblocking. Held/named type/link/dev/ino/size checks require
+  CURRENT/marker exactly 112, base >=204, tail >=96, and nonnegative extents <=
+  min(INT64_MAX, native off_t max). Junk correctly sized content can be pinned:
+  this is intentionally preliminary identity validation, not byte decoding.
+- Shared private RootState retains root and stable LOCK until the last dependent
+  file/lease is destroyed. Each pin owns exactly its artifact FD and owned name.
+  File teardown closes artifact before releasing its state reference; last state
+  teardown closes LOCK then root. Root move/assignment cannot invalidate a retained
+  pin's lock lifetime. No threading/reentrancy guarantee: caller serializes owner
+  calls/destruction; trusted adapters cannot reenter or retain borrowed buffers.
+  A closed pin conservatively retains its lease reference until destruction/move-away.
+  Explicit root close with dependent pins fails terminally without releasing LOCK.
+- Rechecks verify held root identity, held/named LOCK and held/named artifact,
+  regular/single-link rules and captured size. First failure latches the entire
+  shared state, invalidates all peers/identity access and prevents further open/read
+  attempts. No repinning, fallback, repair or reopening after failure. Legitimate
+  future marker replacement requires a separately coordinated new pin.
+- Reads use caller storage only, no allocation by file size. Subtraction-first
+  range checks precede addition/narrowing; actual pread requests <=64 KiB and
+  SSIZE_MAX. Retry actual EINTR and accumulate short reads; zero progress before
+  completion is Truncated; invalid counts/returns or permanent errors fail.
+  Identity checks surround even empty reads. Partially filled output on failure
+  must be discarded. Successful read is not actual EOF confirmation or content
+  integrity proof; future validators and coordinator must establish both.
+- RootIo owns no global failure controls. Its protected virtual customization seam
+  covers exactly open/openat/fstat/fstatat/flock/pread/close and scalar before/after
+  events. Defaults invoke POSIX. RootError owns category, operation, role, stage
+  and immediately captured errno without paths/data. Expected allocation/length
+  failures become ResourceLimit; programmer callbacks are noexcept by contract.
+  There are no write/fsync/rename/unlink/creation wrappers.
+- Close relinquishes the FD number before the single attempt, never retries EINTR,
+  and still attempts cleanup if a Before observer rejects. Checked errors latch;
+  destructors do not throw. Destructor-time errors can be queried only through
+  surviving peers or observed in the adapter trace. Tests safely close the REAL
+  descriptor before injecting EIO/EINTR, including immediately reopening a fixture
+  at the SAME number and verifying it survives all later teardown. This proves
+  no unsafe retry for that controlled outcome, not perfect recovery of a real
+  platform close that might leave its kernel FD open. Ambiguous OS close can leak
+  a kernel resource; no guessed second close or false successful cleanup claim.
+- Deterministic fault matrix (every armed point reached and context asserted):
+
+  | Operation/point | Injected result | Expected state |
+  |---|---|---|
+  | Root open, before/call/after | EIO; call EACCES | no usable owner; partial FDs closed; InvalidRoot on actual failure, IoFailure on hooks |
+  | LOCK openat, before/call/after | EIO; actual missing ENOENT | no owner; IoFailure / MissingLock; no file creation |
+  | Root/LOCK fstat, before/call/after | EIO, including second LOCK stat AFTER flock | no owner; IoFailure; acquired resources released |
+  | LOCK named fstatat and flock, before/call/after | EIO; flock EWOULDBLOCK | no owner; IoFailure / LockUnavailable; no alternate inode |
+  | Artifact openat/fstat/fstatat/read, before/call/after | EIO | root and pins terminal; errno remains owned after global errno changes |
+  | pread progress | EINTR then success, short reads, zero, permanent error, negative/oversized return | valid retry/accumulation or terminal Truncated/IoFailure |
+  | Metadata and invalid syscall returns | negative/max fixed size, wrong identity/type/link/size, non-POSIX return | InvalidLength/identity rejection/IoFailure; no accepted pin |
+  | Close of artifact/LOCK/root, before/call/after | EIO and EINTR; invalid positive return | one attempt, terminal IoFailure, no reused-number close |
+  | Construction allocations | budget sweep through success, default adapter/state allocation failure | ResourceLimit, no leaked partial owner |
+
+- Actual new-test counters on this Mac: **23 positive cases, 57 rejection cases,
+  67 syscall/boundary cases, 20 reached allocation failures**. These count scenario
+  cases, not every assertion/syscall, and additional ownership checks are not
+  inflated into the totals. Covered valid generation 1/UINT64_MAX, opaque fixed
+  files, binary NUL/high-bit 200,000-byte reads, >20,000 seven-byte short reads,
+  EINTR, moves, retained dependent lock, independent child opens denied/allowed,
+  deterministic teardown order, terminal moved-from/failed access and premature
+  root-close rejection. Invalid roots/LOCK/artifacts include missing, symlink
+  with slash/dot variants, hardlink, directory, FIFO, inode replacement/removal,
+  length/link/type changes, bad fixed/minimum sizes, invalid generation/role,
+  negative/max metadata and overflow/beyond/crossing read endpoints. Actual inode
+  truncation during read and post-read metadata change cannot be hidden.
+- Fixture safety: only harness-created unique /private/tmp/redisdb-v2-root-* roots,
+  original root dev/ino verified before cleanup; flat nofollow exact-entry cleanup,
+  no arbitrary recursive/user-path deletion. Harness creates/changes/corrupts the
+  fixtures; V2Root does not. Membership, metadata, FNV-1a fingerprints AND exact
+  bytes are compared before/after relevant read-only/failure cases (atime excluded).
+  Per-adapter FD acquire/close accounting and process descriptor inventory checks
+  pass. Child lock contention always independently opens LOCK; inherited fork
+  descriptions are never used as the contender. Only owned children are waited/killed.
+- Actual FINAL local gates: Debug configure/build PASS; focused root/tail/base/
+  fixed/AOF/Snapshot **6/6 PASS (9.92 s)**; full **83/83 PASS (23.88 s)**.
+  Release configure/build PASS; focused **6/6 PASS (5.16 s)**; full **83/83 PASS
+  (20.06 s)**. Preserved stage4b-ubsan compiler/cache, Debug and fuzz-target ON,
+  flags `-fsanitize=undefined -fno-sanitize-recover=all -fno-omit-frame-pointer`;
+  rebuild PASS; focused **6/6 PASS (12.46 s)**; full **84/84 PASS (41.79 s)**,
+  including the actual 50-seed parser smoke. Full suites used the established
+  authorized outside-sandbox loopback route; no tests skipped/weakened. Registration
+  counts are 83/83/84 with exactly one unit.v2_root. No new Linux CI, Docker or
+  ASan execution, dependency installation, remote workflow trigger or fuzz claim.
+- Final clang-format dry-run/Werror and strict -std=c++20 TU/header standalone
+  checks with Wall/Wextra/Wpedantic/Wconversion/Wshadow/Werror PASS. Actual core
+  compile commands use c++20 and test targets retain established gnu++20 CMake
+  convention; strict manual compilation passed for both new TUs. Warnings and
+  UBSan instrumentation preserved. No new local warnings or sanitizer diagnostics.
+  Known accepted Linux GCC Marker shadow, ListCommands redundant move, historical
+  allocation-hook warnings and Docker Node deprecations remain unchanged.
+- Self-review reread full new source/tests: corrected immediate failed-acquisition
+  cleanup before execution; first focused persistence run was 5/6 because the
+  test's wrong-root-type injection still supplied S_IFDIR. Corrected that fixture;
+  root retry passed and all final focused/full gates passed. Later replaced a
+  duplicate fault with the second post-flock LOCK stat, added exact teardown-order
+  and protected-backend API assertions, then rebuilt and reran all gates. Earlier
+  full Debug/Release also passed 83/83; final figures above include final tests.
+  An audit helper initially required c++20 on the existing gnu++20 test convention;
+  corrected the helper, without changing build flags. No frozen contradiction,
+  hidden V1 interaction, raw-FD escape or blocking unresolved finding remains.
+- Final scope/whitespace/source-integrity checks and review export cover all three
+  complete new files (untracked files are not in ordinary git diff), full tracked
+  CMake/handoff diff, actual test results, Git status and five SHA-256 values.
+  No staged change, commit, push, PR, merge, source publication, evidence archive,
+  live persistence-root access or live/selected artifact mutation occurred.
+- **Next gate:** independent full-source review BEFORE separately authorized
+  feature publication and exact-feature CI. STOP LOCAL AND UNCOMMITTED.
+  **10D.1B–F, all P1–P7, R4/R5, 10C.2 and later stages remain deferred.** No
+  CURRENT publication, candidate creation/reservation, fsync, writer activation,
+  import/recovery, Database mutation, compaction or reclamation was implemented.
+  No Stage 6C or infrastructure work; original Phase 16 remains EXCLUDED.
+
 # Stage 6B / 10C.1B.2B — independent review acceptance (2026-10-27)
 
 Independent full-source review **PASSED** on 2026-10-27 with no blocking source
