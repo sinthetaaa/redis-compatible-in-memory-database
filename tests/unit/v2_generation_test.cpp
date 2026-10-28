@@ -810,7 +810,7 @@ void occupancy_errors_and_changes() {
                          terminal(c, root, *io);
                      });
         }
-        for (const auto answer : {std::pair{1, 0}, {-2, EIO}, {-1, 0}, {-1, -7}}) {
+        for (const auto& answer : {std::pair{1, 0}, {-2, EIO}, {-1, 0}, {-1, -7}}) {
             scenario("invalid probe result " + std::to_string(answer.first) + "/" +
                          std::to_string(answer.second) + " role " + std::to_string(ordinal),
                      [=](auto&, auto& io, auto& root) {
