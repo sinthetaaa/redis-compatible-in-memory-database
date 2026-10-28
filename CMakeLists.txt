@@ -50,6 +50,7 @@ add_library(
     src/persistence/V2BaseStream.cpp
     src/persistence/V2TailStream.cpp
     src/persistence/V2Root.cpp
+    src/persistence/V2Staging.cpp
     src/protocol/RespValue.cpp
     src/protocol/RespSerializer.cpp
     src/protocol/RespParser.cpp
@@ -117,6 +118,12 @@ if(BUILD_TESTING)
     redisdb_enable_warnings(redisdb-v2-root-tests)
     add_test(NAME unit.v2_root COMMAND redisdb-v2-root-tests)
     set_tests_properties(unit.v2_root PROPERTIES TIMEOUT 60)
+
+    add_executable(redisdb-v2-staging-tests tests/unit/v2_staging_test.cpp)
+    target_link_libraries(redisdb-v2-staging-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-v2-staging-tests)
+    add_test(NAME unit.v2_staging COMMAND redisdb-v2-staging-tests)
+    set_tests_properties(unit.v2_staging PROPERTIES TIMEOUT 60)
     add_executable(redisdb-v2-tail-stream-tests tests/unit/v2_tail_stream_test.cpp)
     target_link_libraries(redisdb-v2-tail-stream-tests PRIVATE redisdb-core)
     redisdb_enable_warnings(redisdb-v2-tail-stream-tests)

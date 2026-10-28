@@ -1,3 +1,137 @@
+# 10D.1B — owned unpublished data staging (2026-10-28 preparation)
+
+At preparation time on 2026-10-28, this eight-file draft was **local, unstaged,
+uncommitted and unpublished**. Independent complete-source review was the next
+gate; passing local tests alone did not establish final 10D.1B engineering
+acceptance. Local-source acceptance and final engineering acceptance are separate.
+This entry supersedes older continuation instructions only;
+every prior handoff byte follows unchanged.
+
+- Fresh preflight verified repository/origin, Git author/committer and authenticated
+  GitHub account `sinthetaaa`; clean main/index/worktree, no untracked files or
+  unfinished operation; normal fetch; exact local HEAD/main/origin/main/actual
+  remote main `120a52c1ea60d61931d34dbe195a455c2313b441`, tree
+  `0e08e010e09e8b69dea7f8c2fd00198130c0d4ce`, ordered parents
+  `d8f301ac384bae34fcf47b430766096cee5ec217` then
+  `ab7179ee5abc4c28e0ebf6552eb514d91bfe2a79`. Both retained local/remote
+  features match: engineering `fasttrack/v2-root-identity-validation` at
+  `91b30f3c8529ed80954414a601b4ce102770888e`; documentation
+  `fasttrack/10d1a-formal-closure` at
+  `ab7179ee5abc4c28e0ebf6552eb514d91bfe2a79`. New feature absence was checked
+  locally/remotely before creating LOCAL `fasttrack/v2-owned-data-staging`
+  directly from accepted main. At preparation time on 2026-10-28, HEAD remained
+  that baseline; no commit had been made.
+- Exact-main baseline workflow metadata verified completed/success at that SHA:
+  Networking `40575656379`, Clang 18 sanitizer/fuzz `40575656524`, Docker
+  `40575656395`, including required jobs. These are accepted baseline results,
+  not implementation CI. Initial sandbox auth/fetch restrictions were resolved
+  through approved outside-sandbox checks/fetch; no Git state was repaired.
+- Exact implementation manifest: NEW `include/redisdb/persistence/V2Staging.hpp`,
+  `src/persistence/V2Staging.cpp`, `src/persistence/V2RootAccess.hpp`,
+  `tests/unit/v2_staging_test.cpp`; MODIFIED
+  `include/redisdb/persistence/V2Root.hpp`, `src/persistence/V2Root.cpp`,
+  `CMakeLists.txt`, and this additive handoff. Frozen specifications, original
+  root/format/base/tail tests and codecs, V1 persistence, UniqueFd, Database,
+  server/CLI, workflows, Docker, benchmarks and all other documents are unchanged.
+- Move-only, noexcept-lifecycle `StagedFile` provides `create_data`, `valid`,
+  `error`, `identity`, historical accepted `byte_length`, `recheck`, append-only
+  `append`, caller-buffer `read_exact`, `seal_file`, `discard_checked` and
+  `close_checked`. Private typed `detail::StagingAccess` borrows the SAME
+  existing `detail::RootState`, root descriptor, LOCK descriptor and shared first
+  terminal-error latch; the state definition stays in V2Root.cpp. No raw descriptor
+  or arbitrary-name API, independent reopen or second lock is added. Existing
+  enum numeric values are preserved; staging operations/roles/errors are appended.
+- Only Base/Tail/Watermark and valid GenerationId are accepted. Names are derived
+  as `<final>.tmp.<32 lowercase hex digits>` in a NUL-terminated 70-byte array
+  (maximum basename 69 ASCII bytes). All 128 bits come from OS `getentropy`
+  through `<sys/random.h>`; zero is allowed, with no fallback, UUID bits or global
+  entropy changes. Exclusive held-root-relative create uses exactly
+  O_RDWR/O_CREAT/O_EXCL/O_CLOEXEC/O_NOFOLLOW/O_NONBLOCK, mode 0600. Actual EEXIST
+  or create EINTR obtains a fresh token, bounded to 64 total create attempts.
+  Ambiguous names and collisions are never adopted, reopened or removed.
+- Owned descriptors are adopted before After hooks, then regular/single-link/zero
+  extent and held/named identity are checked with root/LOCK checks. Growing temps
+  bypass only final-artifact minimum lengths. Append uses tracked-end pwrite and
+  subtraction-first file/native-offset bounds, at most min(64 KiB, SSIZE_MAX)
+  per call. Valid partial progress is recorded before After observers. Readback
+  shares bounded caller-buffer principles; failed output must be discarded.
+  Actual EINTR is retried for read/write/file-sync, never ambiguous unlink/close.
+- Seal succeeds only after checked file fsync and identity/extent rechecks.
+  Repeated seal success revalidates root/LOCK/staged identity and extent, without
+  another sync; append after seal fails terminally. Seal proves neither bytes,
+  complete EOF, directory durability, recovery-unit validity nor selection.
+  Healthy discard/destructor cleanup can unlink only the exact owned temporary
+  after all checks. Errors latch shared state, preserve remaining linked files
+  and prohibit further write/sync/cleanup; descriptor release is still attempted
+  once. Successful unlink is recorded before After; close relinquishes ownership
+  before its one syscall. Explicit close retains the name and root-state lifetime.
+  Failed cross-root move-assignment disposal preserves the old root's first error
+  locally in the incoming owner; it cannot regain health or mutate its incoming
+  temporary, and independently healthy peers on the other root remain isolated.
+- Actual local macOS configure/build PASS: Debug, Release, preserved
+  `build/stage4b-ubsan` (Debug, fuzz ON, original compiler/sanitizer flags and
+  byte-identical CMakeCache). Discovered CTest registrations: 84/84/85, exactly
+  one new `unit.v2_staging` each. Focused seven persistence tests PASS 7/7 in
+  each; full suites PASS Debug 84/84, Release 84/84, UBSan/fuzz 85/85. Separate
+  preserved parser corpus smoke PASS. Full suites used the authorized external
+  sandbox loopback route; no tests skipped, suppressed or weakened.
+- New staging executable PASS: 266 executed scenarios, including 195 individually
+  reached boundary injections and seven healthy boundary-discovery scenarios.
+  Tests include exact collision inventories, selected/LOCK/V1 byte-and-membership
+  preservation, first-error identities, syscall/count/offset traces and descriptor
+  ledgers. Staging lifecycle reaches zero allocation sites under zero allocation
+  budget; one genuinely reached shared-state allocation failure is also tested.
+  Original `unit.v2_root` remains byte-identical and reports 23 positive / 57
+  rejection / 67 syscall-boundary / 20 reached allocation failures in every
+  applicable configuration. Full source/catalogue/trace evidence is exported.
+- Strict C++20 standalone-header and translation-unit checks, Release/NDEBUG
+  warning checks, clang-format dry-run/Werror and whitespace checks PASS. Local
+  incremental builds introduce no warnings. Historical unrelated ListCommands
+  redundant-move, V2TailStream Marker-shadow and allocation-hook warning evidence
+  remains recorded below; no unrelated warning fix is attempted. Development
+  compile errors (missing entropy declaration/bridge friendship) and a default
+  test-adapter role correction are retained separately in the review evidence.
+- Limits: callers serialize operations/destruction; directory ownership and
+  ancestors are trusted. Held-root identity does not police hostile ancestor/path
+  replacement; advisory locks coordinate cooperating users. Ambiguous kernel close
+  can still leak on some OS outcomes, as documented by the accepted root layer.
+  macOS execution plus SDK/Linux-manual portability inspection is not Linux
+  acceptance. No production persistence directories were accessed.
+- Explicitly deferred: root/LOCK init, generation search/reservation, final artifact
+  installation/replacement, CURRENT temporary/selector, rename, directory fsync,
+  R4, writer activation/handoff, serving/recovery/DB/CLI integration, V1 modification,
+  abandoned-file cleanup, and all next-stage work. This implements only unpublished
+  low-level staging mechanics, not complete P1/P2/P3 or the broader 10D.1 milestone.
+- External review directory: `/private/tmp/redisdb-10d1b-review`. It contains the
+  complete new sources, complete tracked diff, eight-file hashes/manifest,
+  baseline refs/CI identities, reached scenario/fault evidence, actual local
+  build/test/discovery/strict/format logs, preservation proofs and final Git state.
+  The previous handoff payload is saved there and checked as an exact suffix;
+  final hashes are external to avoid self-reference.
+
+**Preparation-time stop (2026-10-28): retain the eight-file draft locally and
+uncommitted for independent complete-source review**, including the private bridge,
+move/failure policy, full new untracked tests and local evidence. Publication and
+final 10D.1B engineering acceptance require these separately verified gates, in order:
+
+1. Independent complete-source review.
+2. Separately authorized guarded feature commit/push.
+3. Exact-feature Linux Networking, Clang 18 sanitizer/fuzz and Docker CI.
+4. Separately authorized guarded two-parent main merge.
+5. Exact-main Linux CI.
+
+At preparation of this wording correction on 2026-10-28, independent complete-source
+review had identified no blocking source-level defect. Independent incremental
+wording review was the next gate before a separately authorized guarded feature
+publication and exact-feature Linux CI task. Local-source acceptance does not
+establish final 10D.1B engineering acceptance.
+
+Future readers must consult actual Git refs and workflow evidence to determine
+which subsequent gates have completed. This checkpoint does not assert that
+feature publication or main acceptance has occurred. It grants no commit, push,
+PR, merge, publication, production V2 integration, 10D.1C or later implementation
+authorization.
+
 # Stage 6B / 10D.1A — formally accepted engineering checkpoint
 
 **2026-10-28: 10D.1A engineering is COMPLETE AND ACCEPTED ON MAIN.**
