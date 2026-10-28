@@ -1,4 +1,5 @@
 #include "redisdb/persistence/V2Root.hpp"
+#include "V2GenerationAccess.hpp"
 #include "V2RootAccess.hpp"
 
 #include <algorithm>
@@ -43,6 +44,35 @@ int RootIo::close(int fd) noexcept { return ::close(fd); }
 int RootIo::observe(const RootIoEvent&) noexcept { return 0; }
 
 namespace {
+enum class Presence { Absent, Occupied, Failed };
+constexpr std::array<RootRole, 3> CandidateRoles{RootRole::Base, RootRole::Tail,
+                                                 RootRole::Watermark};
+bool candidate_names(GenerationId generation, std::array<std::array<char, 33>, 3>& names,
+                     RootRole& role) noexcept {
+    constexpr std::array<const char*, 3> prefixes{"base-", "tail-", "tail-"};
+    constexpr std::array<const char*, 3> suffixes{".snap", ".aof", ".commit"};
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        role = CandidateRoles[i];
+        auto& name = names[i];
+        name.fill('\0');
+        std::memcpy(name.data(), prefixes[i], 5);
+        auto* begin = name.data() + 5;
+        const auto rendered = std::to_chars(begin, begin + 20, generation.value());
+        if (generation.value() == 0 || rendered.ec != std::errc{} || rendered.ptr == begin ||
+            *begin == '0')
+            return false;
+        std::uint64_t parsed = 0;
+        const auto roundtrip = std::from_chars(begin, rendered.ptr, parsed);
+        const auto suffix_size = std::strlen(suffixes[i]);
+        const auto length = static_cast<std::size_t>(rendered.ptr - name.data());
+        if (roundtrip.ec != std::errc{} || roundtrip.ptr != rendered.ptr ||
+            parsed != generation.value() || length >= name.size() ||
+            suffix_size >= name.size() - length)
+            return false;
+        std::memcpy(rendered.ptr, suffixes[i], suffix_size + 1);
+    }
+    return true;
+}
 constexpr int ReadFlags = O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK;
 constexpr auto OffsetCeiling = std::min<std::uint64_t>(
     MaxFileBytes, static_cast<std::uint64_t>(std::numeric_limits<off_t>::max()));
@@ -254,7 +284,144 @@ struct RootState {
                 fail(RootErrorCode::IdentityChanged, RootOperation::Stat, RootRole::LockFile)) &&
                named("LOCK", RootRole::LockFile, lock_identity);
     }
+    // Expected absence belongs only to candidate occupancy, never selected pins
+    // or LOCK. No metadata/type/size validation of an occupied entry is needed.
+    Presence candidate_presence(const char* name, RootRole role) noexcept {
+        constexpr auto op = RootOperation::NamedStat;
+        for (;;) {
+            const auto before = io->observe({op, role, RootStage::Before, 0, 0});
+            if (before != 0) {
+                (void)fail(RootErrorCode::IoFailure, op, role, before > 0 ? before : EIO,
+                           RootStage::Before);
+                return Presence::Failed;
+            }
+            struct stat info{};
+            errno = 0;
+            const auto result = io->named_stat(directory, name, &info, AT_SYMLINK_NOFOLLOW);
+            const auto saved = result < 0 ? errno : 0;
+            const auto after = io->observe({op, role, RootStage::After, result, saved});
+            if (result < -1 || result > 0 || (result == -1 && saved <= 0)) {
+                (void)fail(RootErrorCode::IoFailure, op, role, EIO);
+                return Presence::Failed;
+            }
+            if (result == -1 && saved != ENOENT && saved != EINTR) {
+                (void)fail(RootErrorCode::IoFailure, op, role, saved);
+                return Presence::Failed;
+            }
+            if (after != 0) {
+                (void)fail(RootErrorCode::IoFailure, op, role, after > 0 ? after : EIO,
+                           RootStage::After);
+                return Presence::Failed;
+            }
+            if (result == -1 && saved == EINTR)
+                continue;
+            return result == 0 ? Presence::Occupied : Presence::Absent;
+        }
+    }
+    Presence candidate_triple(GenerationId generation, RootRole& occupied_role) noexcept {
+        if (!check_root())
+            return Presence::Failed;
+        std::array<std::array<char, 33>, 3> names{};
+        RootRole role = RootRole::Base;
+        if (!candidate_names(generation, names, role)) {
+            (void)fail(RootErrorCode::InvalidName, RootOperation::NamedStat, role);
+            return Presence::Failed;
+        }
+        auto presence = Presence::Absent;
+        for (std::size_t i = 0; i < names.size(); ++i) {
+            const auto observed = candidate_presence(names[i].data(), CandidateRoles[i]);
+            if (observed == Presence::Failed)
+                return observed;
+            if (observed == Presence::Occupied && presence == Presence::Absent) {
+                presence = observed;
+                occupied_role = CandidateRoles[i];
+            }
+        }
+        return check_root() ? presence : Presence::Failed;
+    }
 };
+
+void GenerationAccess::borrow(GenerationCandidate& candidate, RootLease& root) noexcept {
+    candidate.root_ = root.state_;
+    if (!candidate.root_)
+        candidate.local_error_ = root.error();
+}
+bool GenerationAccess::healthy(const GenerationCandidate& candidate) noexcept {
+    return candidate.root_ && candidate.root_->healthy();
+}
+RootError GenerationAccess::error(const GenerationCandidate& candidate) noexcept {
+    return candidate.root_ ? candidate.root_->failure : closed_error();
+}
+void GenerationAccess::search(GenerationCandidate& candidate, GenerationId selected,
+                              LogicalSequence sequence, std::uint32_t budget) noexcept {
+    if (!healthy(candidate))
+        return;
+    auto& root = *candidate.root_;
+    if (!root.check_root())
+        return;
+    if (sequence.value() == UINT64_MAX) {
+        (void)root.fail(RootErrorCode::SequenceExhausted, RootOperation::None, RootRole::Root);
+        return;
+    }
+    if (selected.value() == UINT64_MAX) {
+        (void)root.fail(RootErrorCode::GenerationExhausted, RootOperation::None, RootRole::Root);
+        return;
+    }
+    auto next = selected.value() + 1; // selected < UINT64_MAX proved above.
+    for (std::uint32_t inspected = 0; inspected < budget; ++inspected) {
+        const GenerationId generation{next};
+        RootRole occupied_role = RootRole::Base;
+        const auto presence = root.candidate_triple(generation, occupied_role);
+        if (presence == Presence::Failed)
+            return;
+        if (presence == Presence::Absent) {
+            const auto confirmation = root.candidate_triple(generation, occupied_role);
+            if (confirmation == Presence::Absent)
+                candidate.generation_ = generation;
+            else if (confirmation == Presence::Occupied)
+                (void)root.fail(RootErrorCode::CandidateOccupied, RootOperation::NamedStat,
+                                occupied_role);
+            return;
+        }
+        if (next == UINT64_MAX) {
+            (void)root.fail(RootErrorCode::GenerationExhausted, RootOperation::None,
+                            RootRole::Root);
+            return;
+        }
+        if (inspected == budget - 1) {
+            (void)root.fail(RootErrorCode::ResourceLimit, RootOperation::None, RootRole::Root);
+            return;
+        }
+        ++next; // occupied maximum returned above; never wrap to zero.
+    }
+}
+bool GenerationAccess::check(GenerationCandidate& candidate) noexcept {
+    if (!candidate.valid())
+        return false;
+    RootRole role = RootRole::Base;
+    auto& root = *candidate.root_;
+    const auto presence = root.candidate_triple(*candidate.generation_, role);
+    return presence == Presence::Absent ||
+           (presence == Presence::Occupied &&
+            root.fail(RootErrorCode::CandidateOccupied, RootOperation::NamedStat, role));
+}
+RootError GenerationAccess::release(GenerationCandidate& candidate) noexcept {
+    RootError error;
+    if (candidate.root_) {
+        auto& root = *candidate.root_;
+        // Capture operational close failure before releasing the final state.
+        // RootState's destructor sees consumed descriptors and cannot retry them.
+        if (candidate.root_.use_count() == 1) {
+            (void)root.close_fd(root.lock_fd, RootRole::LockFile);
+            (void)root.close_fd(root.directory, RootRole::Root);
+            root.closed = true;
+        }
+        error = root.failure;
+        candidate.root_.reset();
+    }
+    candidate.generation_.reset();
+    return error;
+}
 
 namespace {
 RootRole staging_role(ArtifactRole role) noexcept {
