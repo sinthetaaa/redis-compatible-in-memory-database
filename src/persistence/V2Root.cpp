@@ -120,23 +120,21 @@ struct RootState {
     }
     // Count returns are distinct from fixed-result calls. Commit successful write
     // progress BEFORE observing After, so a rejecting observer cannot replay it.
-    bool staging_count(int fd, RootRole role, void* output, const void* input, std::size_t count,
+    bool staging_write(int fd, RootRole role, const void* input, std::size_t count,
                        std::uint64_t offset, std::size_t& progress, FileIdentity& extent) noexcept {
-        const auto op = input ? RootOperation::WriteAt : RootOperation::Read;
+        constexpr auto op = RootOperation::WriteAt;
         for (;;) {
             const auto before = io->observe({op, role, RootStage::Before, 0, 0});
             if (before != 0)
                 return fail(RootErrorCode::IoFailure, op, role, before > 0 ? before : EIO,
                             RootStage::Before);
             errno = 0;
-            const auto result = input ? io->write_at(fd, input, count, static_cast<off_t>(offset))
-                                      : io->read(fd, output, count, static_cast<off_t>(offset));
+            const auto result = io->write_at(fd, input, count, static_cast<off_t>(offset));
             const auto saved = result < 0 ? errno : 0;
             const auto valid_count = result > 0 && static_cast<std::uint64_t>(result) <= count;
             if (valid_count) {
                 progress = static_cast<std::size_t>(result);
-                if (input)
-                    extent.byte_length += progress;
+                extent.byte_length += progress;
             }
             const auto after = io->observe({op, role, RootStage::After, result, saved});
             if (result < -1 || (result > 0 && !valid_count) || (result == -1 && saved <= 0))
@@ -149,8 +147,36 @@ struct RootState {
             if (result == -1)
                 continue;
             if (result == 0)
-                return fail(input ? RootErrorCode::IoFailure : RootErrorCode::Truncated, op, role,
-                            input ? EIO : 0);
+                return fail(RootErrorCode::IoFailure, op, role, EIO);
+            return true;
+        }
+    }
+    bool staging_read(int fd, RootRole role, void* output, std::size_t count, std::uint64_t offset,
+                      std::size_t& progress) noexcept {
+        constexpr auto op = RootOperation::Read;
+        for (;;) {
+            const auto before = io->observe({op, role, RootStage::Before, 0, 0});
+            if (before != 0)
+                return fail(RootErrorCode::IoFailure, op, role, before > 0 ? before : EIO,
+                            RootStage::Before);
+            errno = 0;
+            const auto result = io->read(fd, output, count, static_cast<off_t>(offset));
+            const auto saved = result < 0 ? errno : 0;
+            const auto valid_count = result > 0 && static_cast<std::uint64_t>(result) <= count;
+            if (valid_count)
+                progress = static_cast<std::size_t>(result);
+            const auto after = io->observe({op, role, RootStage::After, result, saved});
+            if (result < -1 || (result > 0 && !valid_count) || (result == -1 && saved <= 0))
+                return fail(RootErrorCode::IoFailure, op, role, EIO);
+            if (result == -1 && saved != EINTR)
+                return fail(RootErrorCode::IoFailure, op, role, saved);
+            if (after != 0)
+                return fail(RootErrorCode::IoFailure, op, role, after > 0 ? after : EIO,
+                            RootStage::After);
+            if (result == -1)
+                continue;
+            if (result == 0)
+                return fail(RootErrorCode::Truncated, op, role);
             return true;
         }
     }
@@ -390,7 +416,7 @@ bool StagingAccess::append(StagedFile& file, ByteView bytes) noexcept {
         const auto count = std::min<std::size_t>(
             {bytes.size(), 65536, static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())});
         std::size_t progress = 0;
-        if (!root.staging_count(file.fd_, staging_role(file.role_), nullptr, bytes.data(), count,
+        if (!root.staging_write(file.fd_, staging_role(file.role_), bytes.data(), count,
                                 file.identity_.byte_length, progress, file.identity_))
             return false;
         bytes = bytes.subspan(progress);
@@ -408,8 +434,8 @@ bool StagingAccess::read(StagedFile& file, std::uint64_t offset,
         const auto count = std::min<std::size_t>(
             {output.size(), 65536, static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())});
         std::size_t progress = 0;
-        if (!root.staging_count(file.fd_, staging_role(file.role_), output.data(), nullptr, count,
-                                offset, progress, file.identity_))
+        if (!root.staging_read(file.fd_, staging_role(file.role_), output.data(), count, offset,
+                               progress))
             return false;
         offset += progress;
         output = output.subspan(progress);
