@@ -1,5 +1,6 @@
 #include "redisdb/persistence/V2Root.hpp"
 #include "V2GenerationAccess.hpp"
+#include "V2PendingAccess.hpp"
 #include "V2RootAccess.hpp"
 
 #include <algorithm>
@@ -94,6 +95,7 @@ struct RootState {
     FileIdentity root_identity, lock_identity;
     RootError failure;
     bool closed = false;
+    bool pending_generation_active = false;
 
     explicit RootState(std::shared_ptr<RootIo> adapter) noexcept : io(std::move(adapter)) {}
     ~RootState() noexcept {
@@ -645,6 +647,52 @@ bool StagingAccess::close(StagedFile& file) noexcept {
     file.state_ = StagedFile::State::Closed;
     return !file.root_ || file.root_->close_fd(file.fd_, staging_role(file.role_));
 }
+bool PendingAccess::claim(PendingGeneration& owner, RootLease& lease) noexcept {
+    owner.root_ = lease.state_;
+    if (!owner.root_ || !owner.root_->healthy()) {
+        owner.local_error_ = lease.error();
+        owner.root_.reset();
+        return false;
+    }
+    if (owner.root_->pending_generation_active) {
+        owner.local_error_ = {RootErrorCode::WrongState}; // Local rejection, no root latch.
+        owner.root_.reset();
+        return false;
+    }
+    owner.root_->pending_generation_active = true;
+    owner.owns_claim_ = true;
+    return true;
+}
+bool PendingAccess::healthy(const PendingGeneration& owner) noexcept {
+    return owner.root_ && owner.owns_claim_ && owner.root_->pending_generation_active &&
+           owner.root_->healthy();
+}
+RootError PendingAccess::error(const PendingGeneration& owner) noexcept {
+    return owner.root_ ? owner.root_->failure : closed_error();
+}
+bool PendingAccess::fail(PendingGeneration& owner, RootErrorCode code, RootOperation operation,
+                         RootRole role) noexcept {
+    return owner.root_ && owner.root_->fail(code, operation, role);
+}
+RootError PendingAccess::release(PendingGeneration& owner) noexcept {
+    RootError error;
+    if (owner.root_) {
+        auto& root = *owner.root_;
+        if (owner.owns_claim_) {
+            root.pending_generation_active = false;
+            owner.owns_claim_ = false;
+        }
+        if (owner.root_.use_count() == 1) {
+            (void)root.close_fd(root.lock_fd, RootRole::LockFile);
+            (void)root.close_fd(root.directory, RootRole::Root);
+            root.closed = true;
+        }
+        error = root.failure;
+        owner.root_.reset();
+    }
+    return error;
+}
+
 } // namespace detail
 
 RootLease RootLease::open_existing(const std::filesystem::path& root,

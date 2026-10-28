@@ -81,6 +81,7 @@ namespace detail {
 struct RootState;
 struct StagingAccess;
 struct GenerationAccess;
+struct PendingAccess;
 } // namespace detail
 class RootLease;
 class PinnedFile;
@@ -188,6 +189,7 @@ class RootLease final {
   private:
     friend struct detail::StagingAccess;
     friend struct detail::GenerationAccess;
+    friend struct detail::PendingAccess;
     PinnedFile pin(RootRole, const std::array<char, 33>&) noexcept;
     std::shared_ptr<detail::RootState> state_;
     RootError local_error_{RootErrorCode::ClosedOrFailed};
