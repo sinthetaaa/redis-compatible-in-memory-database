@@ -1,5 +1,46 @@
 # Development Roadmap
 
+## Current engineering status (2026-10-28) — accepted 10D.1C slice
+
+**10D.1C candidate-search engineering is COMPLETE AND ACCEPTED ON MAIN.**
+10D.1A root/LOCK and 10D.1B unpublished staging remain accepted. Engineering
+merge `a7692101da60213c0838d1a372787e8429337797`, tree
+`3293a6bc61908b4d9eac56718d8627f1fa24f5a8`, retains corrected feature
+`762c53285810fbf61aa4c85be296727e0da8a077`. Exact-main
+[Networking 40715241101](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715241101) Debug/Release **85/85**,
+[Clang 18 ASan/UBSan/fuzz 40715240672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240672) **86/86**, **50 seeds /
+10,000 actual executions**, and [Docker 40715240649](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240649)
+all mandatory gates with **24 profiles / 48 timed runs** passed. The original
+new generation-test warning is corrected and absent; inherited warnings remain.
+See the [authoritative 10D.1C handoff](CONTINUATION_HANDOFF.md#stage-6b--10d1c--engineering-accepted-on-main-formal-documentation-closure-preparation).
+
+The accepted capability is successor-only, bounded, nonfollowing candidate
+observation with a shared root/LOCK failure latch, second absence confirmation
+and same-candidate recheck. **It is not reservation, publication or durable
+selection. Broader 10D.1, Stage 6B and original Phase 10 remain unfinished.**
+Prepared coordination, full construction/publication, CURRENT replacement,
+directory durability, recovery/writer activation, live handoff/compaction and
+generation reclamation remain outside this accepted slice.
+
+This additive checkpoint changes **none of the 20 original phases or 169 original
+subphase IDs, descriptions, checkboxes, acceptance data or original execution
+policy**. All historical text remains byte-preserved in original order. Older
+status/next-action statements, including that 10D.1C is unimplemented, are
+superseded only for current-status interpretation. Original Phase 16 remains
+**EXCLUDED BY APPROVED SCOPE REVISION**, not completed. No actual VPS deployment
+is claimed and no new original roadmap identifier is introduced.
+
+**Preparation-time status:** 10D.1C engineering is accepted on main. Formal
+documentation closure has been prepared locally; independent review, feature
+publication/exact-feature CI, guarded main merge and exact-main CI remain separate
+gates. This four-document draft on local `fasttrack/10d1c-formal-closure` is
+unstaged, uncommitted, unpublished and not yet accepted documentation. Consult
+actual refs/workflow evidence for later gate completion. No new build/CTest
+was executed. **10D.1D is the next proposed planning slice and requires separate
+planning/implementation authorization; no subsequent stage is automatically
+authorized.** No original checklist status is reconciled by this note.
+
+
 ## Current engineering status (2026-10-28) — accepted 10D.1B slice
 
 **10D.1A read-only root/LOCK ownership remains accepted; 10D.1B unpublished owned
