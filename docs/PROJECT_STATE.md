@@ -1,5 +1,63 @@
 # PROJECT STATE — Redis-Compatible In-Memory Database Server
 
+## Current snapshot (2026-10-28) — 10D.1B engineering accepted
+
+**Stage 6B / 10D.1B engineering is COMPLETE AND ACCEPTED ON MAIN.** 10D.1A
+remains accepted. This dated snapshot and the
+[authoritative 10D.1B handoff](CONTINUATION_HANDOFF.md#stage-6b--10d1b--engineering-accepted-on-main-formal-documentation-closure-preparation)
+supersede older current-status/next-action statements below; all older snapshots
+and the original execution policy remain unchanged as historical records.
+
+- Accepted main merge: `bc66ebb293c26a54f696a972416c00f4c0a4ff23`;
+  tree `bfd594d2dfb9263fff593db39205d5c18b062c1b`. Exact ordered parents:
+  `120a52c1ea60d61931d34dbe195a455c2313b441`, then
+  `5694cda2b886f298124705b12ce6bca3aa286287`. The second parent is retained
+  `fasttrack/v2-owned-data-staging`, with exactly the same tree. Its original
+  implementation `875bd3a5d57363dfaf0d64ad2032ee92fdebd668` has old main as
+  sole parent; corrective feature `5694cda2b886f298124705b12ce6bca3aa286287`
+  has that original implementation as sole parent. Both remain in the genuine
+  two-parent main merge history.
+- The existing shared root/LOCK lease and pinned-read foundation now supports
+  move-only `StagedFile` ownership of typed unpublished Base/Tail/Watermark
+  temporaries. OS-entropy names, exclusive root-relative creation, bounded
+  checked append/readback, file-only fsync sealing, shared terminal failure and
+  identity-checked owned cleanup do not provide final-name installation,
+  selector publication, directory durability, recovery readiness or writer activation.
+- Exact-main [Networking 40652303976](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303976):
+  Debug **84/84**, Release **84/84**, including root/staging, persistence and
+  networking/pipeline/TCP/connection/epoll regression gates.
+  [Clang 18 ASan/UBSan/fuzz 40652303905](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303905):
+  **85/85**, pinned **50 seeds**, real **10,000** libFuzzer executions, no
+  sanitizer diagnostic or crash. [Docker 40652303970](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303970):
+  image/Compose, **22** tooling tests, **15** container cases, **10** private Compose
+  checks, Redis **8.10.2** parity **54 cases/40 routes** plus **10** operational
+  cases, and **24 profiles/48 timed runs** passed. All are push/main,
+  completed/success at the accepted engineering merge, not documentation-branch CI.
+- The separate checked `staging_write()` / `staging_read()` correction is accepted;
+  the original `-Wnonnull` diagnostic is absent in GCC 13 Release and GCC 12
+  Docker Release. Existing unrelated ListCommands, V2TailStream and allocation-test
+  instrumentation warnings remain outside this closure; the repository is not
+  described as warning-free.
+- **Stage 6B, original Phase 10 and the broader 10D.1 workstream remain unfinished.**
+  No production V2 publisher/recovery, complete P1–P7 publication, R4/R5 barrier,
+  writer handoff, live compaction or abandoned-generation reclamation is supplied
+  by 10D.1B. Frozen design/format authority remains unchanged. Original Phase 16
+  stays EXCLUDED, not complete; private Compose does not establish actual VPS/SSH
+  deployment or physical power-loss durability.
+
+At preparation time on 2026-10-28, `fasttrack/10d1b-formal-closure` was a local,
+unstaged, uncommitted documentation draft and had not been published. Engineering
+acceptance was independently established; documentation acceptance required its
+own independent source review, separately authorized guarded feature commit/push,
+exact-documentation-feature Linux CI, separately authorized guarded two-parent
+documentation main merge, and exact-documentation-main Linux CI. Consult actual
+Git refs and workflow evidence to determine subsequent gate completion; this
+snapshot claims none of those future gates. No fresh C++ build/test execution is
+claimed for this documentation-only preparation. Only after formal documentation
+acceptance may proposed next slice 10D.1C receive separate engineering authorization;
+it remains unimplemented and this snapshot grants no such authority.
+
+
 ## Current snapshot (2026-10-28) — 10D.1A engineering accepted
 
 **Stage 6B / 10D.1A engineering is COMPLETE AND ACCEPTED ON MAIN.** This dated

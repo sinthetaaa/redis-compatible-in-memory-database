@@ -1,3 +1,197 @@
+# Stage 6B / 10D.1B — Engineering accepted on main; formal documentation closure preparation
+
+**2026-10-28: Stage 6B / 10D.1B engineering is COMPLETE AND ACCEPTED ON MAIN.**
+Independent final verification accepted the genuine main merge and exact-main
+Linux evidence below. 10D.1A remains accepted. This checkpoint controls current
+status/continuation and supersedes older preparation-only or next-action
+instructions below; every older handoff byte, including the original local
+10D.1B preparation checkpoint, is retained unchanged beneath this entry.
+
+At preparation time on 2026-10-28, this four-document formal closure was a local,
+unstaged, uncommitted and unpublished draft on `fasttrack/10d1b-formal-closure`.
+Engineering acceptance was independently established; documentation source review
+and publication/acceptance were separate gates. Consult actual Git refs and
+workflow evidence to determine which subsequent documentation gates have completed.
+No future documentation commit, push, merge or CI result is asserted here.
+
+**Accepted Git identities and retained history**
+
+- Accepted engineering main merge: `bc66ebb293c26a54f696a972416c00f4c0a4ff23`;
+  tree `bfd594d2dfb9263fff593db39205d5c18b062c1b`.
+- Exactly two ordered merge parents: first
+  `120a52c1ea60d61931d34dbe195a455c2313b441`, then
+  `5694cda2b886f298124705b12ce6bca3aa286287`. A genuine non-fast-forward merge
+  was staged with `--no-ff --no-commit`; its verified index and committed tree
+  exactly equal the independently accepted corrected-feature tree.
+- Original implementation: `875bd3a5d57363dfaf0d64ad2032ee92fdebd668`, sole
+  parent `120a52c1ea60d61931d34dbe195a455c2313b441`. Corrective feature:
+  `5694cda2b886f298124705b12ce6bca3aa286287`, sole parent the original
+  implementation. Both remain reachable through the merge's second parent.
+- Retained `fasttrack/v2-owned-data-staging` remains at corrected feature
+  `5694cda2b886f298124705b12ce6bca3aa286287`, tree
+  `bfd594d2dfb9263fff593db39205d5c18b062c1b`.
+  Historical `fasttrack/v2-root-identity-validation` remains at
+  `91b30f3c8529ed80954414a601b4ce102770888e`;
+  `fasttrack/10d1a-formal-closure` remains at
+  `ab7179ee5abc4c28e0ebf6552eb514d91bfe2a79`. These are retained records, not
+  branches to rename, delete or rewrite.
+- Accepted engineering manifest: NEW `include/redisdb/persistence/V2Staging.hpp`,
+  `src/persistence/V2Staging.cpp`, `src/persistence/V2RootAccess.hpp`,
+  `tests/unit/v2_staging_test.cpp`; MODIFIED
+  `include/redisdb/persistence/V2Root.hpp`, `src/persistence/V2Root.cpp`,
+  `CMakeLists.txt`, `docs/CONTINUATION_HANDOFF.md`. The later warning correction
+  changed only V2Root.cpp. This formal documentation preparation modifies only
+  README, CONTINUATION_HANDOFF, PROJECT_STATE and ROADMAP through new checkpoints;
+  source, tests, CMake, workflows, Docker, benchmarks and frozen designs are untouched.
+
+**Accepted unpublished staging capability**
+
+- Move-only, noexcept-lifecycle `StagedFile` owns one staging descriptor and its
+  typed role/generation, fixed temporary basename, inode identity, accepted extent
+  and Building/SealedFile/closed lifecycle. Public operations are `create_data`,
+  `valid`, `error`, `identity`, `byte_length`, `recheck`, append-only `append`,
+  caller-buffer `read_exact`, `seal_file`, `discard_checked` and `close_checked`.
+  Historical byte length includes accepted partial progress; it is not validity
+  or durability evidence after failure.
+- The narrow private `detail::StagingAccess` bridge reuses the SAME existing
+  `detail::RootState`, held root descriptor, held LOCK descriptor and shared first
+  terminal-error latch as RootLease and sibling PinnedFile owners. RootState stays
+  private in V2Root.cpp. No raw descriptor/arbitrary-name public API, independent
+  root reopen or second lock is introduced. Dependents retain root/LOCK lifetime;
+  original 10D.1A identity validation, pinned reads and DependentsAlive behavior
+  are preserved, with existing enum numeric values unchanged.
+- Only Base/Tail/Watermark and valid GenerationId are supported. Temporary names
+  are derived internally as `<final>.tmp.<32 lowercase hexadecimal digits>` from
+  all 128 bits supplied by OS `getentropy`, without fallback or UUID alteration;
+  a zero token is legal. Maximum basename is 69 ASCII bytes in fixed NUL-terminated
+  storage. Held-root-relative create is O_RDWR/O_CREAT/O_EXCL/O_CLOEXEC/O_NOFOLLOW/
+  O_NONBLOCK, mode 0600, never O_TRUNC. Actual EEXIST or create EINTR obtains a
+  fresh token, bounded to 64 total create attempts. Collisions and ambiguous names
+  are never reopened, adopted or removed.
+- Descriptor ownership is adopted before After observers. Newly created temps
+  must be regular, single-link, initially empty and held/named identity-consistent,
+  with root/LOCK rechecks. Final-artifact minimum lengths are not imposed on
+  growing temporaries. Append writes only at the tracked end, with subtraction-first
+  accepted-size/native-off_t bounds and at most min(64 KiB, SSIZE_MAX) per syscall.
+  Readback uses caller-owned output; failed output may be partially filled and
+  must be discarded. No sparse/truncate/arbitrary-offset-write capability is added.
+- Separate internal `RootState::staging_write()` and `RootState::staging_read()`
+  invoke `RootIo::write_at()` / WriteAt and `RootIo::read()` / Read respectively,
+  without nullable dual-pointer dispatch. Before/syscall/After ordering, immediate
+  errno capture, actual EINTR retries, valid short-I/O accumulation and zero/invalid
+  result rejection are preserved. Successful write progress/extent is recorded
+  BEFORE After observers, preventing replay of an already successful write.
+  Identity and extent checks surround high-level operations, including empty reads.
+- `seal_file()` performs checked fsync only on the owned staging file and verifies
+  identities/extent afterward. Repeated successful seal revalidates root/LOCK/file
+  identity and extent rather than returning unchecked cached success. Appends after
+  sealing are rejected. Success does not prove encoded content, EOF/fidelity,
+  complete recovery unit, durable directory entry, final-name installation, valid
+  CURRENT selection, P4/P7/R4 completion, readiness or publication authority.
+- Healthy discard/destructor cleanup may unlink only the exact owned temporary
+  after intended-name/role and root/LOCK/held/named type/link/size/identity checks.
+  Successful unlink is recorded before After. Close relinquishes descriptor
+  ownership before one close attempt; observers cannot suppress it, and ambiguous
+  close/unlink is never retried. Explicit close retains the temporary name and
+  root-state lifetime. Failure latches the first shared error, blocks later
+  write/sync/cleanup through the failed lease, closes owned descriptors once and
+  conservatively preserves remaining linked artifacts. No abandoned-generation or
+  unowned-file cleanup, repair, overwrite or automatic writer resumption is supplied.
+
+**Verification attributed to the actual checkpoint**
+
+- Original macOS local 10D.1B draft, prepared from main
+  `120a52c1ea60d61931d34dbe195a455c2313b441` before feature publication:
+  Debug **84/84**, Release **84/84**, preserved UBSan/fuzz **85/85**, focused
+  persistence **7/7** each, and 50-seed parser corpus smoke passed. Staging:
+  **266 executed scenarios / 195 reached boundary injections**. Original root:
+  **23 positive / 57 rejection / 67 syscall-boundary / 20 reached allocation
+  failures**. Strict C++20, formatting and whitespace checks passed.
+- Original published feature `875bd3a5d57363dfaf0d64ad2032ee92fdebd668` had
+  successful workflow wrappers (Networking **40645479884**, Clang/fuzz
+  **40645479977**, Docker **40645479872**), but GCC 13 Release and GCC 12 Docker
+  emitted the new staging `-Wnonnull` warning. Those runs did NOT satisfy warning
+  acceptance and are not substituted for corrected-feature or exact-main evidence.
+- Local warning correction, prepared unstaged on original feature 875bd3a before
+  commit 5694cda: Debug **84/84**, Release **84/84**, UBSan/fuzz **85/85**, focused
+  **7/7** each and 50-seed smoke passed. Complete staging stdout matched the
+  original accepted reference in all three configurations, including all **266**
+  scenarios, **195** reached injections, partial-progress/observer/first-error
+  traces; root **23/57/67/20** and all test bytes were preserved. Strict C++20 and
+  formatting passed. Local Linux GCC reproduction was unavailable; later CI, not
+  these macOS checks, established Linux warning resolution.
+- Corrected feature `5694cda2b886f298124705b12ce6bca3aa286287`, push event on
+  `fasttrack/v2-owned-data-staging`, all completed/success:
+  [Networking 40650031860](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40650031860)
+  Debug **84/84**, Release **84/84**;
+  [Clang 18 ASan/UBSan/fuzz 40650032014](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40650032014)
+  **85/85**, pinned **50 seeds**, real **10,000** libFuzzer executions, no
+  sanitizer failure; [Docker 40650031814](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40650031814)
+  all required container/Compose/Redis gates and **24 profiles/48 timed runs** passed.
+  Root/staging passed in each applicable suite; actual GCC 13 Release and GCC 12
+  Docker compiler logs confirmed the original warning absent.
+- Accepted engineering main merge `bc66ebb293c26a54f696a972416c00f4c0a4ff23`,
+  push event on main, all completed/success:
+  [Networking 40652303976](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303976)
+  discovered/passed Debug **84/84**, Release **84/84**, including root/staging,
+  V1/V2 persistence, networking, pipeline, TCP server, connection lifecycle and
+  epoll repeats; [Clang 18 ASan/UBSan/fuzz 40652303905](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303905)
+  discovered/passed **85/85**, pinned **50-seed** corpus verified before/after
+  real **10,000** libFuzzer executions, no sanitizer diagnostic or crash artifact;
+  [Docker 40652303970](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303970)
+  image/Compose, **22** tooling tests, **15** container cases, **10** private Compose
+  checks, pinned Redis **8.10.2**, **54 command cases/40 routes**, **10** operational
+  cases, exact **24-profile/48-run** bounded matrix passed. The engineering audit
+  independently checked full logs and concrete artifacts, not wrapper success alone.
+- The original staging warning remains absent in actual exact-main GCC 13
+  optimized Release and GCC 12 Docker Release output. Inherited unrelated
+  ListCommands redundant-move, V2TailStream Marker-shadow and unchanged test
+  allocation instrumentation warnings remain separately recorded; this is not a
+  claim that the repository is warning-free. Linux CTest logs prove root/staging
+  executable success, not an independent recount of their detailed local scenario
+  totals. No fresh C++ build/test or new documentation-branch CI is claimed here.
+
+**Explicit scope limits and frozen authority**
+
+10D.1B does NOT implement root/LOCK initialization, P1 generation search/reservation,
+full P2/P3 content construction and fidelity/EOF validation, final-name installation,
+CURRENT publication, directory durability barriers, P4–P7, standalone R4, R5 recovery
+mutation/readiness, prepared writer handoff, live P0/P8 compaction integration,
+generation garbage collection, actual VPS deployment, full Stage 6B or Phase 10
+closure. The broader 10D.1 milestone remains unfinished. A synchronized staging
+file remains unpublished and unselected; it is not a complete recovery unit.
+
+Frozen [V2 format](V2_PERSISTENCE_FORMAT.md) and
+[compaction design](AOF_COMPACTION_DESIGN.md) remain authoritative and byte-identical.
+Accepted V1 behavior, V2 byte layouts, P0–P8/R0–R5 ordering and original roadmap
+inventory are unchanged. Callers serialize operations/destruction; directory
+ownership and ancestors are trusted; advisory locks coordinate cooperating
+participants and do not defend against hostile uncooperative directory races.
+Identity/checksum evidence is not authentication or physical durability proof.
+Ambiguous OS close outcomes retain the accepted platform limitation. CI/container
+checks do not establish hardware power-loss behavior or actual VPS/SSH deployment.
+Original Phase 16 stays EXCLUDED, not complete.
+
+**Formal documentation gates and continuation boundary**
+
+From this dated preparation checkpoint, documentation acceptance requires:
+
+1. Independent review of this exact four-document additive draft.
+2. Separately authorized guarded documentation-feature commit/push.
+3. Exact-documentation-feature Linux Networking, Clang sanitizer/fuzz and Docker CI.
+4. Separately authorized guarded two-parent documentation main merge.
+5. Exact-documentation-main Linux CI.
+
+Future readers must consult actual Git refs and workflow evidence to determine
+which subsequent gates have completed. The accepted local, corrected-feature and
+engineering-main results above belong to those checkpoints; they do not establish
+documentation publication or documentation CI. Every previous handoff entry is
+preserved byte-for-byte below. Proposed next engineering slice **10D.1C remains
+unimplemented and separately unauthorized**; it may only be considered after formal
+documentation acceptance and explicit engineering continuation authorization. This
+document grants no 10D.1C or later implementation authority. No later stage,
+publication, merge or code change is authorized by this preparation checkpoint.
+
 # 10D.1B — owned unpublished data staging (2026-10-28 preparation)
 
 At preparation time on 2026-10-28, this eight-file draft was **local, unstaged,

@@ -1,5 +1,40 @@
 # Development Roadmap
 
+## Current engineering status (2026-10-28) — accepted 10D.1B slice
+
+**10D.1A read-only root/LOCK ownership remains accepted; 10D.1B unpublished owned
+staging and checked file-I/O engineering is COMPLETE AND ACCEPTED ON MAIN.**
+Accepted merge `bc66ebb293c26a54f696a972416c00f4c0a4ff23` has exact-main
+[Networking 40652303976](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303976)
+Debug/Release **84/84**,
+[Clang 18 sanitizer/fuzz 40652303905](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303905)
+**85/85**, **50 seeds/10,000 executions**, and
+[Docker 40652303970](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303970)
+all required gates and **24 profiles/48 timed runs** passed. The new staging
+warning is absent in GCC 13 Release and GCC 12 Docker; inherited warnings remain.
+See the [10D.1B handoff](CONTINUATION_HANDOFF.md#stage-6b--10d1b--engineering-accepted-on-main-formal-documentation-closure-preparation).
+
+**The broader 10D.1 workstream, Stage 6B and original Phase 10 remain unfinished.**
+Complete P1–P7 generation publication and R4/R5 remain incomplete; low-level
+staging does not complete those gates. 10D.1C is the next proposed engineering
+slice, unimplemented and subject to separately authorized continuation after
+formal documentation acceptance. This note grants no 10D.1C authority. Older
+status/action statements below are historical and superseded by this dated note.
+All **20 original phases, 169 subphase IDs**, original descriptions, checkboxes,
+acceptance gates and historical entries remain byte-preserved. Original Phase 16
+remains **EXCLUDED BY APPROVED SCOPE REVISION**, not complete; no VPS deployment
+is claimed. No checklist reconciliation is performed.
+
+At preparation time on 2026-10-28, this four-document closure was local, unstaged,
+uncommitted and unpublished. Accepted engineering and documentation publication
+are separate: independent documentation source review, separately authorized
+guarded documentation-feature commit/push, exact-documentation-feature Linux CI,
+separately authorized guarded two-parent documentation main merge, and
+exact-documentation-main Linux CI are distinct gates. Consult actual Git refs
+and workflow evidence for subsequent completion; no future documentation gate or
+new test execution is claimed by this preparation checkpoint.
+
+
 ## Redis-Compatible In-Memory Database Server
 
 **Language:** C++20
