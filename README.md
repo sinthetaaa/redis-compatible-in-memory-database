@@ -1,5 +1,47 @@
 # Redis-Compatible In-Memory Database Server
 
+**Current engineering checkpoint (2026-10-28): Stage 6B / 10D.1B engineering
+is COMPLETE AND ACCEPTED ON MAIN as of 2026-10-28.** Accepted merge:
+`bc66ebb293c26a54f696a972416c00f4c0a4ff23`, tree
+`bfd594d2dfb9263fff593db39205d5c18b062c1b`. Its exact ordered parents are
+`120a52c1ea60d61931d34dbe195a455c2313b441`, then
+`5694cda2b886f298124705b12ce6bca3aa286287`; the second is the accepted
+`fasttrack/v2-owned-data-staging` feature head.
+
+Accepted exact-main Linux evidence on that merge:
+
+- [Networking 40652303976](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303976):
+  Debug **84/84**, Release **84/84**, including root/staging and existing regression gates.
+- [Clang 18 ASan/UBSan/fuzz 40652303905](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303905):
+  **85/85**, pinned **50-seed** corpus and real **10,000** libFuzzer executions, no sanitizer failure.
+- [Docker 40652303970](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40652303970):
+  image/Compose and pinned Redis **8.10.2** compatibility gates passed, including
+  the complete **24-profile/48-run** bounded benchmark matrix.
+
+The original staging `-Wnonnull` warning is absent from GCC 13 Release and GCC 12
+Docker Release; unrelated inherited warnings remain. The accepted 10D.1A
+root/LOCK identity and bounded pinned-read foundation is preserved. 10D.1B adds
+move-only ownership of unpublished Base/Tail/Watermark temporaries, checked
+append/readback, file-only synchronization and identity-checked owned cleanup.
+No production V2 publisher/recovery or complete live compaction is implemented;
+Stage 6B and Phase 10 remain unfinished, and full Redis compatibility is not claimed.
+See the [authoritative 10D.1B handoff](docs/CONTINUATION_HANDOFF.md#stage-6b--10d1b--engineering-accepted-on-main-formal-documentation-closure-preparation).
+Older statements below, including “Stage 6B is not started,” are dated historical
+records, superseded for current status by this checkpoint.
+
+At preparation time on 2026-10-28, this four-document closure was a local,
+unstaged, uncommitted, unpublished draft; engineering acceptance was already
+independently established. Documentation acceptance requires independent source
+review, separately authorized guarded documentation-feature commit/push,
+exact-documentation-feature Linux CI, separately authorized guarded two-parent
+documentation main merge, and exact-documentation-main Linux CI. Consult actual
+Git refs and workflow evidence for subsequent gate completion; no future gate is
+claimed here. The results above are engineering-merge evidence, not documentation
+CI or newly executed tests. Proposed 10D.1C remains unimplemented and unauthorized;
+only after formal documentation acceptance may separate engineering continuation
+be considered. This checkpoint grants no implementation authority.
+
+
 **Latest engineering checkpoint (2026-10-28): Stage 6B / 10D.1A is accepted on
 main** at `d8f301ac384bae34fcf47b430766096cee5ec217`, with exact-main Linux
 Debug/Release 83/83 and Clang 18 ASan/UBSan 84/84, 50-seed smoke, 10,000 fuzz
