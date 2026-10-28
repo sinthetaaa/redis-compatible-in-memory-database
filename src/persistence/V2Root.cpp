@@ -1,4 +1,5 @@
 #include "redisdb/persistence/V2Root.hpp"
+#include "V2RootAccess.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -8,6 +9,7 @@
 #include <limits>
 #include <new>
 #include <sys/file.h>
+#include <sys/random.h>
 #include <unistd.h>
 #include <utility>
 
@@ -23,6 +25,19 @@ int RootIo::named_stat(int directory, const char* name, struct stat* info, int f
 int RootIo::lock(int fd, int flags) noexcept { return ::flock(fd, flags); }
 ssize_t RootIo::read(int fd, void* bytes, std::size_t count, off_t offset) noexcept {
     return ::pread(fd, bytes, count, offset);
+}
+int RootIo::create_at(int directory, const char* name, int flags, mode_t mode) noexcept {
+    return ::openat(directory, name, flags, mode);
+}
+int RootIo::random_128(std::array<std::byte, 16>& token) noexcept {
+    return ::getentropy(token.data(), token.size());
+}
+ssize_t RootIo::write_at(int fd, const void* bytes, std::size_t count, off_t offset) noexcept {
+    return ::pwrite(fd, bytes, count, offset);
+}
+int RootIo::sync_file(int fd) noexcept { return ::fsync(fd); }
+int RootIo::unlink_at(int directory, const char* name) noexcept {
+    return ::unlinkat(directory, name, 0);
 }
 int RootIo::close(int fd) noexcept { return ::close(fd); }
 int RootIo::observe(const RootIoEvent&) noexcept { return 0; }
@@ -103,6 +118,42 @@ struct RootState {
             return true;
         }
     }
+    // Count returns are distinct from fixed-result calls. Commit successful write
+    // progress BEFORE observing After, so a rejecting observer cannot replay it.
+    bool staging_count(int fd, RootRole role, void* output, const void* input, std::size_t count,
+                       std::uint64_t offset, std::size_t& progress, FileIdentity& extent) noexcept {
+        const auto op = input ? RootOperation::WriteAt : RootOperation::Read;
+        for (;;) {
+            const auto before = io->observe({op, role, RootStage::Before, 0, 0});
+            if (before != 0)
+                return fail(RootErrorCode::IoFailure, op, role, before > 0 ? before : EIO,
+                            RootStage::Before);
+            errno = 0;
+            const auto result = input ? io->write_at(fd, input, count, static_cast<off_t>(offset))
+                                      : io->read(fd, output, count, static_cast<off_t>(offset));
+            const auto saved = result < 0 ? errno : 0;
+            const auto valid_count = result > 0 && static_cast<std::uint64_t>(result) <= count;
+            if (valid_count) {
+                progress = static_cast<std::size_t>(result);
+                if (input)
+                    extent.byte_length += progress;
+            }
+            const auto after = io->observe({op, role, RootStage::After, result, saved});
+            if (result < -1 || (result > 0 && !valid_count) || (result == -1 && saved <= 0))
+                return fail(RootErrorCode::IoFailure, op, role, EIO);
+            if (result == -1 && saved != EINTR)
+                return fail(RootErrorCode::IoFailure, op, role, saved);
+            if (after != 0)
+                return fail(RootErrorCode::IoFailure, op, role, after > 0 ? after : EIO,
+                            RootStage::After);
+            if (result == -1)
+                continue;
+            if (result == 0)
+                return fail(input ? RootErrorCode::IoFailure : RootErrorCode::Truncated, op, role,
+                            input ? EIO : 0);
+            return true;
+        }
+    }
     bool close_fd(int& fd, RootRole role) noexcept {
         if (fd < 0)
             return true;
@@ -178,6 +229,229 @@ struct RootState {
                named("LOCK", RootRole::LockFile, lock_identity);
     }
 };
+
+namespace {
+RootRole staging_role(ArtifactRole role) noexcept {
+    switch (role) {
+    case ArtifactRole::Base:
+        return RootRole::StagedBase;
+    case ArtifactRole::Tail:
+        return RootRole::StagedTail;
+    case ArtifactRole::Watermark:
+        return RootRole::StagedWatermark;
+    }
+    return RootRole::Root;
+}
+bool staging_prefix(ArtifactRole role, GenerationId generation, std::array<char, 70>& name,
+                    std::size_t& length) noexcept {
+    const char* prefix = nullptr;
+    const char* suffix = nullptr;
+    switch (role) {
+    case ArtifactRole::Base:
+        prefix = "base-";
+        suffix = ".snap.tmp.";
+        break;
+    case ArtifactRole::Tail:
+        prefix = "tail-";
+        suffix = ".aof.tmp.";
+        break;
+    case ArtifactRole::Watermark:
+        prefix = "tail-";
+        suffix = ".commit.tmp.";
+        break;
+    default:
+        return false;
+    }
+    if (generation.value() == 0)
+        return false;
+    name.fill('\0');
+    std::memcpy(name.data(), prefix, 5);
+    const auto rendered = std::to_chars(name.data() + 5, name.data() + 25, generation.value());
+    if (rendered.ec != std::errc{})
+        return false;
+    std::uint64_t parsed = 0;
+    const auto roundtrip = std::from_chars(name.data() + 5, rendered.ptr, parsed);
+    if (roundtrip.ec != std::errc{} || roundtrip.ptr != rendered.ptr ||
+        parsed != generation.value())
+        return false;
+    length = static_cast<std::size_t>(rendered.ptr - name.data());
+    const auto n = std::strlen(suffix);
+    if (length > 37 || n > 37 - length)
+        return false;
+    std::memcpy(name.data() + length, suffix, n);
+    length += n;
+    return true;
+}
+bool staging_name(ArtifactRole role, GenerationId generation,
+                  const std::array<char, 70>& name) noexcept {
+    std::array<char, 70> expected{};
+    std::size_t prefix = 0;
+    if (!staging_prefix(role, generation, expected, prefix) ||
+        std::memcmp(name.data(), expected.data(), prefix) != 0 || name[prefix + 32] != '\0')
+        return false;
+    for (std::size_t i = prefix; i < prefix + 32; ++i)
+        if (!((name[i] >= '0' && name[i] <= '9') || (name[i] >= 'a' && name[i] <= 'f')))
+            return false;
+    return true;
+}
+} // namespace
+void StagingAccess::borrow(StagedFile& file, RootLease& root) noexcept {
+    file.root_ = root.state_;
+    if (!file.root_)
+        file.local_error_ = root.error();
+}
+bool StagingAccess::healthy(const StagedFile& file) noexcept {
+    return file.root_ && file.root_->healthy();
+}
+RootError StagingAccess::error(const StagedFile& file) noexcept {
+    return file.root_ ? file.root_->failure : closed_error();
+}
+bool StagingAccess::fail(StagedFile& file, RootErrorCode code, RootOperation op) noexcept {
+    return file.root_ && file.root_->fail(code, op, staging_role(file.role_));
+}
+bool StagingAccess::create(StagedFile& file) noexcept {
+    if (!healthy(file))
+        return false;
+    auto& root = *file.root_;
+    const auto role = staging_role(file.role_);
+    std::size_t prefix = 0;
+    if (!staging_prefix(file.role_, file.generation_, file.name_, prefix))
+        return fail(file, RootErrorCode::InvalidName, RootOperation::CreateAt);
+    if (!root.check_root())
+        return false;
+    for (unsigned attempt = 0; attempt < 64; ++attempt) {
+        std::array<std::byte, 16> token{};
+        std::int64_t result = 0;
+        if (!root.call(
+                RootOperation::Random128, role, [&] { return root.io->random_128(token); }, result))
+            return false;
+        constexpr char digits[] = "0123456789abcdef";
+        for (std::size_t i = 0; i < token.size(); ++i) {
+            const auto n = std::to_integer<unsigned>(token[i]);
+            file.name_[prefix + i * 2] = digits[n >> 4];
+            file.name_[prefix + i * 2 + 1] = digits[n & 15];
+        }
+        if (!staging_name(file.role_, file.generation_, file.name_))
+            return fail(file, RootErrorCode::InvalidName, RootOperation::CreateAt);
+        const auto op = RootOperation::CreateAt;
+        const auto before = root.io->observe({op, role, RootStage::Before, 0, 0});
+        if (before != 0)
+            return root.fail(RootErrorCode::IoFailure, op, role, before > 0 ? before : EIO,
+                             RootStage::Before);
+        errno = 0;
+        // Adopt the returned descriptor before running any observer.
+        file.fd_ = root.io->create_at(
+            root.directory, file.name_.data(),
+            O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK, 0600);
+        const auto saved = file.fd_ < 0 ? errno : 0;
+        if (file.fd_ >= 0)
+            file.linked_ = true;
+        const auto after = root.io->observe({op, role, RootStage::After, file.fd_, saved});
+        if (file.fd_ < -1 || (file.fd_ == -1 && saved <= 0))
+            return root.fail(RootErrorCode::IoFailure, op, role, EIO);
+        if (file.fd_ == -1 && saved != EEXIST && saved != EINTR)
+            return root.fail(RootErrorCode::IoFailure, op, role, saved);
+        if (after != 0)
+            return root.fail(RootErrorCode::IoFailure, op, role, after > 0 ? after : EIO,
+                             RootStage::After);
+        if (file.fd_ == -1)
+            continue; // Fresh OS token, including ambiguous actual EINTR.
+        if (!root.inspect(file.fd_, role, file.identity_) || file.identity_.byte_length != 0) {
+            if (root.healthy())
+                (void)root.fail(RootErrorCode::InvalidLength, RootOperation::Stat, role);
+            return false;
+        }
+        file.state_ = StagedFile::State::Building;
+        return check(file);
+    }
+    return root.fail(RootErrorCode::CollisionLimit, RootOperation::CreateAt, role, EEXIST);
+}
+bool StagingAccess::check(StagedFile& file) noexcept {
+    if (!file.valid())
+        return false;
+    if (!file.linked_ || !staging_name(file.role_, file.generation_, file.name_))
+        return fail(file, RootErrorCode::InvalidName, RootOperation::NamedStat);
+    auto& root = *file.root_;
+    const auto role = staging_role(file.role_);
+    FileIdentity now;
+    return root.check_root() && root.inspect(file.fd_, role, now) &&
+           (now == file.identity_ ||
+            root.fail(RootErrorCode::IdentityChanged, RootOperation::Stat, role)) &&
+           root.named(file.name_.data(), role, file.identity_);
+}
+bool StagingAccess::append(StagedFile& file, ByteView bytes) noexcept {
+    if (!check(file))
+        return false;
+    if (file.identity_.byte_length > OffsetCeiling ||
+        bytes.size() > OffsetCeiling - file.identity_.byte_length)
+        return fail(file, RootErrorCode::InvalidLength, RootOperation::WriteAt);
+    auto& root = *file.root_;
+    while (!bytes.empty()) {
+        const auto count = std::min<std::size_t>(
+            {bytes.size(), 65536, static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())});
+        std::size_t progress = 0;
+        if (!root.staging_count(file.fd_, staging_role(file.role_), nullptr, bytes.data(), count,
+                                file.identity_.byte_length, progress, file.identity_))
+            return false;
+        bytes = bytes.subspan(progress);
+    }
+    return check(file);
+}
+bool StagingAccess::read(StagedFile& file, std::uint64_t offset,
+                         std::span<std::byte> output) noexcept {
+    if (!check(file))
+        return false;
+    if (offset > file.identity_.byte_length || output.size() > file.identity_.byte_length - offset)
+        return fail(file, RootErrorCode::InvalidLength, RootOperation::Read);
+    auto& root = *file.root_;
+    while (!output.empty()) {
+        const auto count = std::min<std::size_t>(
+            {output.size(), 65536, static_cast<std::size_t>(std::numeric_limits<ssize_t>::max())});
+        std::size_t progress = 0;
+        if (!root.staging_count(file.fd_, staging_role(file.role_), output.data(), nullptr, count,
+                                offset, progress, file.identity_))
+            return false;
+        offset += progress;
+        output = output.subspan(progress);
+    }
+    return check(file);
+}
+bool StagingAccess::sync(StagedFile& file) noexcept {
+    if (!file.valid())
+        return false;
+    std::int64_t result = 0;
+    return file.root_->call(
+        RootOperation::SyncFile, staging_role(file.role_),
+        [&] { return file.root_->io->sync_file(file.fd_); }, result);
+}
+bool StagingAccess::unlink(StagedFile& file) noexcept {
+    if (!check(file))
+        return false;
+    auto& root = *file.root_;
+    const auto role = staging_role(file.role_);
+    const auto op = RootOperation::UnlinkAt;
+    const auto before = root.io->observe({op, role, RootStage::Before, 0, 0});
+    if (before != 0)
+        return root.fail(RootErrorCode::IoFailure, op, role, before > 0 ? before : EIO,
+                         RootStage::Before);
+    errno = 0;
+    const auto result = root.io->unlink_at(root.directory, file.name_.data());
+    const auto saved = result < 0 ? errno : 0;
+    if (result == 0)
+        file.linked_ = false; // Record irreversible success BEFORE After.
+    const auto after = root.io->observe({op, role, RootStage::After, result, saved});
+    if (result != 0)
+        return root.fail(RootErrorCode::IoFailure, op, role,
+                         result == -1 && saved > 0 ? saved : EIO);
+    if (after != 0)
+        return root.fail(RootErrorCode::IoFailure, op, role, after > 0 ? after : EIO,
+                         RootStage::After);
+    return root.check_root();
+}
+bool StagingAccess::close(StagedFile& file) noexcept {
+    file.state_ = StagedFile::State::Closed;
+    return !file.root_ || file.root_->close_fd(file.fd_, staging_role(file.role_));
+}
 } // namespace detail
 
 RootLease RootLease::open_existing(const std::filesystem::path& root,

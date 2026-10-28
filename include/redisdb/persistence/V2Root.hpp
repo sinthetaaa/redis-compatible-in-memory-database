@@ -25,10 +25,36 @@ enum class RootErrorCode {
     IoFailure,
     ResourceLimit,
     ClosedOrFailed,
-    DependentsAlive
+    DependentsAlive,
+    CollisionLimit,
+    WrongState
 };
-enum class RootOperation { None, Open, OpenAt, Stat, NamedStat, Lock, Read, Close };
-enum class RootRole { Root, LockFile, Current, Base, Tail, Watermark };
+enum class RootOperation {
+    None,
+    Open,
+    OpenAt,
+    Stat,
+    NamedStat,
+    Lock,
+    Read,
+    Close,
+    CreateAt,
+    Random128,
+    WriteAt,
+    SyncFile,
+    UnlinkAt
+};
+enum class RootRole {
+    Root,
+    LockFile,
+    Current,
+    Base,
+    Tail,
+    Watermark,
+    StagedBase,
+    StagedTail,
+    StagedWatermark
+};
 enum class RootStage { Before, Call, After };
 enum class ArtifactRole { Base, Tail, Watermark };
 
@@ -50,7 +76,8 @@ struct RootIoEvent {
 };
 namespace detail {
 struct RootState;
-}
+struct StagingAccess;
+} // namespace detail
 class RootLease;
 class PinnedFile;
 
@@ -59,7 +86,7 @@ class PinnedFile;
 // Adapters must not reenter owners, retain read buffers, or independently close
 // borrowed descriptors. Only the close override consumes descriptor ownership.
 // observe returns 0 to continue, or a positive errno to reject that boundary.
-// After-open rejection still closes the acquired FD. Close is ALWAYS attempted
+// After-open/create rejection still closes the acquired FD. Close is ALWAYS attempted
 // once even if its Before hook rejects: a hook cannot suppress resource release.
 // close must consume its ownership once, even on error. Real POSIX close errors
 // can be ambiguous (notably EINTR); never retry/reopen using the old FD number.
@@ -70,6 +97,7 @@ class RootIo {
 
   protected:
     friend struct detail::RootState;
+    friend struct detail::StagingAccess;
     friend class RootLease;
     friend class PinnedFile;
     // Backend customization only, not a public arbitrary-path opening API.
@@ -81,6 +109,11 @@ class RootIo {
     virtual ssize_t read(int fd, void* bytes, std::size_t count, off_t offset) noexcept;
     virtual int close(int fd) noexcept;
     virtual int observe(const RootIoEvent&) noexcept;
+    virtual int create_at(int directory, const char* name, int flags, mode_t mode) noexcept;
+    virtual int random_128(std::array<std::byte, 16>&) noexcept;
+    virtual ssize_t write_at(int fd, const void* bytes, std::size_t count, off_t offset) noexcept;
+    virtual int sync_file(int fd) noexcept;
+    virtual int unlink_at(int directory, const char* name) noexcept;
 };
 
 struct FileIdentity {
@@ -142,13 +175,14 @@ class RootLease final {
     [[nodiscard]] bool recheck() noexcept;
     [[nodiscard]] PinnedFile pin_current() noexcept;
     [[nodiscard]] PinnedFile pin_generation_file(ArtifactRole, GenerationId) noexcept;
-    // Requires no dependent pins. Violating this fails terminally but does not
+    // Requires no dependent pins or staging owners. Violating this fails terminally but does not
     // release LOCK from underneath them. Otherwise close LOCK, then root, once.
     [[nodiscard]] bool close_checked() noexcept;
     // Last dependent destruction closes artifact, then LOCK, then root. Cleanup
     // never throws; destructor-time errors are observable only by surviving peers.
 
   private:
+    friend struct detail::StagingAccess;
     PinnedFile pin(RootRole, const std::array<char, 33>&) noexcept;
     std::shared_ptr<detail::RootState> state_;
     RootError local_error_{RootErrorCode::ClosedOrFailed};
