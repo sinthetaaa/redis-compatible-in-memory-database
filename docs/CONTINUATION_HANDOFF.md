@@ -1,3 +1,229 @@
+# Stage 6B / 10D.1C — Engineering accepted on main; formal documentation closure preparation
+
+**2026-10-28: Stage 6B / 10D.1C engineering is COMPLETE AND ACCEPTED ON MAIN.**
+Independent verification accepted the corrected two-commit feature, genuine
+engineering merge and exact-main Linux evidence. 10D.1A and 10D.1B remain
+accepted. This checkpoint supersedes older current-status/next-action statements,
+including statements that 10D.1C is unimplemented; all previous handoff bytes are
+retained as an exact suffix below. Historical statements remain records of their
+original preparation time, not retroactively edited claims.
+
+## Preparation status and separate documentation gates
+
+10D.1C engineering is accepted on main. Formal documentation closure has been
+prepared locally; independent review, feature publication/exact-feature CI,
+guarded main merge and exact-main CI remain separate gates. At preparation time
+on 2026-10-28, local `fasttrack/10d1c-formal-closure` points directly to the accepted
+engineering merge with exactly four unstaged, uncommitted documentation changes.
+It has not been pushed; no docs-feature CI or documentation acceptance is claimed.
+Future readers may consult actual Git refs/workflow evidence to determine which
+subsequent gates completed. No new C++ build/CTest or fuzz run was executed for
+this documentation-only preparation; all execution evidence below is retained
+engineering evidence.
+
+## Exact accepted Git identities and retained branches
+
+- Engineering merge: `a7692101da60213c0838d1a372787e8429337797`.
+- Merge and corrected-feature tree: `3293a6bc61908b4d9eac56718d8627f1fa24f5a8`.
+- Exactly two ordered merge parents: first
+  `1be4505f30f0c87b6d71e79eafb0a63477855b18`, then
+  `762c53285810fbf61aa4c85be296727e0da8a077`.
+- Original implementation: `819543dfdcd39d68ff7496c7c421608d2d283774`, sole parent
+  `1be4505f30f0c87b6d71e79eafb0a63477855b18`; original tree
+  `cddbefa76800665646c58e2121032958ce4b05bb`.
+- Warning correction: `762c53285810fbf61aa4c85be296727e0da8a077`, sole parent
+  `819543dfdcd39d68ff7496c7c421608d2d283774`. Feature was exactly two commits
+  ahead of old main, zero behind; both commits remain reachable through the
+  engineering merge's second parent. `--no-ff --no-commit` staging and the final
+  merge produced exactly the independently accepted corrected-feature tree.
+
+| Retained branch | Accepted SHA |
+|---|---|
+| `fasttrack/v2-generation-candidate-search` | `762c53285810fbf61aa4c85be296727e0da8a077` |
+| `fasttrack/10d1b-formal-closure` | `8a8758692c27f1cbf5be94a20b72092ed4e2564e` |
+| `fasttrack/v2-owned-data-staging` | `5694cda2b886f298124705b12ce6bca3aa286287` |
+| `fasttrack/v2-root-identity-validation` | `91b30f3c8529ed80954414a601b4ce102770888e` |
+| `fasttrack/10d1a-formal-closure` | `ab7179ee5abc4c28e0ebf6552eb514d91bfe2a79` |
+
+Retained branches are historical evidence, not branches to rewrite or delete.
+
+## Exact seven-file engineering manifest
+
+Cumulative old-main-to-corrected-feature/main diff: **seven paths, 1754 additions
+and one deletion**, four additions and three modifications, with no mode change.
+
+| Status | Accepted path |
+|---|---|
+| NEW | [include/redisdb/persistence/V2Generation.hpp](../include/redisdb/persistence/V2Generation.hpp) |
+| NEW | [src/persistence/V2Generation.cpp](../src/persistence/V2Generation.cpp) |
+| NEW | [src/persistence/V2GenerationAccess.hpp](../src/persistence/V2GenerationAccess.hpp) |
+| NEW | [tests/unit/v2_generation_test.cpp](../tests/unit/v2_generation_test.cpp) |
+| MODIFIED | [include/redisdb/persistence/V2Root.hpp](../include/redisdb/persistence/V2Root.hpp) |
+| MODIFIED | [src/persistence/V2Root.cpp](../src/persistence/V2Root.cpp) |
+| MODIFIED | [CMakeLists.txt](../CMakeLists.txt) |
+
+Corrected generation-test Git blob: `9efee38090352238401ba4b697a91346aae8e7fa`.
+The other six files retain original accepted implementation bytes. All 214
+original non-scope tracked paths were preserved by the engineering change. This
+formal preparation adds only README, CONTINUATION_HANDOFF, PROJECT_STATE and
+ROADMAP checkpoints; all source/tests/build/CI/Docker/benchmark files and frozen
+contracts remain byte-identical to accepted engineering main.
+
+## Source/API, root ownership and observation semantics
+
+`GenerationCandidate` is move-only with noexcept lifecycle. Its public surface
+is `find_after(RootLease&, GenerationId, LogicalSequence, max_candidates)`,
+`valid()`, `error()`, borrowed `generation()` and `recheck_unused()`. `valid()`
+means a healthy attached observation; the borrowed generation confers no
+ownership and is invalidated by move, failure or destruction. **GenerationCandidate
+is an observation, NOT a reservation, publication or proof of durable selection.**
+
+The private `detail::GenerationAccess` bridge shares the SAME existing
+`detail::RootState`, held root/LOCK ownership and first terminal-error latch as
+RootLease, pins and staging siblings. There is no artifact descriptor, root
+reopen, second LOCK, independent failure domain, claim registry or durable
+ownership token. Dependents retain root/LOCK lifetime; the final reference closes
+existing descriptors once, preserving operational close failure without retrying
+consumed descriptor numbers. Move assignment preserves target-disposal failure
+without poisoning an unrelated incoming healthy root. Callers must serialize
+operations/destruction. The lease excludes cooperating writers, not hostile
+directory mutation. Exact duplicate observations on the SAME lease are allowed.
+
+Search is successor-only from a caller-provided selected GenerationId; there is
+no first-generation factory or `FirstGenerationContext`. The caller supplies the
+authoritative selected generation and synchronized captured LogicalSequence.
+The search checks exhaustion but does not read CURRENT, authenticate that tuple,
+advance a sequence or synchronize a writer. Caller authenticity/synchronization
+remains a future coordinator responsibility.
+
+## Exact occupancy, bounds and failure semantics
+
+- Explicit budget is **1–4096** candidate triples. Invalid budget is rejected
+  before filesystem entry as local `ResourceLimit` on a healthy lease; an existing
+  root error takes precedence. It does not poison an otherwise healthy root.
+- After root health/identity checks, captured sequence `UINT64_MAX` yields shared
+  terminal `SequenceExhausted`; selected generation `UINT64_MAX` yields shared
+  terminal `GenerationExhausted`. Sequence exhaustion is checked first. Arithmetic
+  never wraps to zero. A free successor at `UINT64_MAX` may still be observed;
+  no greater successor exists after it.
+- Names are canonical checked decimal `base-<g>.snap`, `tail-<g>.aof` and
+  `tail-<g>.commit`, derived internally with round-trip checks into fixed
+  33-byte buffers (at most 32 basename bytes plus NUL). No arbitrary-name API.
+- Held-root-relative Base/Tail/Watermark inspection uses existing
+  `RootIo::named_stat` with `AT_SYMLINK_NOFOLLOW`, with root identity checked
+  before/after each triple. Any existing final entry, including a directory,
+  symlink/dangling symlink or unrelated file type, means occupied; its target is
+  never followed and its artifact is not opened, overwritten, repaired or removed.
+- All three names are inspected even after an earlier occupied name, unless a
+  terminal failure interrupts inspection. Only actual `-1/ENOENT` means absence;
+  actual `-1/EINTR` retries after accepted observers. Observer errors, including
+  observer EINTR, are terminal. Unexpected errno and invalid syscall results
+  fail closed as `IoFailure`; impossible results/invalid errno map to EIO.
+- An occupied triple during initial search skips to the next greater generation.
+  If the occupied generation is `UINT64_MAX`, `GenerationExhausted` takes
+  precedence over budget exhaustion. Exhausting the entered budget while greater
+  candidates could exist yields shared terminal `ResourceLimit`.
+- An initially absent triple gets a complete second absence confirmation.
+  Occupancy on that confirmation is terminal `CandidateOccupied`, not another
+  search/skip. `recheck_unused()` inspects the SAME observed triple; later
+  occupancy is likewise terminal `CandidateOccupied`, not a new candidate.
+- Entered I/O/identity/exhaustion/occupancy failures preserve the shared first
+  terminal RootError (operation, role, stage and errno); siblings cannot continue
+  as healthy after that failure. Candidate probing creates, reads, writes,
+  renames, removes or syncs no generation artifact and performs no root fsync.
+
+## Local validation and corrected-warning history
+
+Accepted **local macOS** Debug **85/85**, Release **85/85** and preserved
+UBSan/fuzz **86/86** executions each included **328 executed generation scenarios
+and 190 reached boundary injections**. These detailed scenario/injection counts
+are attributed to local execution, not an independent Linux scenario recount.
+Complete generation/root/staging stdout after the one-line correction matched
+accepted pre-correction stdout byte-for-byte in all three local configurations.
+The accepted root coverage (23 positive / 57 rejection / 67 syscall-boundary /
+20 reached allocation failures) and staging coverage (266 scenarios / 195 reached
+injections) were preserved. Pinned local 50-seed smoke and strict C++20 -O0/-O3
+warning-as-error compilation passed without weakening flags, tests or sanitizers.
+
+The original feature SHA `819543dfdcd39d68ff7496c7c421608d2d283774` had successful
+workflow wrappers but **FAILED engineering Linux acceptance**: both actual GCC 13
+Debug/Release logs reported `-Wrange-loop-construct` in the new generation test
+at line 813. Original runs were [Networking 40707899542](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40707899542),
+[Clang 18 40707899440](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40707899440) and
+[Docker 40707899368](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40707899368). They are failed-acceptance history,
+not corrected acceptance evidence.
+
+The sole corrective commit changed exactly +1/-1 line, from `const auto answer`
+to `const auto& answer` in the four-invalid-result loop. Cases, body and `[=]`
+capture stayed unchanged; no suppression or other source correction occurred.
+Corrected feature and main actual GCC 13 logs contain no generation-test
+`-Wrange-loop-construct` or staging `-Wnonnull`. Accepted unrelated ListCommands,
+V2TailStream and existing allocation-hook warnings remain; do not claim the
+whole repository is warning-free. Docker GCC 12 compiles the runtime, not the
+generation-test executable, so it is not GCC 12 test-source warning evidence.
+
+## Accepted exact-feature and exact-main Linux evidence
+
+All six accepted runs below are completed/success, event `push`, at the exact
+branch/SHA specified. Full actual job logs and required artifacts were inspected;
+old feature results were not substituted for fresh main results.
+
+| Evidence | Exact corrected feature: `fasttrack/v2-generation-candidate-search`, `762c53285810fbf61aa4c85be296727e0da8a077` | Exact engineering main: `main`, `a7692101da60213c0838d1a372787e8429337797` |
+|---|---|---|
+| Networking | [40710745100](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40710745100): Debug 85/85, Release 85/85 | [40715241101](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715241101): Debug 85/85, Release 85/85 |
+| Clang 18 ASan/UBSan/fuzz | [40710745091](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40710745091): 86/86, 50 seeds, actual 10,000 executions | [40715240672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240672): 86/86, 50 seeds, actual 10,000 executions |
+| Docker Linux | [40710745180](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40710745180): all required gates, 24 profiles/48 runs | [40715240649](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240649): all required gates, 24 profiles/48 runs |
+
+Actual main jobs: Networking Debug `122911020090`, Release `122911019819`;
+Clang `122911016672`; Docker `122911017403`. Corrected feature jobs:
+Networking Debug `122895024487`, Release `122895024866`; Clang `122895024276`;
+Docker `122895024143`. Named `unit.v2_generation`, `unit.v2_root` and
+`unit.v2_staging` actually passed in applicable Debug/Release/sanitizer suites,
+with existing V1/V2 persistence/networking/server/TCP/pipeline/epoll regressions.
+Instrumented compilation verification and pinned 50-seed manifest checks passed;
+real fuzzer output included `#10000 DONE` and `Done 10000 runs`, with no sanitizer
+diagnostic, crash artifact or skipped mandatory job. The successful unchanged
+workflow uploads no standalone compile_commands.json or fuzz artifact; its full
+actual logs preserve the execution/instrumentation proof.
+
+Both accepted Docker runs passed GCC 12 Release image/Compose validation,
+**22** tooling checks, **15** container cases, **10** private Compose checks,
+immutable pinned Redis **8.10.2** comparison (**54 command cases / 40 routes**
+plus **10** operational cases), and the exact **24-profile / 48-timed-run**
+benchmark matrix. Persistent-volume recreation, restart/snapshot/AOF recovery,
+SIGKILL acknowledgment, isolated restore and corruption/missing-file rejection
+checks passed. No new throughput threshold was imposed. Private Compose does
+not establish actual VPS/SSH deployment or physical power-loss durability.
+
+## Frozen-contract limits and next authorization boundary
+
+Frozen [AOF compaction design](AOF_COMPACTION_DESIGN.md) SHA-256 remains
+`fb57f333eb1efc65101c8f788442066e30a751472bda46ab040ce27e5e53e5d6`;
+frozen [V2 persistence format](V2_PERSISTENCE_FORMAT.md) remains
+`f078163e99768a84e10fb516ca03674e259a32ce1d09380ecce118ba50091462`.
+The candidate observation is a narrow successor-search component, not completion
+of the frozen publication/recovery contract.
+
+10D.1C supplies **no** first-generation initialization/import authority,
+authentication of selected generation/sequence against CURRENT, durable candidate
+reservation, prepared generation coordinator, complete P1/P2/P3 construction,
+final artifact installation, P4–P7 publication, CURRENT writing/replacement/rename,
+directory durability publication, R4/R5 recovery, writer activation, P8 live
+handoff, live compaction, generation garbage collection/reclamation or actual
+VPS deployment. 10D.1A/B remain accepted; **broader 10D.1, Stage 6B and original
+Phase 10 remain unfinished**. Original Phase 16 remains **EXCLUDED BY APPROVED
+SCOPE REVISION**, not completed.
+
+**Next proposed boundary: 10D.1D planning only after separate authorization.**
+First independently review this exact four-document local draft. Documentation
+feature commit/push and fresh exact-feature CI, guarded documentation main merge
+and fresh exact-main CI are subsequent separately authorized gates. Any proposed
+10D.1D planning must separately define its frozen-contract scope, files,
+invariants, failure model and acceptance gates before implementation authority
+can be granted. This checkpoint implements no 10D.1D, does not prescribe an
+unreviewed coordinator design, and automatically authorizes no subsequent stage.
+Do not follow superseded older next-action instructions as current authorization.
+
 # Stage 6B / 10D.1B — Engineering accepted on main; formal documentation closure preparation
 
 **2026-10-28: Stage 6B / 10D.1B engineering is COMPLETE AND ACCEPTED ON MAIN.**

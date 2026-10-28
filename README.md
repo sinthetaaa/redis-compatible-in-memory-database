@@ -1,5 +1,58 @@
 # Redis-Compatible In-Memory Database Server
 
+## Latest engineering checkpoint (2026-10-28) — 10D.1C accepted on main
+
+**Stage 6B / 10D.1C engineering is COMPLETE AND ACCEPTED ON MAIN.** Accepted
+merge `a7692101da60213c0838d1a372787e8429337797`, tree
+`3293a6bc61908b4d9eac56718d8627f1fa24f5a8`, preserves the accepted 10D.1A
+root/LOCK and 10D.1B unpublished staging foundations.
+
+Accepted exact-main push/Linux evidence at that engineering merge:
+
+- [Networking 40715241101](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715241101):
+  Debug **85/85**, Release **85/85**, including generation/root/staging and
+  existing persistence, networking, TCP, RESP pipeline and Linux epoll gates.
+- [Clang 18 ASan/UBSan/fuzz 40715240672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240672):
+  **86/86**, pinned **50-seed** corpus and **10,000 actual libFuzzer executions**;
+  no sanitizer diagnostic or crash.
+- [Docker 40715240649](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240649):
+  Release image/Compose, **22** tooling checks, **15** container cases, **10**
+  private Compose checks, pinned Redis **8.10.2** comparison (**54 command cases /
+  40 routes**, **10** operational cases), and **24 profiles / 48 timed runs**.
+
+Move-only `GenerationCandidate` observes an unused successor triple after a
+caller-provided selected generation, checks the caller's captured logical sequence
+for exhaustion, and uses an explicit **1–4096** search budget. Held-root-relative,
+nonfollowing Base/Tail/Watermark probes inspect every final name, skip occupied
+triples, confirm absence twice and support `recheck_unused()` on the same
+candidate. Observations share existing root/LOCK lifetime and terminal failure;
+duplicate observations on the same lease are permitted. **A candidate is an
+observation, not a reservation, publication or proof of durable selection.**
+
+This does not authenticate selection against CURRENT or provide first-generation
+initialization/import, durable reservation, a prepared coordinator, complete
+P1/P2/P3 construction, final installation, P4–P7/CURRENT publication, directory
+durability, R4/R5 recovery, writer activation/P8 handoff, live compaction or
+generation reclamation. Broader 10D.1, Stage 6B and original Phase 10 remain
+unfinished. Private Compose is not actual VPS/SSH deployment. The corrected
+GCC 13 generation-test `-Wrange-loop-construct` and staging `-Wnonnull` warnings
+are absent; unrelated inherited warnings remain. The repository is not warning-free.
+
+See the [authoritative 10D.1C handoff](docs/CONTINUATION_HANDOFF.md#stage-6b--10d1c--engineering-accepted-on-main-formal-documentation-closure-preparation)
+for ancestry, exact manifest, failure semantics and continuation gates. Older
+10D.1B/10D.1A checkpoints below are retained historical records; this section
+supersedes their current-status/next-action interpretations only.
+
+**Preparation-time documentation status:** 10D.1C engineering is accepted on main.
+Formal documentation closure has been prepared locally; independent review,
+feature publication/exact-feature CI, guarded main merge and exact-main CI remain
+separate gates. This four-document draft is unstaged, uncommitted and unpublished
+on local `fasttrack/10d1c-formal-closure`; it is not yet accepted documentation.
+Future readers should consult actual refs/workflow evidence for subsequent gate
+completion. No new build/CTest was run for this draft, and no 10D.1D or later work
+is automatically authorized.
+
+
 **Current engineering checkpoint (2026-10-28): Stage 6B / 10D.1B engineering
 is COMPLETE AND ACCEPTED ON MAIN as of 2026-10-28.** Accepted merge:
 `bc66ebb293c26a54f696a972416c00f4c0a4ff23`, tree

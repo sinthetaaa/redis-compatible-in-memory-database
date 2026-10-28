@@ -1,5 +1,56 @@
 # PROJECT STATE — Redis-Compatible In-Memory Database Server
 
+## Current snapshot (2026-10-28) — 10D.1C engineering accepted
+
+**Stage 6B / 10D.1C engineering is COMPLETE AND ACCEPTED ON MAIN.** 10D.1A/B
+remain accepted. This snapshot and the [authoritative 10D.1C handoff](CONTINUATION_HANDOFF.md#stage-6b--10d1c--engineering-accepted-on-main-formal-documentation-closure-preparation)
+supersede older current-status/next-action interpretations only; all historical
+snapshots and the original execution policy remain unchanged below.
+
+- Engineering merge `a7692101da60213c0838d1a372787e8429337797`, tree
+  `3293a6bc61908b4d9eac56718d8627f1fa24f5a8`; ordered parents
+  `1be4505f30f0c87b6d71e79eafb0a63477855b18`, then
+  `762c53285810fbf61aa4c85be296727e0da8a077`. The second parent retains the
+  original implementation and sole one-line GCC test-warning correction.
+- Move-only `GenerationCandidate` observes successor Base/Tail/Watermark triples
+  through nonfollowing held-root-relative probes, explicit 1–4096 search budget,
+  captured-sequence exhaustion checks, second absence confirmation and same-candidate
+  recheck. Existing shared root/LOCK lifetime and terminal-error latch are reused;
+  same-lease duplicate observations are permitted. **Observation is not a
+  reservation, publication or durable-selection guarantee.**
+- Exact-main [Networking 40715241101](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715241101):
+  Debug **85/85**, Release **85/85**; [Clang 18 ASan/UBSan/fuzz 40715240672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240672):
+  **86/86**, pinned **50 seeds**, **10,000 actual executions**; [Docker 40715240649](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40715240649):
+  image/Compose, **22** tooling, **15** container, **10** private Compose,
+  Redis **8.10.2** **54 cases/40 routes + 10 operational cases**, and
+  **24 profiles/48 timed runs**. All completed/success, push/main at that merge;
+  root/staging/generation and required regressions actually passed. Accepted
+  **local** generation counts are **328 scenarios / 190 reached injections**,
+  not independently recounted Linux scenario totals.
+- The original feature's new GCC 13 warning blocked acceptance despite green
+  wrappers. The exact +1/-1 `const auto& answer` correction and fresh corrected
+  feature/main evidence are accepted; generation `-Wrange-loop-construct` and
+  staging `-Wnonnull` are absent from actual GCC Debug/Release logs. Inherited
+  unrelated warnings remain; this is not repository-wide warning closure.
+- **Broader 10D.1, Stage 6B and original Phase 10 remain unfinished.** There is
+  no first-generation init/import or CURRENT authentication, durable reservation,
+  prepared coordinator, complete P1/P2/P3 construction, final installation,
+  P4–P7/CURRENT publication, directory durability, R4/R5 recovery, writer
+  activation/P8 handoff, live compaction or generation reclamation. Frozen
+  specifications remain unchanged. Original Phase 16 is **EXCLUDED BY APPROVED
+  SCOPE REVISION**, not completed; private Compose is not VPS/SSH deployment.
+
+**Preparation-time formal status:** 10D.1C engineering is accepted on main.
+Formal documentation closure has been prepared locally; independent review,
+feature publication/exact-feature CI, guarded main merge and exact-main CI remain
+separate gates. Local `fasttrack/10d1c-formal-closure` is unstaged, uncommitted
+and unpublished; this draft is not yet accepted documentation. Future readers
+should consult actual refs/workflow evidence for subsequent gate completion.
+No new build/CTest was executed for this preparation. Later 10D.1 slices,
+including proposed 10D.1D, are not implemented or accepted; separate planning
+and implementation authorization is required, with no automatic continuation.
+
+
 ## Current snapshot (2026-10-28) — 10D.1B engineering accepted
 
 **Stage 6B / 10D.1B engineering is COMPLETE AND ACCEPTED ON MAIN.** 10D.1A
