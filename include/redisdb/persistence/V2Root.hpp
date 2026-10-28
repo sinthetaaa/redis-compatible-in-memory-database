@@ -27,7 +27,10 @@ enum class RootErrorCode {
     ClosedOrFailed,
     DependentsAlive,
     CollisionLimit,
-    WrongState
+    WrongState,
+    GenerationExhausted = 16,
+    SequenceExhausted = 17,
+    CandidateOccupied = 18
 };
 enum class RootOperation {
     None,
@@ -77,6 +80,7 @@ struct RootIoEvent {
 namespace detail {
 struct RootState;
 struct StagingAccess;
+struct GenerationAccess;
 } // namespace detail
 class RootLease;
 class PinnedFile;
@@ -183,6 +187,7 @@ class RootLease final {
 
   private:
     friend struct detail::StagingAccess;
+    friend struct detail::GenerationAccess;
     PinnedFile pin(RootRole, const std::array<char, 33>&) noexcept;
     std::shared_ptr<detail::RootState> state_;
     RootError local_error_{RootErrorCode::ClosedOrFailed};
