@@ -48,6 +48,7 @@ add_library(
     src/persistence/Snapshot.cpp
     src/persistence/V2Format.cpp
     src/persistence/V2BaseStream.cpp
+    src/persistence/V2BaseEncoding.cpp
     src/persistence/V2TailStream.cpp
     src/persistence/V2Root.cpp
     src/persistence/V2Staging.cpp
@@ -115,6 +116,12 @@ if(REDISDB_BUILD_PROFILES AND UNIX)
 endif()
 
 if(BUILD_TESTING)
+    add_executable(redisdb-v2-base-encoding-tests tests/unit/v2_base_encoding_test.cpp)
+    target_link_libraries(redisdb-v2-base-encoding-tests PRIVATE redisdb-core)
+    redisdb_enable_warnings(redisdb-v2-base-encoding-tests)
+    add_test(NAME unit.v2_base_encoding COMMAND redisdb-v2-base-encoding-tests)
+    set_tests_properties(unit.v2_base_encoding PROPERTIES TIMEOUT 120)
+
     add_executable(redisdb-v2-pending-generation-tests tests/unit/v2_pending_generation_test.cpp)
     target_link_libraries(redisdb-v2-pending-generation-tests PRIVATE redisdb-core)
     redisdb_enable_warnings(redisdb-v2-pending-generation-tests)
