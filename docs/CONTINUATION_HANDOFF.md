@@ -1,3 +1,225 @@
+<a id="pure-v2-base-cursor-engineering-checkpoint"></a>
+
+# Pure V2 Base Encoding Cursor — accepted engineering checkpoint
+
+Preparation date: **2026-10-29 (IST)**. Engineering CI events cited here were recorded
+on 2026-10-29 UTC. The pure cursor is accepted on main; its formal documentation
+is being prepared locally for independent review.
+
+**Pure V2 Base Encoding Cursor engineering is COMPLETE AND ACCEPTED ON MAIN.**
+This is a pure-codec prerequisite after 10D.1D, not completed P2 and not a formally
+designated 10D.1E milestone. This latest checkpoint supersedes older current-status
+interpretations only; all earlier historical text is retained unchanged.
+
+Engineering main: `e1dea845ac268f6d322dbaee0090ddbec73a234c`;
+tree: `10d0a16dbdd340f4d0120314f2cf0b1a786cf74a`.
+Ordered merge parents: first `56a3815a066516e63938ed15d3471a2183ccbb00`,
+second `7d8986be0edd4f338d1117cc33e2a6fcd13fc7e8`.
+The second parent remains retained on `fasttrack/v2-base-encoding-cursor`.
+
+The move-only `BaseEncodingCursor` is a pure byte producer over borrowed immutable
+physical key/Entry views. It requires strict unsigned binary-safe key order and an
+optional exact oldest-to-newest LRU permutation. Explicit entry, byte, frame,
+permutation and logical-charge budgets bound production. `begin()` / `next()` are
+`noexcept`; bounded Header, KEY1, LRU1 and DONE chunks borrow only the current
+output, and `EncodedBaseSummary` appears only after successful terminal End.
+It does not access Database, RootLease or the filesystem; it neither writes/seals
+StagedFile nor operates PendingGeneration or publishes CURRENT.
+
+Accepted exact-main push/Linux evidence (2026-10-29 UTC):
+
+- [Networking 40879337672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337672):
+  Debug **87/87**, Release **87/87**; cursor **3.44 / 3.03 s**, pending **12.86 / 12.67 s**.
+- [Clang 18 ASan/UBSan/fuzz 40879337682](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337682):
+  **88/88**; cursor **13.19 s**, pending **22.00 s**; pinned **50 RESP2 seeds** and
+  **10,000 actual parser libFuzzer executions**. Cursor/pending timeouts remain **120 / 60 s**.
+- [Docker 40879337842](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337842):
+  production image includes the cursor with `BUILD_TESTING=OFF`; **22 tooling,
+  15 container, 10 private Compose** checks; pinned Redis **8.10.2**, **54 command
+  cases / 40 routes + 10 operational cases**; **24 profiles / 48 timed runs**.
+
+Inherited compiler warnings remain: **3 GCC Debug, 17 GCC Release, 0 Clang**;
+Docker retains the unrelated Marker-shadow warning and Node deprecation annotations.
+No new relevant warning or sanitizer regression was observed. Parser fuzzing does
+not directly fuzz the cursor; Docker does not execute cursor units. Private Compose
+is not remote VPS/SSH deployment or physical power-loss certification.
+
+Accepted **local macOS** evidence, not an independent Linux scenario recount:
+Debug **87/87**, Release **87/87**, UBSan **88/88**; **194 cursor scenarios** and
+**141 planned/reached/validated allocation-failure cases per configuration**;
+**75,498,000-byte** streaming generation, **nine byte-identical** historical
+Root/Staging/Generation output comparisons and **50 RESP2 parser seeds**.
+A separate macOS ABI observer verified **13 rejection cases with zero cursor-path
+exception-storage allocations** after correction. Source/object attribution,
+not inherited symbols alone or an operator-new hook alone, establishes the revised
+audit boundary. Existing codec/library exceptions retain typed scalar translation;
+no Linux-specific exception-allocation interposition is claimed.
+
+10D.1A held Root/LOCK identity, 10D.1B unpublished identity-checked StagedFile,
+10D.1C bounded successor GenerationCandidate observation and 10D.1D PendingGeneration
+remain accepted. PendingGeneration owns exactly **three EMPTY unpublished temporaries**
+with private per-RootState factory admission; it is not a prepared generation or
+a durable/universal reservation, and raw staging/candidate contracts remain intact.
+
+**Remaining:** complete P1; P2 Base file construction/fidelity; P3 initial Tail/
+Watermark and disabled writer; P4 final-name installation and directory sync;
+P5 selector temporary; P6 CURRENT replacement; P7 directory durability; P8 live
+handoff; R4 restart durability barrier and R5 recovery/serving; explicit V2
+initialization, V1 import, working compaction, crash-safe full selection, power-loss
+certification and stopped generation reclamation. **Stage 6B and original Phase 10
+remain INCOMPLETE.** The cursor summary proves none of these authorities.
+
+Future P2 must connect cursor → aggregate-controlled Base staging → bounded append
+→ exact extent/identity checks → file fsync → complete readback → format/EOF/CRC
+and physical-state/metadata fidelity comparison. No public mutable child escape
+is available or assumed. An independently reviewed private state/API extension and
+bounded fidelity/EOF design are required; this task only reviews that boundary.
+
+**Preparation status:** this is a LOCAL, UNCOMMITTED four-document draft on
+`fasttrack/v2-base-encoding-formal-closure`. It has not been published or accepted;
+no documentation-feature CI, documentation main merge or post-documentation main
+CI is claimed. Independent review and separately authorized publication/exact-feature
+CI, genuine two-parent documentation main merge and fresh exact-main CI remain.
+No new local build, CTest, sanitizer or fuzz run was performed for this draft.
+Future readers may consult actual Git refs/CI for subsequent gate completion.
+
+The full approved original roadmap remains in force. Original Phase 16 is
+**EXCLUDED BY APPROVED SCOPE REVISION**, not completed. Mandatory local Linux/Docker
+Milestone A remains in scope, including nonroot runtime, mounted persistence,
+restart/recovery demonstration and clean-clone reproducibility. No next engineering
+implementation is authorized by this documentation preparation.
+
+## Accepted Git history and exact implementation scope
+
+The engineering merge message is `merge(persistence): accept pure V2 base encoding cursor`.
+The feature has sole parent `56a3815a066516e63938ed15d3471a2183ccbb00` and the same
+`10d0a16dbdd340f4d0120314f2cf0b1a786cf74a` tree as the main merge. One normal
+feature commit/push and one separately authorized genuine two-parent main merge
+preserve the original history; no PR, squash or rewrite was used. 10D.1D engineering
+and its formal documentation were already accepted at the previous main.
+
+| Accepted path | Git blob | Change from previous main |
+| --- | --- | --- |
+| `include/redisdb/persistence/V2BaseEncoding.hpp` | `484bf3e21d483ac8d5504b1c409e111fdcf0f4b8` | added, 104 lines |
+| `src/persistence/V2BaseEncoding.cpp` | `23d920293afff14664e2873e217a9ece9cfba859` | added, 375 lines |
+| `tests/unit/v2_base_encoding_test.cpp` | `91a81423e1e364dc6ea78fb91909683eb01cddd2` | added, 1148 lines |
+| `CMakeLists.txt` | `0172afe9323bb90dfac5571eafa7e685810854d7` | seven additive lines |
+
+All four modes are `100644`; total **1,634 additions / zero deletions**. No fifth
+path changed in the engineering feature; all 224 other predecessor tracked paths
+were preserved. The original CMake blob was `418ddcfb428e52f467aa67459cd564309b850e78`.
+No source was rewritten during publication or the main merge.
+
+Retained branches are immutable history:
+
+| Branch | Accepted SHA |
+| --- | --- |
+| `fasttrack/v2-base-encoding-cursor` | `7d8986be0edd4f338d1117cc33e2a6fcd13fc7e8` |
+| `fasttrack/10d1d-formal-closure` | `a907f55f71b1496d576583b893c7b04db1b2bda3` |
+| `fasttrack/v2-pending-generation` | `00c2898ea579258df4288829a39d0fcd33c42b04` |
+| `fasttrack/10d1c-formal-closure` | `d44ba94713174373c9f2b95f4639ad96b26ae095` |
+| `fasttrack/v2-generation-candidate-search` | `762c53285810fbf61aa4c85be296727e0da8a077` |
+| `fasttrack/10d1b-formal-closure` | `8a8758692c27f1cbf5be94a20b72092ed4e2564e` |
+| `fasttrack/v2-owned-data-staging` | `5694cda2b886f298124705b12ce6bca3aa286287` |
+| `fasttrack/v2-root-identity-validation` | `91b30f3c8529ed80954414a601b4ce102770888e` |
+| `fasttrack/10d1a-formal-closure` | `ab7179ee5abc4c28e0ebf6552eb514d91bfe2a79` |
+
+## Byte producer and corrected rejection contract
+
+The [cursor API](../include/redisdb/persistence/V2BaseEncoding.hpp) owns only
+in-memory frame/bitmap/scalar state. Caller-owned keys, entries and LRU indices
+must remain alive and unchanged through cursor lifetime, including moves. Expired
+physical entries remain; cached accounting and LRU iterators are not serialized.
+Model-1 charge is recomputed. Existing encoders preserve lists, binary strings,
+hash/set canonical output and deadline flooring toward negative infinity.
+
+The [frozen format](V2_PERSISTENCE_FORMAT.md) remains authoritative: 184-byte Base
+header, ordered KEY1/LRU1 frames, 20-byte DONE, big-endian integers and CRC32C;
+minimum complete Base is 204 bytes. The 96-byte Tail header, 112-byte Watermark and
+112-byte CURRENT are separate contracts. Per-blob/per-frame limits remain, with
+no aggregate 64 MiB or one-million-entry ceiling. Bounded chunks do not imply an
+RSS limit: inherited per-entry encoding/decoding copies may exceed one wire frame.
+
+The sequence is Header → Keys → Lru → Done → Complete. Each Chunk view expires
+on next/move/replacement/destruction; End finalizes the scalar generated-byte
+summary and is idempotent. Failure is terminal/sticky, exposes no live chunk or
+result, and never revalidates the cursor. No summary implies independent on-disk
+validation, fsync, fidelity, root ownership or publication.
+
+Task 16's intentional `throw Rejection` acceptance defect remains historical.
+Task 17 stopped at an overly broad object-symbol criterion, not an accepted repair.
+Task 17B replaced authored rejection throws with scalar propagation and classified
+all remaining direct exception-allocation sites by source/disassembly origin.
+The unchanged uint32 Crc32c constructor's generic invalid-range branch cannot fire
+within its full uint32 domain; libc++ resource paths are handled, not universally
+asserted unreachable. Expected unchanged codec/container exceptions are caught.
+The macOS observer's positive original control observed 13 allocations, versus
+zero for the same 13 corrected rejection cases. This is not proof that downstream
+codecs never allocate exception storage. All original tests were retained.
+
+## Exact feature and main Linux evidence
+
+| Gate | Accepted feature run | Accepted main run | Main job IDs |
+| --- | --- | --- | --- |
+| Networking Debug/Release | [40869850507](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40869850507) | [40879337672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337672) | `123466346580` / `123466347005` |
+| Clang 18 ASan/UBSan/fuzz | [40869850504](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40869850504) | [40879337682](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337682) | `123466346227` |
+| Docker Linux | [40869850496](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40869850496) | [40879337842](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337842) | `123466346800` |
+
+Feature runs were exact push/feature at `7d8986be0edd4f338d1117cc33e2a6fcd13fc7e8`;
+main runs were exact push/main at `e1dea845ac268f6d322dbaee0090ddbec73a234c`.
+All completed/success. Main full discovery/execution was 87/87, 87/87 and 88/88,
+with exact feature test sets preserved, including named cursor/pending/root/staging/
+generation/base/tail/format and networking, RESP, TCP, epoll and V1 persistence.
+The existing PendingGeneration local 2,276 scenarios / 2,010 reached injections
+and 474/474/474 move-target-disposal campaign remain prior local evidence.
+
+Clang actually built the new core and test translation units under the unchanged
+global ASan/UBSan flags; the mandatory core compile-command instrumentation check
+passed. Successful workflows do not upload raw compile_commands.json. Actual
+parser output completed #10000 DONE; it is separate from persistence fault tests.
+The pinned seed manifest SHA-256 is
+`e5ff669b8cd8ac01f3d81dcbddcadceba63426a503a7d55a5fb1ddc7faa62327`.
+
+The Docker artifact `12899592741` belongs to the exact main merge and has ZIP SHA-256
+`e95349177ef96abcef6e4fd80fc272ab15e143a80940f3a9932a9c3445616a78`.
+Its complete container, Compose, parity and benchmark reports passed independent
+inspection. The tracked-source fingerprint was
+`5b796da1d5a7a4801c1698df116f2950b8e2411e717e5747a40f9fff3d1b483d`.
+The benchmark covers exactly four policies × three key counts × two workloads,
+one client/pipeline and two timed repeats per profile. No invented performance
+threshold, physical power-loss claim or real VPS deployment follows.
+
+## Next P2 gate and immutable authorities
+
+The read-only Task 20 boundary proposal is external review material, not accepted
+implementation. Existing PendingGeneration exposes no legal mutable Base child;
+its OwnedEmpty state cannot silently become a written/prepared state. A separately
+approved aggregate lifecycle extension is needed for a controlled Base write bridge.
+The existing BaseStreamValidator retains decoded entries and LRU state; it is an
+independent test oracle, not the required bounded production streaming fidelity
+comparator. Existing StagedFile reads reject requests beyond recorded extent, so
+an actual EOF probe also needs a reviewed private seam or an explicitly justified
+stable-extent EOF proof. No such interface was implemented here.
+
+The [compaction authority](AOF_COMPACTION_DESIGN.md), especially sections 5.2, 6,
+6.1, 7.1–7.2 and 9.1, requires file sync/readback/full physical fidelity before
+later publication, with continuous LOCK and first-error latching. P3 must separately
+bind Tail/Watermark to a verified Base and prepare a disabled writer; P4–P7 and R4
+remain separate. OLD is authoritative before P6; NEW becomes visible at P6 but
+requires P7 durability, or restart R4 before any R5 mutation. Uncertainty stops;
+no selected-generation guessing, fallback or rollback is authorized.
+
+Both frozen documents remain byte-identical, including their historical design-only
+status text. No scope reduction, test/fault-campaign weakening or skipped review/CI
+is authorized to meet sprint scheduling. Next implementation requires independent
+architecture/source-scope acceptance and separate explicit authorization.
+
+## Historical handoff follows unchanged
+
+The entire previously accepted handoff is preserved below as an exact suffix.
+Its preparation-time statements remain historical; this section only supersedes
+present-day interpretation and does not retroactively rewrite those records.
+
 <a id="10d1d-engineering-checkpoint"></a>
 
 # Stage 6B / 10D.1D — Engineering accepted on main; formal documentation draft

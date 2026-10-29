@@ -1,5 +1,92 @@
 # Redis-Compatible In-Memory Database Server
 
+## Latest engineering checkpoint — pure V2 Base encoding cursor (2026-10-29 IST)
+
+**Pure V2 Base Encoding Cursor engineering is COMPLETE AND ACCEPTED ON MAIN.**
+This is a pure-codec prerequisite after 10D.1D, not completed P2 and not a formally
+designated 10D.1E milestone. This latest checkpoint supersedes older current-status
+interpretations only; all earlier historical text is retained unchanged.
+
+Engineering main: `e1dea845ac268f6d322dbaee0090ddbec73a234c`;
+tree: `10d0a16dbdd340f4d0120314f2cf0b1a786cf74a`.
+Ordered merge parents: first `56a3815a066516e63938ed15d3471a2183ccbb00`,
+second `7d8986be0edd4f338d1117cc33e2a6fcd13fc7e8`.
+The second parent remains retained on `fasttrack/v2-base-encoding-cursor`.
+
+The move-only `BaseEncodingCursor` is a pure byte producer over borrowed immutable
+physical key/Entry views. It requires strict unsigned binary-safe key order and an
+optional exact oldest-to-newest LRU permutation. Explicit entry, byte, frame,
+permutation and logical-charge budgets bound production. `begin()` / `next()` are
+`noexcept`; bounded Header, KEY1, LRU1 and DONE chunks borrow only the current
+output, and `EncodedBaseSummary` appears only after successful terminal End.
+It does not access Database, RootLease or the filesystem; it neither writes/seals
+StagedFile nor operates PendingGeneration or publishes CURRENT.
+
+Accepted exact-main push/Linux evidence (2026-10-29 UTC):
+
+- [Networking 40879337672](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337672):
+  Debug **87/87**, Release **87/87**; cursor **3.44 / 3.03 s**, pending **12.86 / 12.67 s**.
+- [Clang 18 ASan/UBSan/fuzz 40879337682](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337682):
+  **88/88**; cursor **13.19 s**, pending **22.00 s**; pinned **50 RESP2 seeds** and
+  **10,000 actual parser libFuzzer executions**. Cursor/pending timeouts remain **120 / 60 s**.
+- [Docker 40879337842](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40879337842):
+  production image includes the cursor with `BUILD_TESTING=OFF`; **22 tooling,
+  15 container, 10 private Compose** checks; pinned Redis **8.10.2**, **54 command
+  cases / 40 routes + 10 operational cases**; **24 profiles / 48 timed runs**.
+
+Inherited compiler warnings remain: **3 GCC Debug, 17 GCC Release, 0 Clang**;
+Docker retains the unrelated Marker-shadow warning and Node deprecation annotations.
+No new relevant warning or sanitizer regression was observed. Parser fuzzing does
+not directly fuzz the cursor; Docker does not execute cursor units. Private Compose
+is not remote VPS/SSH deployment or physical power-loss certification.
+
+Accepted **local macOS** evidence, not an independent Linux scenario recount:
+Debug **87/87**, Release **87/87**, UBSan **88/88**; **194 cursor scenarios** and
+**141 planned/reached/validated allocation-failure cases per configuration**;
+**75,498,000-byte** streaming generation, **nine byte-identical** historical
+Root/Staging/Generation output comparisons and **50 RESP2 parser seeds**.
+A separate macOS ABI observer verified **13 rejection cases with zero cursor-path
+exception-storage allocations** after correction. Source/object attribution,
+not inherited symbols alone or an operator-new hook alone, establishes the revised
+audit boundary. Existing codec/library exceptions retain typed scalar translation;
+no Linux-specific exception-allocation interposition is claimed.
+
+10D.1A held Root/LOCK identity, 10D.1B unpublished identity-checked StagedFile,
+10D.1C bounded successor GenerationCandidate observation and 10D.1D PendingGeneration
+remain accepted. PendingGeneration owns exactly **three EMPTY unpublished temporaries**
+with private per-RootState factory admission; it is not a prepared generation or
+a durable/universal reservation, and raw staging/candidate contracts remain intact.
+
+**Remaining:** complete P1; P2 Base file construction/fidelity; P3 initial Tail/
+Watermark and disabled writer; P4 final-name installation and directory sync;
+P5 selector temporary; P6 CURRENT replacement; P7 directory durability; P8 live
+handoff; R4 restart durability barrier and R5 recovery/serving; explicit V2
+initialization, V1 import, working compaction, crash-safe full selection, power-loss
+certification and stopped generation reclamation. **Stage 6B and original Phase 10
+remain INCOMPLETE.** The cursor summary proves none of these authorities.
+
+Future P2 must connect cursor → aggregate-controlled Base staging → bounded append
+→ exact extent/identity checks → file fsync → complete readback → format/EOF/CRC
+and physical-state/metadata fidelity comparison. No public mutable child escape
+is available or assumed. An independently reviewed private state/API extension and
+bounded fidelity/EOF design are required; this task only reviews that boundary.
+
+**Preparation status:** this is a LOCAL, UNCOMMITTED four-document draft on
+`fasttrack/v2-base-encoding-formal-closure`. It has not been published or accepted;
+no documentation-feature CI, documentation main merge or post-documentation main
+CI is claimed. Independent review and separately authorized publication/exact-feature
+CI, genuine two-parent documentation main merge and fresh exact-main CI remain.
+No new local build, CTest, sanitizer or fuzz run was performed for this draft.
+Future readers may consult actual Git refs/CI for subsequent gate completion.
+
+The full approved original roadmap remains in force. Original Phase 16 is
+**EXCLUDED BY APPROVED SCOPE REVISION**, not completed. Mandatory local Linux/Docker
+Milestone A remains in scope, including nonroot runtime, mounted persistence,
+restart/recovery demonstration and clean-clone reproducibility. No next engineering
+implementation is authorized by this documentation preparation.
+
+Detailed authority: [pure cursor handoff](docs/CONTINUATION_HANDOFF.md#pure-v2-base-cursor-engineering-checkpoint).
+
 ## Latest engineering checkpoint — 10D.1D (2026-10-29 IST)
 
 **Stage 6B / 10D.1D engineering is COMPLETE AND ACCEPTED ON MAIN.** Merge
