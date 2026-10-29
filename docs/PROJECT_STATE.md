@@ -1,5 +1,60 @@
 # PROJECT STATE — Redis-Compatible In-Memory Database Server
 
+## Current snapshot — 10D.1D engineering accepted (2026-10-29 IST)
+
+**Stage 6B / 10D.1D engineering is COMPLETE AND ACCEPTED ON MAIN.** Accepted
+10D.1A root/LOCK, 10D.1B staging and 10D.1C candidate observation remain intact.
+Engineering merge `f673b50c01a03e7ea8ecff6d67fb04be577f2fb8`, tree
+`fd578b73171514ead9a9d1dfaf0785d44488e7c7`, has ordered parents
+`4c45778a6216ff1ad798c011d97dcafb93962a36`, then
+`00c2898ea579258df4288829a39d0fcd33c42b04`. The feature remains retained through
+the second parent. See the [authoritative 10D.1D handoff](CONTINUATION_HANDOFF.md#10d1d-engineering-checkpoint).
+
+`PendingGeneration` is a move-only, bounded owner of exactly three empty,
+unpublished Base/Tail/Watermark temporaries on the existing shared root/LOCK.
+Its private RootState flag admits one new factory aggregate; raw candidate and
+staging contracts remain available. Successor search uses caller-attested
+selection/sequence and budget 1–4096. Checked cleanup/retain, child-reference drain
+and conditional moves preserve first failures and incoming ownership when target
+disposal fails. **This is not universal exclusion, durable reservation,
+publication authority or a prepared generation.**
+
+Accepted exact-main push/Linux runs recorded on 2026-10-28 UTC:
+
+- [Networking 40763413118](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413118):
+  Debug **86/86**, Release **86/86**; pending **13.20 s / 13.07 s**.
+- [Clang 18 ASan/UBSan/fuzz 40763413345](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413345):
+  **87/87**, pending **20.93 s**, pinned **50 seeds**, **10,000 actual RESP2 fuzz
+  executions**. All pending times remain under the unchanged **60-second** limit.
+- [Docker 40763413114](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413114):
+  image, **22** tooling / **15** container / **10** private Compose checks,
+  Redis **8.10.2** **54 cases / 40 routes + 10 operational cases**, and
+  **24 profiles / 48 timed runs**. Docker does not execute the pending unit.
+
+Accepted **local** pending verification reported **2,276 scenarios / 2,010 reached
+injections**, including **474 planned / reached / validated** move-target faults
+and nine byte-identical prior regression outputs. These local source-review
+counts are not a Linux scenario recount; parser fuzzing is separate. No new
+10D.1D warning or sanitizer diagnostic was observed; inherited unrelated warnings
+remain. No actual remote deployment or physical power-loss certification is claimed.
+
+**Broader 10D.1, Stage 6B and original Phase 10 remain unfinished.** Initialization,
+CURRENT authentication, durable/global reservation, content writing/sealing and
+prepared validation, complete P1/P2/P3, final installation/P4–P7 publication,
+CURRENT replacement/directory durability, R4/R5 recovery, writer/P8 activation,
+live compaction and reclamation remain unimplemented by this slice. Frozen
+contracts are unchanged; original Phase 16 remains excluded, not completed.
+
+**Preparation status (2026-10-29 IST):** engineering is accepted on main. This
+four-document closure is only a local, unstaged, uncommitted, unpublished draft
+on `fasttrack/10d1d-formal-closure`, not yet accepted documentation. Independent
+review, separately authorized docs-feature publication/exact-feature CI, guarded
+main merge and exact-main CI remain separate gates. No new tests were run for
+this draft. Any subsequent engineering needs separate scope/design review and
+implementation authorization; none is automatically authorized. Previous state
+snapshots and original policy below remain exact historical content, superseded
+only for present-day current-status interpretation.
+
 ## Current snapshot (2026-10-28) — 10D.1C engineering accepted
 
 **Stage 6B / 10D.1C engineering is COMPLETE AND ACCEPTED ON MAIN.** 10D.1A/B

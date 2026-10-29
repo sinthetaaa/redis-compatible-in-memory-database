@@ -1,3 +1,303 @@
+<a id="10d1d-engineering-checkpoint"></a>
+
+# Stage 6B / 10D.1D — Engineering accepted on main; formal documentation draft
+
+**Preparation date: 2026-10-29 (IST). 10D.1D engineering is COMPLETE AND ACCEPTED
+ON MAIN.** CI events cited here were recorded on 2026-10-28 UTC. 10D.1A/B/C remain
+accepted. This is the authoritative current engineering checkpoint; older
+current-status/next-action statements are superseded for present interpretation
+only. The complete previous handoff remains an exact historical suffix below.
+
+## Preparation status for this 10D.1D draft
+
+Engineering is accepted on main. Formal documentation closure has been prepared
+locally on `fasttrack/10d1d-formal-closure`, directly from the engineering merge,
+with four unstaged, uncommitted documentation changes. The branch has not been
+pushed; this draft is not yet accepted documentation and has no docs-feature CI.
+Independent documentation review, separately authorized docs-feature publication
+and exact-feature CI, guarded genuine two-parent main merge and exact-main CI
+remain separate gates. Future readers should consult actual refs and workflow
+evidence for subsequent gate completion. **No new build, CTest, sanitizer or fuzz
+execution was run for this documentation draft.** All execution results below
+are retained accepted engineering evidence.
+
+## Accepted 10D.1D Git identities and history
+
+- Engineering main merge: `f673b50c01a03e7ea8ecff6d67fb04be577f2fb8`.
+- Main merge and feature tree: `fd578b73171514ead9a9d1dfaf0785d44488e7c7`.
+- Exactly two ordered main parents: first
+  `4c45778a6216ff1ad798c011d97dcafb93962a36`, then
+  `00c2898ea579258df4288829a39d0fcd33c42b04`.
+- Accepted feature: `fasttrack/v2-pending-generation` at
+  `00c2898ea579258df4288829a39d0fcd33c42b04`, with sole parent
+  `4c45778a6216ff1ad798c011d97dcafb93962a36`. At feature publication it was one
+  commit ahead of then-main, zero behind; it is now retained through main's second
+  parent. The exact feature was committed once as
+  `feat(persistence): own empty pending V2 generation`.
+- The genuine `--no-ff --no-commit` engineering merge used
+  `merge(persistence): accept 10D.1D pending generation ownership` and preserved
+  the feature tree exactly. Normal non-force pushes and no-PR guarded merges
+  were used. No source rewrite, test change, warning suppression, timeout change,
+  extra correction commit, squash, rebase or history rewrite occurred during
+  feature publication or engineering merge.
+- Accepted sequence: 10D.1A held-root/LOCK identity foundation; 10D.1B unpublished
+  identity-checked staging; 10D.1C bounded successor observation; 10D.1D private
+  pending admission and three-empty-temporary aggregate ownership. All earlier
+  engineering history remains reachable. Old main was the 10D.1C formal merge,
+  with tree `e2c71758c1b68f997c1c18b6aa847a8e80cca640`.
+
+Retained branches at this preparation checkpoint:
+
+| Branch | Exact retained head |
+| --- | --- |
+| `fasttrack/v2-pending-generation` | `00c2898ea579258df4288829a39d0fcd33c42b04` |
+| `fasttrack/10d1c-formal-closure` | `d44ba94713174373c9f2b95f4639ad96b26ae095` |
+| `fasttrack/v2-generation-candidate-search` | `762c53285810fbf61aa4c85be296727e0da8a077` |
+| `fasttrack/10d1b-formal-closure` | `8a8758692c27f1cbf5be94a20b72092ed4e2564e` |
+| `fasttrack/v2-owned-data-staging` | `5694cda2b886f298124705b12ce6bca3aa286287` |
+| `fasttrack/v2-root-identity-validation` | `91b30f3c8529ed80954414a601b4ce102770888e` |
+| `fasttrack/10d1a-formal-closure` | `ab7179ee5abc4c28e0ebf6552eb514d91bfe2a79` |
+
+## Exact 10D.1D implementation manifest
+
+The cumulative old-main-to-engineering-main implementation diff is exactly four
+added paths, three modified paths, **2,261 additions and zero deletions**:
+
+| Path | Status | Accepted Git blob |
+| --- | --- | --- |
+| `include/redisdb/persistence/V2PendingGeneration.hpp` | Added | `63272036181181246ce77a0749ef0a178e270265` |
+| `src/persistence/V2PendingGeneration.cpp` | Added | `aa8fdb39addab32ea265901c9e2a39f2c75ab0f2` |
+| `src/persistence/V2PendingAccess.hpp` | Added | `9326cc37912e2473b784ebd65ff970e43571771d` |
+| `tests/unit/v2_pending_generation_test.cpp` | Added | `11d2dbc8324109dcf705cb3d12f50a99ece9d6b1` |
+| `include/redisdb/persistence/V2Root.hpp` | Modified | `91c2a3821c5c3376ac0e08188fb2a3dc3ab864ed` |
+| `src/persistence/V2Root.cpp` | Modified | `6b6e9c3078d4cc14ee5941af2648d61cac66d9dd` |
+| `CMakeLists.txt` | Modified | `418ddcfb428e52f467aa67459cd564309b850e78` |
+
+All 218 original tracked paths outside the three modified paths, and their modes,
+are preserved. The Root changes contain only the accepted private forward/friend
+bridge, private include, initialized admission boolean and additive definitions.
+Original RootState/RootLease/StagedFile/GenerationCandidate method bodies, RootIo
+virtual interface, enum identities, warning flags and existing test registrations
+remain unchanged. CMake adds one core source and the warning-enabled executable
+`redisdb-v2-pending-generation-tests`, registered as `unit.v2_pending_generation`
+with **TIMEOUT 60**. The documentation draft does not
+alter any implementation, test, CMake, workflow, Docker or benchmark bytes.
+
+## PendingGeneration ownership and API invariants
+
+[PendingGeneration](../include/redisdb/persistence/V2PendingGeneration.hpp) is final,
+move-only, fixed-capacity and noexcept for lifecycle operations. Its public
+surface is `begin_after(RootLease&, GenerationId, LogicalSequence, uint32_t)`,
+`valid()`, `error()`, borrowed typed generation/selected-generation/captured-sequence
+and FileIdentity accessors, `recheck()`, `discard_checked()`, `close_checked()` and
+moves/destruction. Borrowed observations are available only while valid and are
+invalidated by move, failure, terminal operation or destruction. `valid()` and
+getters do not themselves promise a fresh filesystem absence observation.
+
+The private [PendingAccess bridge](../src/persistence/V2PendingAccess.hpp), defined
+where RootState is private, owns one `pending_generation_active` slot per shared
+RootState. **Only the new PendingGeneration factory participates in this guard.**
+Existing raw GenerationCandidate duplicate observations and StagedFile APIs keep
+their accepted contracts; this is neither universal exclusion nor a global
+allocation ledger. Distinct roots have independent admission. Existing serialized,
+nonreentrant lease/adapter use remains required; no thread-safe registry is added.
+
+A successful owner holds one candidate, caller-attested selected generation and
+captured logical sequence, and exactly three typed empty Base/Tail/Watermark
+StagedFiles in Building state. Each is a regular single-link file with the exact
+observed device/inode, correct role/generation/name and zero extent. It shares
+the existing held directory, RootState, first-error latch and LOCK; there is no
+root reopen, second LOCK, independent descriptor authority, mutable child, raw FD
+or arbitrary-name escape. The parent exposes no content write/readback, seal,
+install, publish or activate operation and performs no direct POSIX calls.
+
+**A GenerationCandidate is an observation. PendingGeneration owns empty,
+unpublished temporaries in-process. Neither is a durable reservation, publication
+token, selected recovery unit or PreparedGeneration.** Caller-provided selection
+and sequence are assertions, not CURRENT/StoreId authentication or initialization
+permission. A pending numerical generation can be observed again if final names
+remain unused; volatile admission and temporary leftovers do not select it.
+
+## Admission, candidate and acquisition ordering
+
+1. Inspect existing root health without filesystem I/O; its earlier error wins.
+   Reject budget outside **1–4096** locally as ResourceLimit before checking busy
+   admission. Reject an active aggregate locally as WrongState, without poisoning
+   the existing owner or performing I/O.
+2. Claim the private slot once, then invoke accepted successor-only
+   GenerationCandidate search on the same root with the selected generation and
+   captured sequence. Preserve sequence-first exhaustion, generation exhaustion,
+   bounded-search ResourceLimit and confirmation-time CandidateOccupied semantics.
+   Generation zero is not a hidden first-generation initialization mode.
+3. Recheck the candidate; acquire Base through accepted identity-checked
+   `StagedFile::create_data`; recheck candidate and acquired owners. Repeat for
+   Tail and Watermark. Final checking is candidate, all three owners, candidate.
+   Root/LOCK and nonfollowing held-root-relative final-name checks are inherited
+   unchanged. Late final occupancy is terminal, not a restart on another number.
+4. Return valid OwnedEmpty only after every check succeeds. No content byte is
+   written, no artifact is sealed and no file/directory fsync occurs. Owned
+   capacity is fixed at three artifact descriptors, one candidate and scalar
+   context; post-root lifecycle paths have accepted zero-allocation evidence.
+
+## Failure cleanup, lifetime and moves
+
+Entered operational failures use the existing shared first terminal RootError.
+A later cleanup/close error cannot overwrite it; releasing admission cannot make
+a failed root healthy. Partial acquisition consumes every actually acquired
+handle once and retains still-linked known temps after root failure. Ambiguous
+create names are never guessed or unlinked. Accepted create retries/collision
+limits remain unchanged; a successful aggregate owns exactly three files even
+when separately ambiguous/unowned leftovers exist.
+
+Healthy discard rechecks the aggregate and uses accepted identity-checked own-name
+cleanup in **Base, Tail, Watermark** order. Any error stops later unlinking;
+remaining descriptors close and linked names are retained. An unlink completed
+before an After-hook failure is real and is not rolled back. This is exact-owner
+temporary cleanup, not orphan reclamation or selected/final-file deletion.
+
+Checked close-and-retain consumes all artifact descriptors while retaining names,
+ends the aggregate and releases its admission/root reference without file or
+directory sync. Child optional StagedFiles and the candidate are explicitly
+drained before the aggregate's final shared RootState reference: closing a child
+FD alone would not release that child's shared reference. If this is the final
+root owner, LOCK/root close errors are captured before resetting the shared_ptr.
+Other RootLeases, pins, candidates or staged siblings keep their own root/LOCK
+lifetime. No consumed descriptor is retried, including EINTR; no replacement FD
+with a reused number may be closed accidentally. Checked APIs expose completion
+errors; destruction remains noexcept, and an error cannot be observed through an
+owner that no longer exists.
+
+Moves transfer claim, children and context once. Moved-from destruction cannot
+clear the recipient's admission. Self-move is harmless. Assignment first disposes
+of the target; an existing target operational failure or disposal failure leaves
+its first error intact and **does not consume or poison the incoming source**.
+After successful target disposal, ownership transfer itself performs no allocation
+or additional I/O. Empty/successfully closed healthy targets may receive moved
+ownership; failed targets are not rehabilitated by assignment. Terminal ordinary
+operations cannot recover the failed owner or root.
+
+## Accepted local 10D.1D verification
+
+The independently reviewed local implementation passed full Debug **86/86**,
+Release **86/86** and preserved UBSan/fuzz **87/87**, strict C++20 O0/O3
+warnings-as-errors, formatting and pinned RESP2 **50-seed** smoke. Nine original
+root/staging/generation output comparisons were byte-identical across those
+three configurations.
+
+Each accepted **local** pending-unit run reported **2,276 executed scenarios and
+2,010 reached boundary injections**. The dedicated
+`cross_root_move_target_disposal` campaign planned, reached and validated
+**474/474/474**, with zero excluded: **234** with another target-root lease and
+**240** with the target as final root owner. Each fresh pair of independent roots
+checks exact target first error, actual partial cleanup effects, source typed
+context/three identities, descriptors/LOCK, successful recheck, local busy
+rejection, checked completion and exactly-once admission release/reacquisition.
+Before, actual Call and After boundaries are dynamically discovered and counted
+only when reached. Final-reference LOCK/root closes, real consumed-FD reuse,
+partial create/retention, filesystem types/identity, allocation and bounded owned
+process-interruption controls remain covered. SIGKILL temp survival is not a
+physical power-loss test.
+
+These detailed counts belong to local execution and independent source review,
+**not an independent Linux scenario recount**. Linux evidence below verifies
+actual named test execution. No C++ tests were rerun to prepare this draft.
+
+## Exact-feature and exact-main Linux evidence — 10D.1D
+
+All six runs are completed/success push events on 2026-10-28 UTC. Feature runs
+use `00c2898ea579258df4288829a39d0fcd33c42b04` on the retained feature; main runs
+use `f673b50c01a03e7ea8ecff6d67fb04be577f2fb8` on main. No historical run substitutes
+for a fresh main gate.
+
+| Workflow | Accepted exact-feature run | Accepted exact-main run |
+| --- | --- | --- |
+| Networking, GCC 13 | [40759544711](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40759544711): Debug/Release **86/86** each | [40763413118](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413118): Debug/Release **86/86** each |
+| Clang 18 ASan/UBSan/fuzz | [40759544638](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40759544638): **87/87** | [40763413345](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413345): **87/87** |
+| Docker Linux, GCC 12 | [40759544641](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40759544641): all mandatory gates | [40763413114](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413114): all mandatory gates |
+
+Pending unit times were **13.77 s Debug / 12.39 s Release / 17.41 s Clang** on the
+feature and **13.20 s / 13.07 s / 20.93 s** on main; each is below the unchanged
+**60-second** CTest timeout. Actual root/staging/generation/pending tests and all
+previous required persistence, RESP/parser, TCP/networking and epoll integration
+and repetition gates passed. Sanitizer builds include Root, PendingGeneration
+and the pending-unit translation unit with ASan/UBSan flags; no sanitizer error,
+leak/crash diagnostic or failed mandatory instrumentation was observed.
+
+Both Clang runs validated the pinned **50 immutable RESP2 seeds** and completed
+**10,000 actual libFuzzer executions** (`#10000 DONE` and `Done 10000 runs` in the
+full logs). RESP2 parser fuzzing is separate from the pending-generation unit's
+deterministic fault campaigns; it is not direct PendingGeneration fuzz coverage.
+
+Docker built the GCC 12 Release image including V2PendingGeneration.cpp and passed
+**22 tooling checks, 15 container cases, 10 private Compose checks**, pinned Redis
+**8.10.2** differential **54 command cases / 40 routes + 10 operational cases**, and
+the complete bounded **24-profile / 48-timed-run** benchmark matrix. No new
+throughput threshold was imposed. BUILD_TESTING=OFF means Docker does not compile
+or execute the pending-generation unit. Existing persistent-volume/restart checks
+remain accepted. Private Compose is not actual VPS/SSH deployment or physical
+power-loss certification.
+
+## Compiler warnings and validation limits — 10D.1D
+
+No new warning attributable to 10D.1D and no sanitizer diagnostic were observed.
+GCC Debug/Release logs retain no generation `-Wrange-loop-construct` or staging
+`-Wnonnull`. Inherited unrelated ListCommands redundant-move, V2TailStream Marker
+shadow and allocation-hook warnings remain; they were not fixed or suppressed.
+The main warning signatures/counts match the feature: **3 Debug, 17 Release,
+0 Clang, 1 Docker**. This is not a repository-wide warning-free claim.
+
+Publication and merge preserved the exact source tree. The complete Docker CI
+tracked-source fingerprint matches the accepted feature and merged source, with
+clean worktree/revision metadata. Successful Clang workflows do not export raw
+compile_commands.json as an artifact; accepted instrumentation proof combines the
+actual global flags, all-core compile-command assertion, target inheritance and
+actual new-unit build/execution. No unavailable evidence or deployment claim is
+invented.
+
+## Frozen boundaries and unfinished work — 10D.1D
+
+The frozen [compaction design](AOF_COMPACTION_DESIGN.md) and
+[V2 persistence format](V2_PERSISTENCE_FORMAT.md) remain unchanged, SHA-256:
+
+- Compaction: `fb57f333eb1efc65101c8f788442066e30a751472bda46ab040ce27e5e53e5d6`.
+- Format: `f078163e99768a84e10fb516ca03674e259a32ce1d09380ecce118ba50091462`.
+
+This is an acquisition/lifetime substep of P1, **not complete P1/P2/P3**. Deferred:
+first-generation initialization/import; authentication against CURRENT; global
+allocation/durable reservation or universal raw-staging exclusion; generation
+data writing, full Base/Tail/Watermark construction, content sealing/validation
+or prepared-file authentication; final-name installation; P4–P7 publication;
+CURRENT write/replace/rename; directory durability barriers; R4/R5 recovery;
+writer activation/P8 handoff; live compaction; generation GC/reclamation;
+crash-safe end-to-end V2 persistence; and remote VPS/SSH deployment.
+
+Trusted root/ancestors, cooperating writers and serialized nonreentrant use remain
+assumptions. Identity/nonfollowing checks detect mutation but cannot confer
+hostile-race security, durable selection or crash readiness. The in-memory guard
+disappears on process death and does not reclaim surviving temps. Selected
+CURRENT/LOCK/V1/V2 and unowned files must remain preserved by later work.
+
+**Broader 10D.1, Stage 6B and original Phase 10 remain unfinished.** All 20 original
+phases, 169 original IDs, checkboxes, wording, acceptance data and original
+execution policy remain unchanged. Original Phase 16 remains **EXCLUDED BY
+APPROVED SCOPE REVISION**, not completed.
+
+## Next review and publication gates — 10D.1D
+
+This four-document local draft awaits independent review. Only after independent
+acceptance and separate authorization may its exact bytes be committed/pushed to
+a documentation feature, validated by new exact-feature CI, merged through a
+guarded genuine two-parent main merge and validated by fresh exact-main CI. No
+such documentation publication or acceptance is claimed at preparation time.
+
+Any subsequent engineering substep requires independent scope/design review and
+explicit implementation authorization. This checkpoint assigns no next-slice
+identifier and authorizes no content writing, artifact installation, CURRENT
+publication, recovery integration, reclamation or Stage 6C work. The next gate
+is independent documentation review, not automatic engineering continuation.
+
+---
+
 # Stage 6B / 10D.1C — Engineering accepted on main; formal documentation closure preparation
 
 **2026-10-28: Stage 6B / 10D.1C engineering is COMPLETE AND ACCEPTED ON MAIN.**

@@ -1,5 +1,53 @@
 # Development Roadmap
 
+## Current engineering status — accepted 10D.1D slice (2026-10-29 IST)
+
+**10D.1D empty pending-generation ownership engineering is COMPLETE AND ACCEPTED
+ON MAIN.** 10D.1A/B/C remain accepted. Engineering merge
+`f673b50c01a03e7ea8ecff6d67fb04be577f2fb8`, tree
+`fd578b73171514ead9a9d1dfaf0785d44488e7c7`, retains feature
+`00c2898ea579258df4288829a39d0fcd33c42b04`. See the
+[authoritative 10D.1D handoff](CONTINUATION_HANDOFF.md#10d1d-engineering-checkpoint) for exact ancestry,
+source manifest, lifecycle/failure invariants and evidence.
+
+The accepted scope is one move-only factory aggregate per shared RootState,
+caller-attested bounded successor search, and exactly three empty unpublished
+Base/Tail/Watermark temporary owners under the existing root/LOCK. Raw candidate
+and staging contracts are unchanged. **It is not durable reservation, universal
+raw-API exclusion, a prepared generation or publication authority.** This is an
+acquisition/lifetime substep of P1, not complete P1/P2/P3.
+
+Accepted exact-main push evidence, recorded 2026-10-28 UTC:
+[Networking 40763413118](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413118) Debug/Release **86/86** each;
+[Clang 18 ASan/UBSan/fuzz 40763413345](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413345) **87/87**, **50 seeds / 10,000 actual parser-fuzz executions**;
+[Docker 40763413114](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413114) complete **22 tooling / 15 container / 10 Compose**, Redis **8.10.2**
+**54 cases / 40 routes + 10 operational cases**, and **24 profiles / 48 timed runs**.
+Accepted **local** pending evidence is **2,276 scenarios / 2,010 reached injections**
+with **474/474/474** planned/reached/validated cross-root move-target faults; these
+are not independently recounted Linux scenario totals. Inherited warnings remain.
+
+**Original 10D.1 objectives, original Phase 10 and Stage 6B remain unfinished.**
+Content construction/sealing/prepared validation, final installation, P4–P7 and
+CURRENT publication, directory durability, recovery/writer activation, P8/live
+compaction and generation reclamation are not provided. No crash-safe end-to-end
+V2 persistence, actual remote VPS/SSH deployment or power-loss certification is
+claimed.
+
+This additive checkpoint changes **none of the 20 original phases or 169 original
+subphase identifiers, checklist statuses, descriptions, acceptance data or
+original execution policy**. Original Phase 16 remains **EXCLUDED BY APPROVED
+SCOPE REVISION**, not completed. Older current-status/next-action statements are
+superseded only for present interpretation; all historical lines remain unchanged.
+No new original task identifier is introduced.
+
+**Preparation status (2026-10-29 IST):** formal documentation is prepared locally
+on `fasttrack/10d1d-formal-closure`, unstaged, uncommitted, unpublished and not yet
+accepted. Independent review, separate docs-feature publication/exact-feature CI,
+guarded main merge and exact-main CI are still separate gates. No new tests were
+run for this draft. The next engineering substep requires independent scope/design
+review and separate implementation authorization; this note assigns it no name or
+ID and authorizes no later work.
+
 ## Current engineering status (2026-10-28) — accepted 10D.1C slice
 
 **10D.1C candidate-search engineering is COMPLETE AND ACCEPTED ON MAIN.**

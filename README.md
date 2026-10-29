@@ -1,5 +1,54 @@
 # Redis-Compatible In-Memory Database Server
 
+## Latest engineering checkpoint — 10D.1D (2026-10-29 IST)
+
+**Stage 6B / 10D.1D engineering is COMPLETE AND ACCEPTED ON MAIN.** Merge
+`f673b50c01a03e7ea8ecff6d67fb04be577f2fb8` has tree
+`fd578b73171514ead9a9d1dfaf0785d44488e7c7`. 10D.1A/B/C remain accepted;
+older 10D.1C/10D.1B/10D.1A checkpoint text below is retained historical content.
+This section supersedes its current-status interpretation only.
+
+Accepted exact-main push/Linux runs, recorded on 2026-10-28 UTC:
+
+- [Networking 40763413118](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413118):
+  Debug **86/86**, Release **86/86**; pending unit **13.20 s / 13.07 s**.
+- [Clang 18 ASan/UBSan/fuzz 40763413345](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413345):
+  **87/87**, pending unit **20.93 s**, pinned **50 seeds** and **10,000 actual
+  RESP2 libFuzzer executions**. The pending timeout remains **60 seconds**.
+- [Docker 40763413114](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40763413114):
+  Release image, **22** tooling checks, **15** container cases, **10** private
+  Compose checks, Redis **8.10.2** parity (**54 cases / 40 routes + 10 operational
+  cases**) and **24 profiles / 48 timed runs**.
+
+Move-only, bounded `PendingGeneration` admits one new aggregate per shared
+`RootState` through its private factory guard, searches a caller-attested
+successor with budget **1–4096**, and acquires exactly three empty, unpublished
+Base/Tail/Watermark staging owners on the existing root/LOCK. Checked cleanup,
+close/retain and conditional moves preserve first errors and incoming ownership
+when target disposal fails. Raw candidate/staging APIs keep their prior contracts.
+**This is in-process empty-temporary ownership, not durable reservation,
+publication authority or a prepared generation.**
+
+Accepted **local** execution reported **2,276 scenarios / 2,010 reached injections**,
+including **474 planned / reached / validated** cross-root move-target faults and
+nine byte-identical legacy regression comparisons. These are local source-review
+counts, not an independent Linux scenario recount. No new 10D.1D warning or
+sanitizer diagnostic was observed; unrelated inherited warnings remain.
+
+There is no init/import or CURRENT authentication, content construction/sealing,
+complete P1/P2/P3, final installation, P4–P7/CURRENT publication, directory
+durability, R4/R5 recovery, writer/P8 activation, live compaction or reclamation.
+Broader 10D.1, Stage 6B and original Phase 10 remain unfinished. Private Compose
+is not remote VPS/SSH deployment or physical power-loss certification.
+
+See the [authoritative 10D.1D handoff](docs/CONTINUATION_HANDOFF.md#10d1d-engineering-checkpoint).
+**Preparation status (2026-10-29 IST):** engineering is accepted on main; formal
+documentation is prepared locally, unstaged, uncommitted, unpublished and not yet
+accepted. Independent review, docs-feature publication/exact-feature CI, guarded
+main merge and exact-main CI remain separate gates. No new tests were run for
+this draft. Subsequent engineering requires separate scope/design review and
+implementation authorization.
+
 ## Latest engineering checkpoint (2026-10-28) — 10D.1C accepted on main
 
 **Stage 6B / 10D.1C engineering is COMPLETE AND ACCEPTED ON MAIN.** Accepted
