@@ -1,6 +1,7 @@
 #include "redisdb/persistence/V2Root.hpp"
 #include "V2GenerationAccess.hpp"
 #include "V2PendingAccess.hpp"
+#include "V2PendingBaseWriteAccess.hpp"
 #include "V2RootAccess.hpp"
 
 #include <algorithm>
@@ -675,6 +676,85 @@ bool PendingAccess::fail(PendingGeneration& owner, RootErrorCode code, RootOpera
     return owner.root_ && owner.root_->fail(code, operation, role);
 }
 RootError PendingAccess::release(PendingGeneration& owner) noexcept {
+    RootError error;
+    if (owner.root_) {
+        auto& root = *owner.root_;
+        if (owner.owns_claim_) {
+            root.pending_generation_active = false;
+            owner.owns_claim_ = false;
+        }
+        if (owner.root_.use_count() == 1) {
+            (void)root.close_fd(root.lock_fd, RootRole::LockFile);
+            (void)root.close_fd(root.directory, RootRole::Root);
+            root.closed = true;
+        }
+        error = root.failure;
+        owner.root_.reset();
+    }
+    return error;
+}
+
+bool PendingBaseWriteAccess::transfer(PendingBaseWriter& target,
+                                      PendingGeneration& source) noexcept {
+    // Validate every ownership precondition before the first move. All remaining
+    // operations are noexcept moves of existing references/descriptors/scalars.
+    if (target.root_ || target.owns_claim_ ||
+        source.state_ != PendingGeneration::State::OwnedEmpty || !source.valid() ||
+        !source.owns_claim_ || !source.root_ || !source.root_->pending_generation_active ||
+        !source.selected_ || !source.captured_ || !source.candidate_)
+        return false;
+    for (const auto& file : source.files_)
+        if (!file || !file->valid() || file->byte_length() != 0)
+            return false;
+    target.root_ = std::move(source.root_);
+    target.owns_claim_ = std::exchange(source.owns_claim_, false);
+    target.selected_ = std::exchange(source.selected_, std::nullopt);
+    target.captured_ = std::exchange(source.captured_, std::nullopt);
+    target.candidate_.emplace(std::move(*source.candidate_));
+    source.candidate_.reset();
+    for (std::size_t i = 0; i < source.files_.size(); ++i) {
+        target.files_[i].emplace(std::move(*source.files_[i]));
+        source.files_[i].reset();
+    }
+    source.state_ = PendingGeneration::State::Empty;
+    source.local_error_ = {};
+    target.state_ = PendingBaseWriter::State::Writing;
+    return true;
+}
+bool PendingBaseWriteAccess::healthy(const PendingBaseWriter& owner) noexcept {
+    return owner.root_ && owner.owns_claim_ && owner.root_->pending_generation_active &&
+           owner.root_->healthy();
+}
+RootError PendingBaseWriteAccess::error(const PendingBaseWriter& owner) noexcept {
+    return owner.root_ ? owner.root_->failure : closed_error();
+}
+void PendingBaseWriteAccess::fail(PendingBaseWriter& owner, RootErrorCode code) noexcept {
+    if (owner.root_)
+        (void)owner.root_->fail(code, RootOperation::None, RootRole::StagedBase);
+}
+bool PendingBaseWriteAccess::check(PendingBaseWriter& owner) noexcept {
+    if (!healthy(owner))
+        return false;
+    if (!owner.candidate_ || !owner.selected_ || !owner.captured_) {
+        fail(owner, RootErrorCode::WrongState);
+        return false;
+    }
+    if (!owner.candidate_->recheck_unused())
+        return false;
+    for (std::size_t i = 0; i < owner.files_.size(); ++i) {
+        if (!owner.files_[i]) {
+            fail(owner, RootErrorCode::WrongState);
+            return false;
+        }
+        if (!owner.files_[i]->recheck())
+            return false;
+        if (i != 0 && owner.files_[i]->byte_length() != 0)
+            return owner.root_->fail(RootErrorCode::InvalidLength, RootOperation::None,
+                                     i == 1 ? RootRole::StagedTail : RootRole::StagedWatermark);
+    }
+    return owner.candidate_->recheck_unused();
+}
+RootError PendingBaseWriteAccess::release(PendingBaseWriter& owner) noexcept {
     RootError error;
     if (owner.root_) {
         auto& root = *owner.root_;

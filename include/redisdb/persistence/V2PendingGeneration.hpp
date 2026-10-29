@@ -10,6 +10,7 @@
 namespace redisdb::persistence::v2 {
 namespace detail {
 struct PendingAccess;
+struct PendingBaseWriteAccess;
 }
 
 // One new-factory admission and three EMPTY, unpublished data temporaries.
@@ -46,6 +47,7 @@ class PendingGeneration final {
 
   private:
     friend struct detail::PendingAccess;
+    friend struct detail::PendingBaseWriteAccess;
     enum class State { Empty, Acquiring, OwnedEmpty, Discarded, ClosedRetained, Failed };
     std::shared_ptr<detail::RootState> root_;
     bool owns_claim_ = false;
