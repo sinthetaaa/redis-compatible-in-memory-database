@@ -1,12 +1,9 @@
 # TCP performance baselines
 
-Stage 4A is merged and Linux-validated at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`;
-see [Docker acceptance evidence](DOCKER.md). The tables here are **native macOS**
-measurements, kept separate from Linux container results. Stage 4B is merged at
-`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; post-merge Linux Debug/Release,
-ASan/UBSan/fuzz and Docker CI passed (40316862854/40316862866/40316862873).
-The native development checkpoints below retain their original measurement context. Neither
-set of measurements establishes Redis throughput parity or production capacity.
+The measurements below are dated native macOS experiments, not measurements of
+the current main commit or production capacity. Linux container reports are
+separate; see [Docker reproduction](DOCKER.md#repeatable-container-checks-and-linux-reference).
+Neither establishes Redis-wide throughput parity.
 
 ## Method and reproduction
 
@@ -28,8 +25,8 @@ Dataset raw values occupy 6,400/64,000 bytes and logical V1 charges 13,700/137,0
 bytes; temporary staging, buffers and RSS are outside that logical charge.
 
 Each client is closed-loop: send one bounded pipeline batch, then drain/validate
-all replies. Publication review strengthened single-client GET validation to
-exact bytes using an oracle carried across warmup/load, including pipeline order;
+all replies. The driver validates single-client GET replies using
+exact bytes and an oracle carried across warmup/load, including pipeline order;
 SET replies must be exact OK. Multi-client shared-key GET checks remain type/length,
 with concurrency correctness covered separately. The historical native figures
 below predate this added oracle overhead; future before/after runs must use the
@@ -88,11 +85,11 @@ timing; it does not retroactively make their timed replies synchronous.
 
 Host: Apple M4, 10 logical CPUs, arm64, macOS 26.5.2. Driver: Python 3.9.6.
 Native Apple Clang 17 Release, `-O3 -DNDEBUG`; Git HEAD baseline
-`798010ff34ec0c094aa37f7821524277edbb75dd` with Stage 4A working-tree changes.
+`798010ff34ec0c094aa37f7821524277edbb75dd` with the original container-packaging working-tree changes.
 Measured server SHA-256:
 `fa994fadf00161b7884cb2e36e9455810551e4309427d65dcd9002e79f833d95`.
 The raw JSON retains its exact source fingerprint and dirty flag; these are not
-claimed to be measurements of a published Stage 4A commit.
+claimed to be measurements of a published commit.
 
 Two repeats/profile. Off/always/no figures below use 0.15-second warm-up and
 0.5-second measured windows (actual 0.5000–0.5004 seconds), an exploratory bounded
@@ -128,10 +125,10 @@ small dataset, so no pure snapshot-write speed is inferred. Local reports live
 under ignored `benchmark-results/`; measured figures above are the compact,
 reviewable record. No peak RSS, image size or Linux throughput is invented.
 
-## Historical Stage 4A bottleneck observations
+## Historical full-copy bottleneck observations
 
 With sync disabled, increasing key count from 100 to 1,000 reduced the write-heavy
-median from about 26.7k to 10.3k ops/s; off mode stayed near 35k. The Stage 4A
+median from about 26.7k to 10.3k ops/s; off mode stayed near 35k. The original
 persistent transaction copied the whole database and computed effects. That
 known O(database size) path is consistent with the observed persistence scaling
 penalty; this experiment does not isolate all allocation/encoding/filesystem costs.
@@ -139,14 +136,14 @@ penalty; this experiment does not isolate all allocation/encoding/filesystem cos
 slower than the weaker policies. Weaker policies retain their documented loss
 windows; these numbers are not a recommendation to weaken durability.
 
-Stage 4B below profiles and replaces noeviction staging. Remaining follow-ups: measure
-snapshot blocking time on substantially larger datasets; use a lower-overhead
-load generator and longer controlled Linux runs to identify the Python-driver
-ceiling; define a private deployment memory/stop-grace budget. AOF growth and
-retained generations remain operational limits. Compaction/retention are separate
-work, not implemented here. No replication or cluster changes.
+The later experiment below profiles affected-key noeviction staging. Snapshot
+blocking on larger datasets and the Python-driver ceiling remain measurement
+limits. Evaluating them would require larger datasets, a lower-overhead load
+generator and longer controlled Linux runs. AOF growth and retained generations
+remain operational limits; a deployment needs its own memory/stop-grace budget.
+Compaction and retention are not implemented in the frozen server.
 
-## Stage 4B: measured local hardening (2026-10-26)
+## Affected-key staging experiment (2026-10-26)
 
 Same Apple M4/10 logical CPUs/arm64/macOS 26.5.2, Apple Clang 17 Release
 `-O3 -DNDEBUG`, Python 3.9.6, native loopback TCP. Before: preserved executable
@@ -253,17 +250,18 @@ and blocking snapshots/I/O. No O(1), Redis-parity or production-throughput claim
 
 ### Reproduction and operational boundaries
 
+The historical comparison used independently built before/after executables with
+the hashes above. Building the present tree twice does not reproduce that
+comparison. Use the current driver and identical environments for new measurements;
+record each executable's source fingerprint and SHA rather than relabeling the
+historical figures.
+
 ```sh
-# Preserve an accepted-baseline Release build before editing storage sources.
-cmake -S . -B build/stage4b-before -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-cmake --build build/stage4b-before --parallel 2
-# Run before; rebuild the changed source in build/release, then run after.
-python3 benchmarks/tcp_baseline.py --server build/stage4b-before/redisdb-server \
-  --scaling --seconds 2 --warmup 0.25 --repeats 2 --output benchmark-results/before-new.json
 cmake --preset release -DREDISDB_BUILD_PROFILES=ON
 cmake --build --preset release --parallel 2
 python3 benchmarks/tcp_baseline.py --server build/release/redisdb-server \
-  --scaling --seconds 2 --warmup 0.25 --repeats 2 --output benchmark-results/after-new.json
+  --scaling --seconds 2 --warmup 0.25 --repeats 2 \
+  --output benchmark-results/current-scaling-new.json
 build/release/redisdb-transaction-profile 10000 200 no noeviction set
 build/release/redisdb-transaction-profile 10000 200 no noeviction expire
 ```
@@ -286,21 +284,13 @@ bound (about 39 → 164 MB) without an ASan/UBSan diagnostic. CMake marks only
 address-instrumented builds for this envelope. ASan quarantine and fatal
 ASan/UBSan/LeakSanitizer checks remain enabled; native Debug/Release retain the
 strict bound. Sanitizer RSS is not compared with native performance/RSS.
-Docker now configures one CPU alongside 512 MiB and 64 PIDs, with runtime assertions;
-new enforcement and Linux performance/ASan must be validated after publication.
-Stage 4A Linux figures used the older CPU configuration and are not directly
-comparable. No Docker daemon was started or system configuration changed.
+Docker configures one CPU alongside 512 MiB and 64 PIDs, with runtime assertions.
+Older container figures used a different CPU configuration and are not directly
+comparable.
 
-Local validation: Debug's 77 tests passed across the full run and targeted retry
-of the new hardening test; Release passed 77/77 in one run; full-program UBSan
-passed 78/78 including the pinned 50-seed parser smoke. The transaction test
-exhausted 2,115 allocation/rollback trials, including rehash, expiry metadata and
-both policies. Two test-harness issues were corrected: an APPEND input exceeded
-the codec's own bound, and unlimited connection churn exhausted host TIME_WAIT
-ports. Successful unchanged tests were not rerun to address those harness issues.
-The 16-case native smoke and 54-case/40-route curated parity with candidate
-AOF `always` passed against the pinned Redis 8.10.2 binary; all 41 differential
-harness tests passed. The Linux adapter now also enables candidate AOF `always`.
+The operational and transaction tests remain available in the current suite. The
+historical before/after timing runs are distinct from sanitizer and correctness
+results; no new benchmark or regression execution is claimed by this guide.
 Reproduce the persistent comparison with:
 
 ```sh
