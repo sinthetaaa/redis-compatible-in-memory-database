@@ -1,14 +1,8 @@
-# Stage 4A: Linux container packaging and private demo
+# Docker packaging and private operation
 
-Stage 4A is merged at `5e3b3cceaf1fd9c9522567b0a4807f2f7cf604cc`.
-[Main Docker CI run 40289732162](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40289732162)
-passed the actual image build, 15 container cases, Redis 8.10.2 parity (54 cases /
-40 routes), and 30 benchmark profiles. Stage 4B is merged and validated at
-`d69b3ede7405b4fe843ffb1c3bbfe4d957810615`; its
-[main Docker run 40316862873](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40316862873)
-passed 15 container cases, persistent parity and 24 profiles/48 scaling runs.
-For the new Stage 5A configuration, see the [private deployment runbook](PRIVATE_DEPLOYMENT.md).
-Its health/backup/Compose acceptance is pending Linux CI and actual remote validation.
+The Linux image packages the V1 server for a private demonstration. The root
+Compose service publishes only on host loopback. Actual remote-host deployment
+and SSH acceptance are not claimed.
 
 ## Image and runtime design
 
@@ -16,8 +10,8 @@ The multi-stage Dockerfile pins the Debian bookworm-slim OCI index to
 `sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8`
 (resolved 2026-10-26). Builder: GCC, CMake >=3.25, Ninja, C++20, Release, tests off,
 stripped server. Runtime: matching Debian base, libstdc++/runtime dependencies and
-one executable. No compiler, source tree or build cache is copied. Exact image
-size on Stage 4A's Linux amd64 runner was 75,371,632 bytes; new builds report their own size.
+one executable. No compiler, source tree or build cache is copied. Image size
+varies by build; use the size recorded by the container report.
 Apt packages follow that Debian suite's updates; base identity is fixed, but
 bit-for-bit builds across different apt repository dates are not promised.
 `.dockerignore` allows only build inputs and excludes host data/credentials.
@@ -35,10 +29,10 @@ flag. Publication happens on the serialized event loop. The default image CMD
 selects AOF `always`, `/data/appendonly.aof`, `/data/snapshots`, port 6380, explicit
 `0.0.0.0`, and 64 MiB **logical** maxmemory with noeviction. Compose additionally
 uses read-only rootfs, all capabilities dropped, no-new-privileges, 64 PIDs,
-512 MiB cgroup memory, one CPU (Stage 4B) and 30-second stop grace. The owned
+512 MiB cgroup memory, one CPU and 30-second stop grace. The owned
 test/benchmark adapter applies the same CPU/memory/PID limits and checks Docker
-HostConfig; these limits passed Stage 4B main Linux CI. Logical charge is not RSS; affected-value
-staging (or full-database LRU fallback) and temporary buffers can hit the cgroup limit.
+HostConfig. Logical charge is not RSS; affected-value staging (or full-database
+LRU fallback) and temporary buffers can hit the cgroup limit.
 The image does not manage retention, backups, log rotation or remote deployment.
 
 ## Safe networking
@@ -158,30 +152,68 @@ clients. Replies compare exact wire bytes except the existing duplicate-checked
 unordered SMEMBERS/HGETALL semantics. Raw request/reply hex and failures are
 recorded, and mismatch/infrastructure/identity errors exit nonzero. No floating
 fallback or unverified distro Redis server. The macOS executable pin and harness
-are untouched. Version/digest/hash changes require reviewed repinning, never an
-automatic floating-tag refresh. Stage 4A's merged-main parity passed; the changed
-Stage 4B transaction implementation also passed merged-main Linux parity. Its candidate
-now uses AOF `always` to exercise transaction staging while the reference stays
-nonpersistent. Docker CI uses the 24-profile SET/mixed-write scaling matrix through
-10,000 keys; Stage 4A's historical 30-profile matrix remains the tool's default.
+are separate. Version/digest/hash changes
+require reviewed repinning, never an automatic floating-tag refresh. The Linux
+candidate uses AOF `always` to exercise transaction staging while the reference
+stays nonpersistent. Docker CI uses the 24-profile SET/mixed-write scaling matrix through
+10,000 keys; the historical 30-profile matrix remains the tool's default.
 
-The new GitHub-hosted Ubuntu workflow builds the image, runs these checks and
+The GitHub-hosted Ubuntu workflow builds the image, runs these checks and
 records image size, exact reference identity and bounded baseline JSON/job summary.
 The existing Debug/Release and ASan/UBSan/libFuzzer workflows are unchanged.
 No images are pushed, deployments provisioned, or paid resources created.
 
-## Local validation checkpoint
+## Stopped backups
 
-On 2026-10-26 the complete native Debug suite passed **75/75**, Release **75/75**,
-and full-program Apple Clang 17 UBSan **76/76**, including the pinned parser seed
-corpus. The new listener test checks actual `getsockname` addresses and descriptor
-flags; the CLI test exercises default loopback, explicit wildcard, invalid forms
-and graceful shutdown. Five offline Docker-tooling identity/safety/method checks passed.
-The existing pinned macOS Redis differential trace passed **54 cases / 40 routes**.
-Compose rendered successfully with the sole host binding `127.0.0.1`.
-The existing documented local Apple ASan runtime limitation remains; Linux
-ASan/UBSan/fuzz execution subsequently passed on merged Stage 4A main
-([run 40289732173](https://github.com/sinthetaaa/redis-compatible-in-memory-database/actions/runs/40289732173)).
-Stage 4B main Linux Debug/Release (77 each), ASan/UBSan (78) and 10,000 fuzz
-executions passed runs 40316862854/40316862866; Docker passed 40316862873.
-These accepted results do not validate Stage 5A's new Compose configuration or a remote host.
+Stop all writers and require `RESP_STOPPED` with exit status zero before copying
+recovery files. A running-file copy is not a consistent backup. Preserve the
+entire `/data` tree: AOF, `.commit`, snapshot `CURRENT`, its selected generation,
+retained history and other recovery files. Do not prune recovery history.
+Record the exact image ID, source revision, startup options, volume name and
+backup time. Keep a protected independent copy; a persistent volume alone is not
+a backup strategy.
+
+For the root Compose demo, verify the stop before copying its data:
+
+```sh
+docker compose stop -t 30 redisdb
+CID="$(docker compose ps --all --quiet redisdb)"
+test "$(docker inspect "$CID" --format '{{.State.Running}}')" = false
+test "$(docker inspect "$CID" --format '{{.State.ExitCode}}')" = 0
+test "$(docker logs "$CID" | tail -n 1)" = RESP_STOPPED
+```
+
+Copy the stopped volume to a new trusted backup destination and compute file
+hashes. Do not run another writer against the volume during the copy. Preserve
+the backup before restarting the original service.
+
+Restore into a new disposable volume and a separate project or isolated container,
+never over the original. Verify backup hashes, regular-file layout and ownership
+for UID/GID 10001:10001. Start the same recovery configuration and check sentinel
+values, collection data and TTL behavior before relying on the backup. A missing
+or corrupt required recovery file must fail startup; do not delete or truncate
+files to force readiness. Details: [AOF](AOF.md) and [snapshot recovery](SNAPSHOTS.md).
+
+Monitor free disk bytes and inodes as well as container/process memory and
+latency. Journal history, retained snapshot generations and crash leftovers grow
+without automatic deletion or compaction. Leave room for another snapshot and a
+stopped backup, and stop cleanly before exhaustion. Logical maxmemory and Docker
+log rotation do not bound database disk growth.
+
+## Optional private deployment tooling
+
+[deploy/compose.private.yaml](../deploy/compose.private.yaml),
+[deploy/private.env.example](../deploy/private.env.example) and
+[tools/private_deployment.py](../tools/private_deployment.py) remain available for
+an optional dedicated demo. This overlay uses an external data volume, pinned
+image identity, a loopback host port and a health check. Its disposable smoke test
+checks stopped-copy restoration and isolated corruption fixtures; it does not
+establish real remote-host or SSH acceptance. Consult the tool's `--help` and
+subcommand help for required image/revision/volume/project inputs before use.
+Retain the same explicit project, environment, Compose file and volume settings
+for every lifecycle command; do not substitute the root demo project.
+
+For any separately operated host, keep ingress private and use a restricted SSH
+tunnel instead of publishing the unauthenticated database port. Host firewall,
+IPv4/IPv6 rules, storage durability, ownership, backup policy and capacity require
+validation on that host. No public database service is included in this project.

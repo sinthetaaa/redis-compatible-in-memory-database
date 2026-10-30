@@ -1,4 +1,4 @@
-# AOF persistence and restart recovery (Stage 3A)
+# Append-only persistence and restart recovery
 
 Persistence is opt-in and loopback serving remains unchanged:
 
@@ -10,10 +10,10 @@ mkdir -p data
 
 Default: persistence disabled. When enabled, `always` is the default policy;
 the default file is `./appendonly.aof`. The parent directory must exist.
-Configuration is startup-only. Stage 3B adds opt-in coordinated snapshots via
-`--snapshot-dir PATH` and `SIGUSR1`; see [SNAPSHOTS.md](SNAPSHOTS.md). No new Redis
-commands, compaction, rewriting, replication or background persistence worker
-are implemented.
+Configuration is startup-only. Opt-in coordinated snapshots use
+`--snapshot-dir PATH` and `SIGUSR1`; see [SNAPSHOTS.md](SNAPSHOTS.md).
+Persistence adds no Redis snapshot command. Compaction, rewriting, replication
+and background persistence workers are not implemented.
 
 ## Commit boundary
 
@@ -116,11 +116,11 @@ touches are not durable. Changing from a journal written without LRU to LRU uses
 documented sorted-key cold order. Startup removes due keys and rejects a configured
 memory limit too small for the recovered live state, rather than silently evicting it.
 
-Stage 4B's `noeviction` staging copies affected preimages and expiry nodes, then
+The `noeviction` staging copies affected preimages and expiry nodes, then
 compares only touched keys. Rollback erases tentative nodes and transfers reserved
 backup nodes without allocation. Exact LRU retains the complete-copy fallback
 (O(database size) extra time/memory) and its unchanged V1 full-order record.
 Collection postimages and the complete LRU order can make records large. Disk writes,
 `fsync`, replay and watermark publication block the event loop. The logical data budget
 does not bound temporary copies, journal size, metadata or RSS. These are explicit
-tradeoffs; see [measurements and remaining limits](BENCHMARKS.md). Compaction remains future work.
+tradeoffs; see [measurements and remaining limits](BENCHMARKS.md). Compaction is not implemented in this feature-frozen V1 server.

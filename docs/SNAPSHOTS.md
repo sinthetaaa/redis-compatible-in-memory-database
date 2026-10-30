@@ -1,9 +1,8 @@
-# Snapshots and crash recovery (Fast-Track Stage 3B)
+# Snapshots and crash recovery
 
-Stage 3B is merged at `798010ff34ec0c094aa37f7821524277edbb75dd`; V1 is unchanged
-through accepted Stage 4B main `d69b3ede7405b4fe843ffb1c3bbfe4d957810615`.
-See [private deployment and stopped backups](PRIVATE_DEPLOYMENT.md) for Stage 5A
-preparation; actual remote acceptance remains pending. No AOF rotation or compaction.
+Snapshots use the V1 persistence format and require the matching AOF history.
+There is no AOF rotation or compaction. See [stopped backups](DOCKER.md#stopped-backups)
+for preserving the complete recovery set.
 
 ## Configuration and operator trigger
 
@@ -173,22 +172,13 @@ eviction, AOF-only migration, invalid recovery combinations, real EFBIG failure,
 SIGKILL during construction and after acknowledged publication, repeated restarts.
 These are process-crash tests, not power-cut or filesystem fault-model proofs.
 
-Local validation on macOS ARM64 (2026-10-26): Debug **73/73**, Release **73/73**,
-and full-program Apple Clang 17 UBSan **74/74** (including the pinned 50-seed
-parser corpus) passed. Existing nonpersistent Redis 8.10.2 differential suites
-passed: curated **54 cases / 40 routes**, negative **35**, TTL **44**.
-Formatting, diff whitespace and sanitizer compilation coverage checks passed.
-The repository's documented Apple ASan runtime startup limitation still applies;
-Linux ASan/UBSan/libFuzzer is wired to discover/instrument the new tests but was
-not run or published during this local-only milestone.
-
 Snapshot capture blocks the event loop for encoding, writes and synchronization.
 It sorts key views (O(K log K)), copies LRU keys, and temporarily copies/encodes
 one entry at a time; temporary memory is outside the logical-memory budget.
 Restore consumes the live database plus bounded frames and O(K) LRU/validation
 metadata. Full historical AOF validation still reads/decodes O(journal bytes),
 so no bounded startup time or snapshot speedup is claimed. CRC tracking adds
-work to journal append. Stage 4B uses affected-key undo under noeviction; exact
+work to journal append. Transaction staging uses affected-key undo under noeviction; exact
 LRU retains the full-database staging fallback.
 All generations, abandoned candidates and the complete AOF continue growing;
 there is no retention worker, automatic cleanup, rotation, compaction or salvage.
