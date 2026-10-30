@@ -46,7 +46,7 @@ Lifecycle/error diagnostics use JSON lines on stderr with severity/event/detail,
 only static safe categories; readiness, snapshot and shutdown stdout markers remain.
 No per-request logging, thread, lock, telemetry queue or filesystem metric scan is
 added. Failed diagnostic write/flush exits 74; serious persistence errors remain
-fatal and receive no successful acknowledgment. [README operational contract](../README.md#operational-subset-stage-6a-accepted).
+fatal and receive no successful acknowledgment. [Supported command subset](../README.md#supported-commands).
 
 Accepted INFO supports server, clients, stats, memory and persistence sections;
 no argument/default/all selects those sections, unknown sections return an empty
